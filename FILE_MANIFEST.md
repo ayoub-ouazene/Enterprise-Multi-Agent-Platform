@@ -1,0 +1,23 @@
+# File Manifest
+
+- `AGENTS.md`
+- `README.md`
+- `docs/01-system-overview.md`
+- `docs/02-actors-and-departments.md`
+- `docs/03-business-rules-and-request-lifecycle.md`
+- `docs/04-ai-multi-agent-architecture.md`
+- `docs/05-technology-stack.md`
+- `docs/06-backend-architecture.md`
+- `docs/07-langgraph-workflow-architecture.md`
+- `docs/08-database-architecture.md`
+- `docs/09-rag-company-knowledge.md`
+- `docs/10-api-architecture.md`
+- `docs/11-realtime-request-tracking.md`
+- `docs/12-frontend-architecture.md`
+- `docs/13-company-onboarding-data-import.md`
+- `docs/14-auth-permissions-multitenancy.md`
+- `docs/15-failure-handling-notifications.md`
+- `docs/16-deployment-architecture.md`
+- `docs/17-future-improvements.md`
+- `docs/18-codex-implementation-instructions.md`
+- `docs/decisions/architecture-decisions.md`

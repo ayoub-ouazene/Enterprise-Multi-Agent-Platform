@@ -1,0 +1,84 @@
+# 15. Failure Handling and Notifications
+
+## 15.1 Failure Flow
+
+```text
+Failure
+→ return to owner department agent
+→ search for a valid alternative
+→ continue if one exists
+→ terminate if none exists
+```
+
+## 15.2 User Response
+
+The user receives a polite general reason.
+
+Do not expose:
+
+- internal table names;
+- SQL errors;
+- stack traces;
+- secrets;
+- credentials;
+- sensitive company details;
+- raw model or tool errors.
+
+## 15.3 Internal Failure Record
+
+Internal records may include:
+
+- Request ID;
+- company ID;
+- department;
+- failure category;
+- technical detail;
+- failed tool or stage;
+- timestamp;
+- alternative attempted;
+- resolution status.
+
+## 15.4 Capability Gaps
+
+When no approved capability exists:
+
+- create a capability-gap record;
+- notify the company or manager;
+- explain safely to the user;
+- terminate gracefully.
+
+Capability gaps may track:
+
+- department;
+- requested operation;
+- frequency;
+- first seen;
+- last seen;
+- status.
+
+## 15.5 Persistent Notifications
+
+Use a database table for notifications that must remain until seen or handled.
+
+Examples:
+
+- approval required;
+- human action assigned;
+- request completed;
+- request failed;
+- capability gap detected;
+- company action required.
+
+## 15.6 Live Delivery
+
+When the recipient is online, new notifications may be pushed through SSE.
+
+The database remains the source of truth.
+
+## 15.7 Retry Philosophy
+
+Safe temporary failures may be retried a limited number of times.
+
+Do not use endless retry loops.
+
+Irreversible operations must avoid duplicate execution.
