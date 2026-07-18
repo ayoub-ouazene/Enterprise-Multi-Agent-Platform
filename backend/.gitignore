@@ -1,0 +1,77 @@
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Native extensions
+*.so
+*.pyd
+
+# Packaging and build artifacts
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments and Conda environments
+.venv/
+venv/
+env/
+ENV/
+.conda/
+conda-meta/
+
+# Test, coverage, lint, and type-check artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.hypothesis/
+.mypy_cache/
+.pyright/
+.ruff_cache/
+
+# Runtime files
+*.log
+logs/
+uploads/
+*.pid
+
+# IDE and editor files
+.idea/
+.vscode/
+*.code-workspace
+*.swp
+*.swo
+*~
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+Desktop.ini
