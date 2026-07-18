@@ -53,6 +53,8 @@ def test_initial_state_is_derived_from_business_request() -> None:
     assert state.human_action.required is False
     assert state.failure.has_failure is False
     assert state.result.completed_at is None
+    assert state.execution.department_result == {}
+    assert state.collaboration.request == {}
 
 
 def test_state_storage_is_json_serializable() -> None:

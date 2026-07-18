@@ -10,10 +10,13 @@ from app.auth.context import AuthenticatedUser
 from app.core.enums import ActorType, DepartmentType
 from app.core.exceptions import NotFoundError
 from app.departments.repository import DepartmentRepository
+from app.departments.contracts import DepartmentExecutionResult
+from app.departments.execution import DepartmentExecutionService
 from app.notifications.service import NotificationService
 from app.llm.exceptions import RouterProviderError
 from app.requests.enums import RequestStatus
 from app.workflow.enums import WorkflowEventType
+from app.workflow.enums import WorkflowEventActorType
 from app.workflow.exceptions import (
     WorkflowAlreadyStartedError,
     WorkflowExecutionFailedError,
@@ -91,6 +94,29 @@ class FakeRouterClient:
         return routed_output()
 
 
+class FakeDepartmentExecutionService:
+    async def execute(self, state):
+        result = DepartmentExecutionResult(
+            department_type="it",
+            status="completed",
+            decision="placeholder_execution_completed",
+            reason="IT execution foundation validated.",
+            user_message="The IT placeholder completed its foundation check.",
+            current_stage="it_placeholder_completed",
+            completed_step="it_placeholder_completed",
+            next_action="complete_request",
+            is_terminal=True,
+            safe_event_title="IT stage completed",
+            safe_event_message="IT execution foundation validated.",
+        )
+        return DepartmentExecutionService._safe_state_update(state, result)
+
+
+class FailingDepartmentExecutionService:
+    async def execute(self, state):
+        raise RuntimeError("internal department implementation details")
+
+
 def service_fixture(current_user, request, *, graph=workflow_graph, state=None):
     session = AsyncMock(spec=AsyncSession)
     persistence = Mock(spec=WorkflowPersistence)
@@ -118,6 +144,7 @@ def service_fixture(current_user, request, *, graph=workflow_graph, state=None):
         current_user,
         persistence=persistence,
         department_repository=departments,
+        department_execution_service=FakeDepartmentExecutionService(),
         workflow_event_service=events,
         notification_service=notifications,
         failure_service=failures,
@@ -153,6 +180,13 @@ def test_workflow_start_persists_ordered_events_and_completion_notification() ->
     assert persistence.save_checkpoint.await_count == 6
     notifications.notify_terminal_request.assert_awaited_once()
     assert session.commit.await_count == 6
+    stage_started = events.append.await_args_list[2].args[1]
+    stage_completed = events.append.await_args_list[3].args[1]
+    completion = events.append.await_args_list[4].args[1]
+    assert stage_started.actor_type == WorkflowEventActorType.DEPARTMENT_AGENT
+    assert stage_completed.actor_type == WorkflowEventActorType.DEPARTMENT_AGENT
+    assert stage_completed.title == "IT stage completed"
+    assert completion.actor_type == WorkflowEventActorType.SYSTEM
 
 
 def test_cross_company_start_behaves_as_not_found() -> None:
@@ -342,6 +376,30 @@ def test_terminal_router_provider_failure_uses_safe_failure_service() -> None:
     )
     failed_state = persistence.save_checkpoint.await_args_list[-1].args[0]
     assert "provider headers" not in failed_state.failure.safe_message
+
+
+def test_department_exception_uses_sanitized_terminal_failure_path() -> None:
+    current = user()
+    request = request_record(current)
+    service, _, persistence, _, events, notifications, failures = service_fixture(
+        current,
+        request,
+    )
+    service.department_execution_service = FailingDepartmentExecutionService()
+
+    with pytest.raises(WorkflowExecutionFailedError):
+        asyncio.run(service.start(request.id))
+
+    failures.record.assert_awaited_once()
+    failed_state = persistence.save_checkpoint.await_args_list[-1].args[0]
+    assert failed_state.request.status == RequestStatus.FAILED
+    assert "implementation details" not in failed_state.failure.safe_message
+    assert event_types(events) == [
+        WorkflowEventType.ROUTING_STARTED,
+        WorkflowEventType.REQUEST_ROUTED,
+        WorkflowEventType.STAGE_STARTED,
+    ]
+    notifications.notify_terminal_request.assert_not_awaited()
 
 
 def test_department_lookup_is_tenant_repository_call() -> None:

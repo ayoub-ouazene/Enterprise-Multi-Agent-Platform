@@ -3,6 +3,8 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 from app.core.enums import DepartmentType
+from app.departments.contracts import DepartmentExecutionResult
+from app.departments.execution import DepartmentExecutionService
 from app.requests.enums import RequestStatus
 from app.workflow.graph import build_workflow_graph
 from app.workflow.router_output import RouterOutput
@@ -34,6 +36,24 @@ class FakeRouterClient:
             unsupported_reason=None,
             is_capability_gap=False,
         )
+
+
+class FakeDepartmentExecutionService:
+    async def execute(self, state):
+        result = DepartmentExecutionResult(
+            department_type="it",
+            status="completed",
+            decision="placeholder_execution_completed",
+            reason="IT execution foundation validated.",
+            user_message="The IT placeholder completed its foundation check.",
+            current_stage="it_placeholder_completed",
+            completed_step="it_placeholder_completed",
+            next_action="complete_request",
+            is_terminal=True,
+            safe_event_title="IT stage completed",
+            safe_event_message="IT execution foundation validated.",
+        )
+        return DepartmentExecutionService._safe_state_update(state, result)
 
 
 def initial_state() -> WorkflowState:
@@ -75,6 +95,7 @@ def test_deterministic_graph_reaches_completion() -> None:
                         is_active=True,
                     )
                 },
+                department_execution_service=FakeDepartmentExecutionService(),
             ),
         )
     )
@@ -106,6 +127,7 @@ def test_graph_routes_any_valid_request_type_from_structured_output() -> None:
                         is_active=True,
                     )
                 },
+                department_execution_service=FakeDepartmentExecutionService(),
             ),
         )
     )

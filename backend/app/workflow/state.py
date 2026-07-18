@@ -25,8 +25,10 @@ WORKFLOW_STARTED_STEP = "workflow_started"
 INITIALIZED_STEP = "initialized"
 ROUTED_STEP = "router_routed"
 LEGACY_ROUTED_STEP = "placeholder_routed"
-DEPARTMENT_STARTED_STEP = "placeholder_department_started"
-DEPARTMENT_COMPLETED_STEP = "placeholder_department_completed"
+DEPARTMENT_STARTED_STEP = "department_execution_started"
+DEPARTMENT_COMPLETED_STEP = "department_execution_completed"
+LEGACY_DEPARTMENT_STARTED_STEP = "placeholder_department_started"
+LEGACY_DEPARTMENT_COMPLETED_STEP = "placeholder_department_completed"
 COMPLETED_STEP = "workflow_completed"
 
 _JWT_PATTERN = re.compile(
@@ -74,6 +76,8 @@ class WorkflowCollaborationState(WorkflowStateSection):
     payload: dict[str, Any] = Field(default_factory=dict)
     expected_output: dict[str, Any] = Field(default_factory=dict)
     result: dict[str, Any] = Field(default_factory=dict)
+    request: dict[str, Any] = Field(default_factory=dict)
+    structured_result: dict[str, Any] = Field(default_factory=dict)
     is_active: bool = False
 
 
@@ -86,6 +90,7 @@ class WorkflowExecutionState(WorkflowStateSection):
     retry_counts: dict[str, int] = Field(default_factory=dict)
     last_operation: str | None = Field(default=None, max_length=255)
     last_operation_status: str | None = Field(default=None, max_length=100)
+    department_result: dict[str, Any] = Field(default_factory=dict)
 
 
 class WorkflowRoutingState(WorkflowStateSection):
@@ -120,6 +125,7 @@ class WorkflowHumanActionState(WorkflowStateSection):
     decision_package: dict[str, Any] = Field(default_factory=dict)
     status: str | None = Field(default=None, max_length=100)
     response: dict[str, Any] = Field(default_factory=dict)
+    request: dict[str, Any] = Field(default_factory=dict)
 
 
 class WorkflowFailureState(WorkflowStateSection):
@@ -185,6 +191,7 @@ class WorkflowRuntimeContext:
     router_client: Any
     departments: dict[DepartmentType, DepartmentRuntimeContext]
     preclassified_output: RouterOutput | None = None
+    department_execution_service: Any | None = None
 
 
 def _reject_sensitive_string_values(

@@ -8,6 +8,7 @@ from app.workflow.state import (
     add_completed_step,
 )
 from app.workflow.router_output import RouterMessageCategory
+from app.departments.contracts import DepartmentExecutionResult
 
 
 def completion_node(state: WorkflowState) -> dict[str, Any]:
@@ -26,6 +27,13 @@ def completion_node(state: WorkflowState) -> dict[str, Any]:
     final_response = "The request completed its placeholder department workflow."
     reason = "The routed placeholder workflow completed successfully."
     decision = "completed"
+    if state.execution.department_result:
+        department_result = DepartmentExecutionResult.model_validate(
+            state.execution.department_result
+        )
+        final_response = department_result.user_message
+        reason = department_result.reason
+        decision = department_result.decision
     if state.routing.message_category == RouterMessageCategory.PLATFORM_QUESTION:
         final_response = state.routing.platform_answer or "Platform guidance is unavailable."
         reason = state.routing.routing_reason or "Platform question answered."

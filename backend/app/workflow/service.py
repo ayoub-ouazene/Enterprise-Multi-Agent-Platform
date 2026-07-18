@@ -8,6 +8,8 @@ from app.core.config import Settings
 from app.core.enums import ActorType, DepartmentType
 from app.core.exceptions import NotFoundError
 from app.departments.repository import DepartmentRepository
+from app.departments.contracts import DepartmentExecutionResult
+from app.departments.execution import DepartmentExecutionService
 from app.failures.enums import FailureSource, FailureType
 from app.failures.schemas import CapabilityGapCreate, FailureCreate
 from app.llm.exceptions import RouterConfigurationError
@@ -207,6 +209,7 @@ class WorkflowService:
         router_client: Any | None = None,
         persistence: WorkflowPersistence | None = None,
         department_repository: DepartmentRepository | None = None,
+        department_execution_service: DepartmentExecutionService | None = None,
         workflow_event_service: WorkflowEventService | None = None,
         notification_service: NotificationService | None = None,
         failure_service: Any | None = None,
@@ -221,6 +224,15 @@ class WorkflowService:
         self.department_repository = department_repository or DepartmentRepository(
             session,
             current_user.company_id,
+        )
+        self.department_execution_service = (
+            department_execution_service
+            if department_execution_service is not None
+            else DepartmentExecutionService(
+                session,
+                current_user,
+                department_repository=self.department_repository,
+            )
         )
         self.workflow_event_service = workflow_event_service or WorkflowEventService(
             session,
@@ -505,6 +517,7 @@ class WorkflowService:
             router_client=router_client,
             departments=departments,
             preclassified_output=preclassified_output,
+            department_execution_service=self.department_execution_service,
         )
         try:
             async for part in self.graph.astream(
@@ -574,7 +587,7 @@ class WorkflowService:
         node_name: str,
         state: WorkflowState,
     ) -> WorkflowEventCreate | None:
-        common = {
+        router_common = {
             "actor_type": WorkflowEventActorType.ROUTER,
             "department_id": state.request.active_department_id,
             "visibility": WorkflowEventVisibility.REQUESTER,
@@ -597,23 +610,36 @@ class WorkflowService:
                     "owner_department": state.routing.selected_department.value,
                     "request_type": state.request.request_type,
                 },
-                **{key: value for key, value in common.items() if key != "event_data"},
+                **{
+                    key: value
+                    for key, value in router_common.items()
+                    if key != "event_data"
+                },
             )
         if node_name == "department_stage_start":
             return WorkflowEventCreate(
                 event_type=WorkflowEventType.STAGE_STARTED,
                 stage=state.request.current_stage,
-                title="Processing started",
-                message="The placeholder department stage started.",
-                **common,
+                title="Department processing started",
+                message="The owner department started processing the request.",
+                actor_type=WorkflowEventActorType.DEPARTMENT_AGENT,
+                department_id=state.request.active_department_id,
+                visibility=WorkflowEventVisibility.REQUESTER,
+                event_data={},
             )
-        if node_name == "placeholder_department":
+        if node_name == "department_execution":
+            result = DepartmentExecutionResult.model_validate(
+                state.execution.department_result
+            )
             return WorkflowEventCreate(
                 event_type=WorkflowEventType.STAGE_COMPLETED,
                 stage=state.request.current_stage,
-                title="Department stage completed",
-                message="The placeholder department stage completed.",
-                **common,
+                title=result.safe_event_title,
+                message=result.safe_event_message,
+                actor_type=WorkflowEventActorType.DEPARTMENT_AGENT,
+                department_id=state.request.active_department_id,
+                visibility=WorkflowEventVisibility.REQUESTER,
+                event_data={"department_type": result.department_type.value},
             )
         if node_name == "completion":
             return WorkflowEventCreate(
@@ -621,7 +647,10 @@ class WorkflowService:
                 stage=state.request.current_stage,
                 title="Request completed",
                 message="The request completed its current workflow.",
-                **common,
+                actor_type=WorkflowEventActorType.SYSTEM,
+                department_id=state.request.active_department_id,
+                visibility=WorkflowEventVisibility.REQUESTER,
+                event_data={},
             )
         return None
 
