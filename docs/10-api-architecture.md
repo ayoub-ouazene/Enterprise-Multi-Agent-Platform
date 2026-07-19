@@ -180,3 +180,12 @@ request workflow start/resume endpoints. Read-only management endpoints are `GET
 read company financial records; other department managers may read only their department budget
 summary. Employees and external users cannot list full financial data. No public financial mutation
 endpoint exists.
+
+## 10.9 Procurement API Surface
+
+Procurement execution remains available only through the assistant and workflow APIs. Authorized
+read endpoints expose a Procurement request, its safe candidate list, or one candidate. Company
+accounts and active Procurement managers may create and update request-scoped candidates;
+authorized collaborating department managers may read only the relevant shortlist. Employees and
+external users cannot mutate candidates. No public endpoint executes Procurement, selects a final
+supplier, creates a purchase order, pays a supplier, or signs a contract.

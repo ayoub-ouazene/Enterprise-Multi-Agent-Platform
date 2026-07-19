@@ -4,6 +4,7 @@ from app.departments.models import Department
 from app.departments.customer_support.models import SupportIssue
 from app.departments.finance.models import Budget, FinanceRequest, FinancialTransaction
 from app.departments.it.models import AccessRequest, Asset, HardwareRequest, ITIncident, SoftwareCatalog
+from app.departments.procurement.models import ProcurementRequest, SupplierCandidate
 from app.employees.models import Employee
 from app.failures.models import CapabilityGap, FailureLog
 from app.notifications.models import Notification
@@ -25,6 +26,8 @@ __all__ = [
     "HardwareRequest",
     "ITIncident",
     "SoftwareCatalog",
+    "ProcurementRequest",
+    "SupplierCandidate",
     "Employee",
     "FailureLog",
     "CapabilityGap",

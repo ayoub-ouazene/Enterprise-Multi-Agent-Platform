@@ -610,6 +610,13 @@ class WorkflowService:
                 )
                 if persist_finance is not None:
                     await persist_finance(state)
+                persist_procurement = getattr(
+                    self.department_execution_service,
+                    "persist_procurement_collaboration_result",
+                    None,
+                )
+                if persist_procurement is not None:
+                    await persist_procurement(state)
             event = self._event_for_node(node_name, state)
             if event is not None:
                 await self.workflow_event_service.append(

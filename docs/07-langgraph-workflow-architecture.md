@@ -200,3 +200,13 @@ tools checkpoint before Finance continues. IT-to-Finance validation executes Fin
 returns a structured result to IT under the same Request ID and unchanged owner. The future
 Procurement contract follows the same pattern. Approval-required work enters the existing human
 waiting state. HR and Procurement remain placeholders.
+
+## Procurement graph behavior
+
+Procurement runs inside the centralized graph. Informational questions may complete after grounded
+retrieval. Controlled evaluation tools return deterministic results to Procurement. IT-to-
+Procurement `find_it_asset_suppliers` executes Procurement as a collaborator without changing the
+IT owner. When final financial validation is needed, the same workflow runs Finance with
+`validate_procurement_purchase`, returns the result to Procurement, and then returns the shortlist
+to IT. Clarification, human selection preparation, failures, and completion reuse existing nodes
+and checkpoints. HR remains the only placeholder.

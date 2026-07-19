@@ -183,3 +183,13 @@ multiple budgets or cost centers, exceptions, high impact, and complex collabora
 cannot calculate authoritative balances. Allowlisted tools are `get_budget_status`,
 `validate_budget_availability`, `reserve_budget`, `release_budget_reservation`, and
 `record_financial_transaction`; all monetary mutation remains deterministic and tenant-scoped.
+
+## Procurement model and tool policy
+
+Procurement uses only configured Fast and Reasoning Groq roles. Fast handles policy questions,
+requirements extraction, candidate summaries, and straightforward shortlist explanations.
+Reasoning is restricted to conflicting policy, complex criteria, contradictory quotations,
+compliance risk, exceptions, and high-impact recommendations. The model cannot create supplier
+facts or calculate authoritative cost, eligibility, scores, or ranks. Allowlisted tools only list
+candidates, calculate total cost, evaluate eligibility, score, rank, and persist a shortlist; they
+cannot search the internet or execute purchasing.

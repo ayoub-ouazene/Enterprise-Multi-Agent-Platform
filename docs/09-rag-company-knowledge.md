@@ -120,3 +120,11 @@ policy, procedure, manual, and internal-rule document types represent expense po
 matrices, purchasing policies, budget procedures, and financial manuals. Requester access scope is
 derived from trusted authentication records. Database balances remain authoritative when RAG policy
 and financial records are used together.
+
+## Procurement retrieval
+
+Procurement retrieves only `procurement` and `shared` knowledge in the trusted company namespace.
+Existing policy, procedure, manual, and internal-rule document types represent purchasing policy,
+supplier requirements, approval matrices, compliance rules, and internal procedures. Requester
+access scopes are derived from trusted authentication context. RAG may explain evaluation policy
+but cannot create supplier facts, quotations, scores, Finance decisions, or authorization.

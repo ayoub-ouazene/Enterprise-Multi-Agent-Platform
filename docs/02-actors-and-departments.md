@@ -262,3 +262,13 @@ reservations, accepts IT and future Procurement financial-validation collaborati
 spending approval, and records authorized confirmed financial movements. Finance cannot choose
 suppliers, source products, execute purchases or payments, initiate bank transfers, or approve
 restricted spending. Human Resources and Procurement remain placeholders.
+
+## Step 16 Procurement implementation
+
+Procurement is now real alongside Customer Support, IT, and Finance. It retrieves only authorized
+Procurement/shared company knowledge, manages tenant-scoped supplier candidates, performs exact
+quotation arithmetic, applies deterministic eligibility and weighted scoring, and returns an
+advisory shortlist. It accepts IT purchase requirements and may request Finance validation under
+the same Request ID. Procurement cannot discover suppliers on the public internet, execute a
+purchase or payment, sign a contract, or silently make final supplier selection. Human Resources
+remains the only placeholder department.

@@ -106,3 +106,14 @@ provider failures use `FailureService`; insufficient balance, inactive periods, 
 are business decisions and do not create failure logs. Approval preparation notifies an authorized
 Finance manager or Company account. No prompt, raw evidence, credential, financial secret, or
 provider payload is logged.
+
+## Procurement failures and notifications
+
+Procurement Pinecone and Groq failures use bounded retries and sanitized provider categories.
+Malformed structured output receives one bounded correction attempt. Persistence and unexpected
+execution failures use `FailureService`. Empty candidate sets, all-ineligible candidates, mixed
+currencies, invalid weights, and Finance rejection are safe business outcomes rather than technical
+failure logs. Unsupported external supplier discovery creates a capability gap only when discovery
+is required. Human selection preparation notifies an authorized Procurement manager or Company
+account without claiming that selection or purchase occurred. Prompts, raw evidence, quotation
+contacts, credentials, and complete provider payloads are never logged.

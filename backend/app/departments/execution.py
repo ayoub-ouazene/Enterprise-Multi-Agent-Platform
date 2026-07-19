@@ -30,6 +30,10 @@ from app.departments.finance.agent import FinanceDepartmentAgent
 from app.departments.finance.schemas import FinanceDepartmentResult
 from app.departments.finance.service import FinanceService
 from app.departments.finance.tools import FinanceBusinessDecisionError, FinanceToolService
+from app.departments.procurement.agent import ProcurementDepartmentAgent
+from app.departments.procurement.schemas import ProcurementDepartmentResult
+from app.departments.procurement.service import ProcurementService
+from app.departments.procurement.tools import ProcurementToolService
 from app.users.repository import UserRepository
 from app.departments.contracts import DepartmentCollaborationResult
 from app.rag.pinecone import PineconeProvider
@@ -55,6 +59,7 @@ class DepartmentExecutionService:
         customer_support_service: CustomerSupportService | None = None,
         it_service: ITService | None = None,
         finance_service: FinanceService | None = None,
+        procurement_service: ProcurementService | None = None,
         user_repository: UserRepository | None = None,
     ) -> None:
         self.session = session
@@ -70,6 +75,7 @@ class DepartmentExecutionService:
         self.customer_support_service = customer_support_service
         self.it_service = it_service
         self.finance_service = finance_service
+        self.procurement_service = procurement_service
         self.user_repository = user_repository or UserRepository(session, current_user.company_id)
         if registry is None:
             if customer_support_service is None:
@@ -100,10 +106,23 @@ class DepartmentExecutionService:
                     ),
                 )
                 self.finance_service = finance_service
+            if procurement_service is None:
+                if settings is None or pinecone_provider is None:
+                    raise ValueError("Procurement settings and Pinecone provider are required")
+                procurement_service = ProcurementService(
+                    session,
+                    current_user,
+                    settings,
+                    KnowledgeRetrievalService(
+                        session, current_user, settings, pinecone_provider
+                    ),
+                )
+                self.procurement_service = procurement_service
             registry = build_default_department_registry(
                 CustomerSupportDepartmentAgent(customer_support_service),
                 ITDepartmentAgent(it_service),
                 FinanceDepartmentAgent(finance_service),
+                ProcurementDepartmentAgent(procurement_service),
             )
         self.registry = registry
 
@@ -266,6 +285,14 @@ class DepartmentExecutionService:
         if department_result.requires_tool:
             if department_result.tool_request is None:
                 raise DepartmentResultValidationError("Finance tool request is missing")
+            if (
+                request.sender_department == DepartmentType.PROCUREMENT
+                and department_result.tool_request.operation
+                not in {"get_budget_status", "validate_budget_availability"}
+            ):
+                raise DepartmentResultValidationError(
+                    "Procurement collaboration permits read-only Finance validation"
+                )
             tool = FinanceToolService(
                 self.finance_service.budgets,
                 self.finance_service.finance_requests,
@@ -365,6 +392,143 @@ class DepartmentExecutionService:
             output["idempotency_reference"] = reference
         return output
 
+    async def execute_procurement_tool(self, state: WorkflowState) -> dict[str, Any]:
+        result = DepartmentExecutionResult.model_validate(
+            state.execution.department_result
+        )
+        if (
+            result.department_type != DepartmentType.PROCUREMENT
+            or result.tool_request is None
+        ):
+            raise DepartmentContextMismatchError(
+                "Only validated Procurement tools are active"
+            )
+        operation = result.tool_request.operation
+        if any(item.get("operation") == operation for item in state.execution.tool_results):
+            raise DepartmentStateUpdateError(
+                "The Procurement tool operation already completed"
+            )
+        if self.procurement_service is None:
+            raise DepartmentContextMismatchError("Procurement service is unavailable")
+        tool = ProcurementToolService(
+            self.procurement_service.candidates,
+            request_id=state.request.request_id,
+        )
+        return await tool.execute(result.tool_request)
+
+    async def execute_procurement_collaboration(
+        self, state: WorkflowState, request: DepartmentCollaborationRequest
+    ) -> DepartmentCollaborationResult:
+        if (
+            request.request_id != state.request.request_id
+            or request.sender_department != DepartmentType.IT
+            or request.receiver_department != DepartmentType.PROCUREMENT
+            or request.action != "find_it_asset_suppliers"
+        ):
+            raise DepartmentContextMismatchError(
+                "Procurement collaboration request is invalid"
+            )
+        business_request = await self.request_repository.get_by_id(
+            state.request.request_id
+        )
+        requester = await self.user_repository.get_by_id_with_employee(
+            state.request.requester_user_id
+        )
+        department = await self.department_repository.get_by_type(
+            DepartmentType.PROCUREMENT
+        )
+        if (
+            business_request is None
+            or requester is None
+            or department is None
+            or not department.is_active
+            or self.procurement_service is None
+        ):
+            raise NotFoundError("Procurement collaboration context not found")
+        context = self._build_context(
+            state,
+            business_request=business_request,
+            owner_department_type=DepartmentType.IT,
+            active_department_type=DepartmentType.PROCUREMENT,
+            requester=requester,
+        ).model_copy(update={"collaboration_input": request})
+        await self.session.rollback()
+        department_result = DepartmentExecutionResult.model_validate(
+            await self.registry.resolve(DepartmentType.PROCUREMENT).execute(context)
+        )
+        if department_result.department_type != DepartmentType.PROCUREMENT:
+            raise DepartmentResultValidationError(
+                "Procurement collaboration returned the wrong department"
+            )
+
+        tool_results = list(context.tool_results)
+        if department_result.requires_tool:
+            if department_result.tool_request is None:
+                raise DepartmentResultValidationError(
+                    "Procurement collaboration tool request is missing"
+                )
+            tool = ProcurementToolService(
+                self.procurement_service.candidates,
+                request_id=state.request.request_id,
+            )
+            tool_results.append(await tool.execute(department_result.tool_request))
+            await self.session.rollback()
+            context = context.model_copy(update={"tool_results": tool_results})
+            department_result = DepartmentExecutionResult.model_validate(
+                await self.registry.resolve(DepartmentType.PROCUREMENT).execute(context)
+            )
+
+        finance_data = None
+        if department_result.requires_collaboration:
+            finance_request = department_result.collaboration_request
+            if finance_request is None:
+                raise DepartmentResultValidationError(
+                    "Procurement Finance collaboration request is missing"
+                )
+            finance_result = await self.execute_finance_collaboration(
+                state, finance_request
+            )
+            finance_data = finance_result.result.get("finance_data")
+            await self.session.rollback()
+            context = context.model_copy(
+                update={
+                    "collaboration_result": finance_result,
+                    "tool_results": tool_results,
+                }
+            )
+            department_result = DepartmentExecutionResult.model_validate(
+                await self.registry.resolve(DepartmentType.PROCUREMENT).execute(context)
+            )
+        if department_result.requires_tool or department_result.requires_collaboration:
+            raise DepartmentResultValidationError(
+                "Procurement collaboration did not reach a stable outcome"
+            )
+        data = (
+            department_result.state_updates.execution.department_data
+            if department_result.state_updates.execution
+            else {}
+        )
+        return DepartmentCollaborationResult(
+            request_id=request.request_id,
+            sender_department=DepartmentType.PROCUREMENT,
+            receiver_department=DepartmentType.IT,
+            action=request.action,
+            status=(
+                "unsupported"
+                if department_result.status.value == "unsupported"
+                else "failed"
+                if department_result.status.value == "failed"
+                else "completed"
+            ),
+            result={
+                "decision": department_result.decision,
+                "user_message": department_result.user_message,
+                "procurement_data": data or {},
+                "finance_data": finance_data,
+            },
+            reason=department_result.reason,
+        )
+
     async def persist_it_collaboration_result(self, state: WorkflowState) -> None:
         if self.it_service is None or not state.collaboration.structured_result:
             return
@@ -392,6 +556,29 @@ class DepartmentExecutionService:
                 FinanceDepartmentResult.model_validate(data),
             )
 
+    async def persist_procurement_collaboration_result(
+        self, state: WorkflowState
+    ) -> None:
+        if self.procurement_service is None or not state.collaboration.structured_result:
+            return
+        collaboration = DepartmentCollaborationResult.model_validate(
+            state.collaboration.structured_result
+        )
+        if collaboration.sender_department != DepartmentType.PROCUREMENT:
+            return
+        data = collaboration.result.get("procurement_data")
+        if data:
+            await self.procurement_service.persist_result(
+                state.request.request_id,
+                ProcurementDepartmentResult.model_validate(data),
+            )
+        finance_data = collaboration.result.get("finance_data")
+        if finance_data and self.finance_service is not None:
+            await self.finance_service.persist_result(
+                state.request.request_id,
+                FinanceDepartmentResult.model_validate(finance_data),
+            )
+
     async def persist_department_result(self, state: WorkflowState) -> None:
         raw = state.execution.department_result
         if not raw:
@@ -415,6 +602,15 @@ class DepartmentExecutionService:
             await self.finance_service.persist_result(
                 state.request.request_id,
                 FinanceDepartmentResult.model_validate(data),
+            )
+        if (
+            data
+            and raw.get("department_type") == DepartmentType.PROCUREMENT.value
+            and self.procurement_service
+        ):
+            await self.procurement_service.persist_result(
+                state.request.request_id,
+                ProcurementDepartmentResult.model_validate(data),
             )
 
     @staticmethod

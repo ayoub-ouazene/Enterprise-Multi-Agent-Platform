@@ -199,3 +199,12 @@ non-spending hold and may be automatic only when policy clearly permits it and n
 required. Approval-required work pauses without a pre-approval hold. Commitments and expenses need
 trusted authorization; an expense also needs confirmed execution evidence. Insufficient balance is
 a safe business rejection rather than a technical failure.
+
+## Procurement request flows
+
+Procurement information answers may complete immediately when grounded. Supplier evaluation uses
+stored tenant candidates and deterministic backend calculations: exact total cost, eligibility,
+bounded component scores, weighted overall score, and stable tie-breaking. Recommendations are
+advisory. IT-to-Procurement and Procurement-to-Finance collaboration retain the original owner and
+Request ID. Finance rejection prevents selection; required authorization enters the existing human
+waiting state. Completion returns a shortlist without claiming purchase execution.

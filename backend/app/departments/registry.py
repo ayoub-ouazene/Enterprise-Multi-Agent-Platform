@@ -46,6 +46,7 @@ def build_default_department_registry(
     customer_support_agent: CustomerSupportDepartmentAgent | None = None,
     it_agent: ITDepartmentAgent | None = None,
     finance_agent: FinanceDepartmentAgent | None = None,
+    procurement_agent: ProcurementDepartmentAgent | None = None,
 ) -> DepartmentRegistry:
     return DepartmentRegistry(
         (
@@ -53,6 +54,6 @@ def build_default_department_registry(
             HRDepartmentAgent(),
             it_agent or ITDepartmentAgent(),
             finance_agent or FinanceDepartmentAgent(),
-            ProcurementDepartmentAgent(),
+            procurement_agent or ProcurementDepartmentAgent(),
         )
     )

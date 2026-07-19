@@ -7,6 +7,7 @@ from app.departments.exceptions import (
 )
 from app.departments.it.agent import ITDepartmentAgent
 from app.departments.finance.agent import FinanceDepartmentAgent
+from app.departments.procurement.agent import ProcurementDepartmentAgent
 from app.departments.registry import (
     DepartmentRegistry,
     build_default_department_registry,
@@ -22,6 +23,9 @@ def test_default_registry_contains_all_five_departments() -> None:
     for department_type in DepartmentType:
         assert registry.resolve(department_type).department_type == department_type
     assert isinstance(registry.resolve(DepartmentType.FINANCE), FinanceDepartmentAgent)
+    assert isinstance(
+        registry.resolve(DepartmentType.PROCUREMENT), ProcurementDepartmentAgent
+    )
 
 
 def test_duplicate_registration_is_rejected() -> None:

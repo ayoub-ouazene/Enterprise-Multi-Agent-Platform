@@ -65,7 +65,25 @@ async def department_collaboration_node(state: WorkflowState,
     allowed = {(DepartmentType.IT, DepartmentType.PROCUREMENT, "find_it_asset_suppliers")}
     if (request.sender_department, request.receiver_department, request.action) not in allowed:
         raise InactiveWorkflowNodeError("The collaboration operation is not active")
-    request_state = state.request.model_copy(update={"status": RequestStatus.WAITING_FOR_DEPARTMENT,
-        "current_stage": f"it_waiting_for_{request.receiver_department.value}"})
-    return {"request": request_state,
-        "collaboration": state.collaboration.model_copy(update={"is_active": True})}
+    service = runtime.context.department_execution_service
+    if service is None:
+        request_state = state.request.model_copy(update={
+            "status": RequestStatus.WAITING_FOR_DEPARTMENT,
+            "current_stage": "it_waiting_for_procurement",
+        })
+        return {
+            "request": request_state,
+            "collaboration": state.collaboration.model_copy(update={"is_active": True}),
+        }
+    result = await service.execute_procurement_collaboration(state, request)
+    return {
+        "request": state.request.model_copy(update={
+            "status": RequestStatus.PROCESSING,
+            "current_stage": "it_received_procurement_shortlist",
+        }),
+        "collaboration": state.collaboration.model_copy(update={
+            "structured_result": result.model_dump(mode="json"),
+            "is_active": False,
+        }),
+        "execution": state.execution.model_copy(update={"department_result": {}}),
+    }

@@ -60,3 +60,19 @@ class FinanceProviderError(FinanceClientError):
 
 class FinanceOutputError(FinanceClientError):
     pass
+
+
+class ProcurementClientError(Exception):
+    """Safe base exception for Procurement model failures."""
+
+
+class ProcurementConfigurationError(ProcurementClientError):
+    pass
+
+
+class ProcurementProviderError(ProcurementClientError):
+    pass
+
+
+class ProcurementOutputError(ProcurementClientError):
+    pass

@@ -49,7 +49,7 @@ No separate general `expenses` table in Version 1. Purchase-related financial da
 
 ### Procurement Tables
 
-- `suppliers`
+- `procurement_requests`
 - `supplier_candidates`
 
 A separate supplier-evaluations table is unnecessary in Version 1. Candidate rows contain price, delivery, scores, ranking, and recommendation reason.
@@ -209,3 +209,12 @@ request extension using the original Request ID; it replaces the earlier concept
 pending or confirmed reservation, commitment, expense, release, adjustment, and reversal entries.
 Only confirmed movements change authoritative totals. Budget mutation locks the tenant-scoped budget
 row and repositories never commit independently.
+
+## Procurement foundation tables
+
+`procurement_requests` is a tenant-owned one-to-one extension using the original Request ID. It
+stores the structured requirement, exact quantity and budget values, currency, criteria, Finance
+state, shortlist state, and authorized selection state. `supplier_candidates` contains quotation
+facts and deterministic evaluation results in one table. Money uses fixed-precision decimals;
+scores are bounded to 0–100. A partial unique index permits at most one selected candidate for a
+request. There is no separate evaluation, shortlist, purchase-order, contract, or payment table.

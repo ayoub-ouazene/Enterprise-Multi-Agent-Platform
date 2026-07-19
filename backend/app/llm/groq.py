@@ -29,6 +29,9 @@ from app.llm.exceptions import (
     FinanceConfigurationError,
     FinanceOutputError,
     FinanceProviderError,
+    ProcurementConfigurationError,
+    ProcurementOutputError,
+    ProcurementProviderError,
     ITConfigurationError,
     ITOutputError,
     ITProviderError,
@@ -284,6 +287,115 @@ class GroqFinanceClient:
         logger.info(
             "LLM request completed role=%s model=%s latency_ms=%d retry_count=%d category=%s",
             f"finance_{role}", model, int((monotonic() - started) * 1000), retries, category,
+        )
+
+
+class GroqProcurementClient:
+    """Centralized Groq client restricted to Procurement model roles."""
+
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        client: Any | None = None,
+        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+    ) -> None:
+        if settings.groq_api_key is None or not settings.groq_api_key.get_secret_value().strip():
+            raise ProcurementConfigurationError(
+                "GROQ_API_KEY must be configured for Procurement"
+            )
+        if not settings.groq_model_fast.strip() or not settings.groq_model_reasoning.strip():
+            raise ProcurementConfigurationError(
+                "Fast and Reasoning Groq models must be configured for Procurement"
+            )
+        self.settings, self._sleep = settings, sleep
+        self._client = client or AsyncGroq(
+            api_key=settings.groq_api_key.get_secret_value(),
+            base_url=str(settings.groq_base_url),
+            timeout=float(settings.llm_request_timeout_seconds),
+            max_retries=0,
+        )
+
+    async def generate(self, payload: Any, *, role: Any) -> Any:
+        from app.departments.procurement.enums import ProcurementModelRole
+        from app.departments.procurement.prompt import (
+            PROCUREMENT_SYSTEM_PROMPT,
+            build_procurement_user_message,
+        )
+        from app.departments.procurement.schemas import ProcurementDepartmentResult
+
+        if role not in {ProcurementModelRole.FAST, ProcurementModelRole.REASONING}:
+            raise ProcurementConfigurationError("Unsupported Procurement model role")
+        model = (
+            self.settings.groq_model_fast
+            if role == ProcurementModelRole.FAST
+            else self.settings.groq_model_reasoning
+        ).strip()
+        messages = [
+            {"role": "system", "content": PROCUREMENT_SYSTEM_PROMPT},
+            {"role": "user", "content": build_procurement_user_message(payload)},
+        ]
+        retries, validation_retry = 0, False
+        while True:
+            started = monotonic()
+            try:
+                response = await self._client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=self.settings.llm_temperature,
+                    response_format={"type": "json_object"},
+                )
+                content = response.choices[0].message.content
+                if not isinstance(content, str) or not content.strip():
+                    raise ValueError("empty response")
+                result = ProcurementDepartmentResult.model_validate(json.loads(content))
+            except TemporaryProviderError:
+                self._log_procurement(
+                    started, role.value, model, retries, "temporary_failure"
+                )
+                if retries >= self.settings.llm_max_retries:
+                    raise ProcurementProviderError(
+                        "Procurement is temporarily unavailable"
+                    ) from None
+                retries += 1
+                await self._sleep(min(0.25 * 2 ** (retries - 1), 2.0))
+                continue
+            except (json.JSONDecodeError, ValidationError, ValueError, IndexError, TypeError):
+                self._log_procurement(started, role.value, model, retries, "invalid_output")
+                if validation_retry or retries >= self.settings.llm_max_retries:
+                    raise ProcurementOutputError(
+                        "Procurement returned an invalid structured response"
+                    ) from None
+                validation_retry, retries = True, retries + 1
+                messages.append(
+                    {
+                        "role": "system",
+                        "content": (
+                            "Correct the response and return only valid "
+                            "ProcurementDepartmentResult JSON."
+                        ),
+                    }
+                )
+                continue
+            except Exception:
+                self._log_procurement(
+                    started, role.value, model, retries, "permanent_failure"
+                )
+                raise ProcurementProviderError("Procurement provider request failed") from None
+            self._log_procurement(started, role.value, model, retries, "success")
+            return result
+
+    @staticmethod
+    def _log_procurement(
+        started: float, role: str, model: str, retries: int, category: str
+    ) -> None:
+        logger.info(
+            "LLM request completed role=%s model=%s latency_ms=%d retry_count=%d category=%s",
+            f"procurement_{role}",
+            model,
+            int((monotonic() - started) * 1000),
+            retries,
+            category,
         )
 
 

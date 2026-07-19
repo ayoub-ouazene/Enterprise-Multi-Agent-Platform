@@ -1,10 +1,24 @@
 from app.core.enums import DepartmentType
-from app.departments.base import DeterministicPlaceholderDepartmentAgent
+from app.departments.contracts import DepartmentExecutionContext, DepartmentExecutionResult
+from app.departments.exceptions import DepartmentContextMismatchError
+from app.departments.procurement.service import ProcurementService
 
 
-class ProcurementDepartmentAgent(DeterministicPlaceholderDepartmentAgent):
-    """Step 11 placeholder; it contains no Procurement business logic."""
+class ProcurementDepartmentAgent:
+    """Real Step 16 Procurement implementation."""
 
     department_type = DepartmentType.PROCUREMENT
-    department_label = "Procurement"
-    completed_step = "procurement_placeholder_completed"
+
+    def __init__(self, service: ProcurementService | None = None) -> None:
+        self.service = service
+
+    async def execute(
+        self, context: DepartmentExecutionContext
+    ) -> DepartmentExecutionResult:
+        if context.active_department_type != DepartmentType.PROCUREMENT:
+            raise DepartmentContextMismatchError(
+                "The active department does not match Procurement"
+            )
+        if self.service is None:
+            raise RuntimeError("Procurement dependencies are unavailable")
+        return await self.service.execute(context)

@@ -94,3 +94,13 @@ Other department managers may read only their own department budget summaries an
 transactions. Employees and external users cannot access full financial listings. Finance tools
 derive company, requester, and approval identity from trusted context; cross-company identifiers
 behave as not found. Restricted confirmed movements require an independent approver.
+
+## 14.10 Procurement Authorization
+
+Company accounts and trusted Procurement managers may manage supplier candidates inside their
+company. A collaborating department manager may read safe shortlist data only when the
+Procurement request records that department as requester. Ordinary employees cannot create or
+alter candidates, and external users have no Procurement data access. Candidate, request, company,
+Finance, and collaboration identity are derived from trusted records; cross-company identifiers
+behave as not found. Contact references and confidential custom metadata are excluded from public
+candidate responses.
