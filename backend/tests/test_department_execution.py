@@ -75,12 +75,20 @@ def execution_fixture(*, agent=None, active_type=DepartmentType.IT):
     )
     implementation = agent or RecordingAgent()
     registry = DepartmentRegistry([implementation])
+    users = Mock()
+    users.get_by_id_with_employee = AsyncMock(return_value=SimpleNamespace(
+        id=business_request.requester_user_id,
+        is_active=True,
+        actor_type=ActorType.EMPLOYEE,
+        employee=SimpleNamespace(department_id=uuid4()),
+    ))
     service = DepartmentExecutionService(
         AsyncMock(),
         current,
         request_repository=requests,
         department_repository=departments,
         registry=registry,
+        user_repository=users,
     )
     return service, state, business_request, implementation, requests, departments
 

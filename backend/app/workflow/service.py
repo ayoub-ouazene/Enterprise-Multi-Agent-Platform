@@ -15,6 +15,8 @@ from app.failures.schemas import CapabilityGapCreate, FailureCreate
 from app.llm.exceptions import (
     CustomerSupportClientError,
     CustomerSupportOutputError,
+    ITClientError,
+    ITOutputError,
     RouterConfigurationError,
 )
 from app.rag.exceptions import KnowledgeProviderError
@@ -578,16 +580,27 @@ class WorkflowService:
                 and state.routing.is_capability_gap
             ):
                 state = await self._record_capability_gap(state)
+            if node_name == "department_execution" and state.execution.department_result:
+                department_result = DepartmentExecutionResult.model_validate(
+                    state.execution.department_result)
+                if department_result.status.value == "unsupported":
+                    state = await self._record_department_capability_gap(
+                        state, department_result)
 
             business_request = await self.persistence.save_checkpoint(state)
             if node_name == "department_execution":
                 persist_support = getattr(
                     self.department_execution_service,
-                    "persist_customer_support_result",
+                    "persist_department_result",
                     None,
                 )
                 if persist_support is not None:
                     await persist_support(state)
+            if node_name == "collaboration":
+                persist_collaboration = getattr(self.department_execution_service,
+                    "persist_it_collaboration_result", None)
+                if persist_collaboration is not None:
+                    await persist_collaboration(state)
             event = self._event_for_node(node_name, state)
             if event is not None:
                 await self.workflow_event_service.append(
@@ -626,8 +639,8 @@ class WorkflowService:
                     recipient_user_id=recipient.id,
                     request_id=state.request.request_id,
                     notification_type=NotificationType.HUMAN_ACTION_REQUIRED,
-                    title="Customer Support action required",
-                    message="A Customer Support request needs authorized human assistance.",
+                    title="Department action required",
+                    message="A department request needs authorized human assistance.",
                     severity=NotificationSeverity.WARNING,
                     action_required=True,
                     action_type=NotificationActionType.VIEW_REQUEST,
@@ -697,15 +710,17 @@ class WorkflowService:
                 event_data={"department_type": result.department_type.value},
             )
         if node_name == "collaboration":
+            request = state.collaboration.request
+            receiver = request.get("receiver_department") if request else None
             return WorkflowEventCreate(
                 event_type=WorkflowEventType.DEPARTMENT_COLLABORATION_STARTED,
                 stage=state.request.current_stage,
-                title="IT diagnostic collaboration prepared",
-                message="Customer Support prepared an IT diagnostic collaboration on this request.",
+                title="Department collaboration updated",
+                message=("IT returned a diagnostic result to Customer Support." if state.collaboration.structured_result else f"A collaboration with {receiver or 'another department'} was prepared."),
                 actor_type=WorkflowEventActorType.DEPARTMENT_AGENT,
                 department_id=state.request.owner_department_id,
                 visibility=WorkflowEventVisibility.REQUESTER,
-                event_data={"owner_department": DepartmentType.CUSTOMER_SUPPORT.value},
+                event_data={"owner_department": state.routing.selected_department.value if state.routing.selected_department else "unknown"},
             )
         if node_name == "human_action":
             return WorkflowEventCreate(
@@ -773,6 +788,25 @@ class WorkflowService:
             {"request": request, "failure": failure, "result": result},
         )
 
+    async def _record_department_capability_gap(
+        self, state: WorkflowState, department_result: DepartmentExecutionResult
+    ) -> WorkflowState:
+        await self.capability_gap_service.record(CapabilityGapCreate(
+            request_id=state.request.request_id,
+            department_id=state.request.owner_department_id,
+            requested_operation=department_result.decision,
+            description=department_result.reason,
+            safe_user_message=department_result.user_message,
+            metadata={"source": department_result.department_type.value}),
+            no_alternative=True, commit=False)
+        request = state.request.model_copy(update={"status": RequestStatus.FAILED,
+            "current_stage": RequestStatus.FAILED.value})
+        failure = WorkflowFailureState(has_failure=True, failure_type="capability_gap",
+            safe_message=department_result.user_message, terminal=True)
+        result = WorkflowResultState(decision=RequestStatus.FAILED.value,
+            reason=department_result.reason, final_response=department_result.user_message)
+        return apply_state_update(state, {"request": request, "failure": failure, "result": result})
+
     async def _record_graph_failure(
         self,
         state: WorkflowState,
@@ -795,6 +829,14 @@ class WorkflowService:
             failure_type = FailureType.EXTERNAL_SERVICE_FAILURE
             failure_source = FailureSource.LLM
             safe_message = "Customer Support is temporarily unavailable."
+        elif isinstance(exc, ITOutputError):
+            failure_type = FailureType.VALIDATION_FAILURE
+            failure_source = FailureSource.LLM
+            safe_message = "IT could not validate its response."
+        elif isinstance(exc, ITClientError):
+            failure_type = FailureType.EXTERNAL_SERVICE_FAILURE
+            failure_source = FailureSource.LLM
+            safe_message = "IT is temporarily unavailable."
         try:
             failure = await self.failure_service.record(
                 FailureCreate(

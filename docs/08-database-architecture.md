@@ -191,3 +191,11 @@ Cross-company record IDs must behave as not found.
 both the primary key and a cascading foreign key. It stores issue category/status, product or
 service, symptoms, error messages, structured troubleshooting progress, resolution, escalation
 flags, safe custom state, and timestamps. Repository access always includes `company_id`.
+
+## IT foundation tables
+
+`access_requests`, `hardware_requests`, and `it_incidents` are one-to-one extensions using the
+original Request ID. `assets` and `software_catalog` are tenant-owned reference data. Important
+status, type, employee, reporter, and active fields are relational columns; safe optional company
+fields remain JSONB. Password, reset-token, supplier, budget, purchase, and physical-execution data
+is not stored by this foundation.

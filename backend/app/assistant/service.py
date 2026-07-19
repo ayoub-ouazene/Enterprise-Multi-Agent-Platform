@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import uuid4
+import inspect
 
 from app.assistant.schemas import AssistantMessageRequest, AssistantMessageResponse
 from app.auth.context import AuthenticatedUser
@@ -83,23 +84,27 @@ class AssistantService:
         precomputed = None
         if (
             output.message_category == RouterMessageCategory.DEPARTMENT_QUESTION
-            and output.owner_department == DepartmentType.CUSTOMER_SUPPORT
+            and output.owner_department in {DepartmentType.CUSTOMER_SUPPORT, DepartmentType.IT}
         ):
             request_id = uuid4()
-            support = getattr(
-                self.workflow_service.department_execution_service,
-                "customer_support_service",
-                None,
-            )
-            if support is not None:
-                result = await support.execute(
+            execution_service = getattr(self.workflow_service, "department_execution_service", None)
+            department_service = (getattr(execution_service, "customer_support_service", None)
+                if output.owner_department == DepartmentType.CUSTOMER_SUPPORT
+                else getattr(execution_service, "it_service", None))
+            if department_service is not None and inspect.iscoroutinefunction(
+                getattr(department_service, "execute", None)
+            ):
+                result = await department_service.execute(
                     DepartmentExecutionContext(
                         request_id=request_id,
                         company_id=self.current_user.company_id,
                         requester_user_id=self.current_user.user_id,
                         requester_employee_id=self.current_user.employee_id,
-                        owner_department_type=DepartmentType.CUSTOMER_SUPPORT,
-                        active_department_type=DepartmentType.CUSTOMER_SUPPORT,
+                        requester_department_id=self.current_user.department_id,
+                        requester_actor_type=self.current_user.actor_type,
+                        requester_is_manager=self.current_user.is_manager,
+                        owner_department_type=output.owner_department,
+                        active_department_type=output.owner_department,
                         request_type=output.request_type or "customer_support_question",
                         request_summary=payload.message,
                         current_stage="customer_support_analysis",
@@ -153,6 +158,8 @@ class AssistantService:
     def _with_sources(message: str, result) -> str:
         data = result.state_updates.execution
         refs = data.department_data.get("sources", []) if data and data.department_data else []
+        if data and data.department_data and not refs:
+            refs = data.department_data.get("sources_used", [])
         titles = list(dict.fromkeys(item["title"] for item in refs if item.get("title")))
         return message if not titles else f"{message}\n\nSources: {', '.join(titles)}"
 

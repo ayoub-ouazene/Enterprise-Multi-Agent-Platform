@@ -1,9 +1,10 @@
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.departments.contracts import (
+    DepartmentCollaborationResult,
     DepartmentCollaborationRequest,
     DepartmentConfidence,
     DepartmentHumanActionRequest,
@@ -96,3 +97,4 @@ class CustomerSupportModelInput(BaseModel):
     latest_user_input: str | None = None
     evidence: list[dict[str, Any]] = Field(default_factory=list)
     issue_history: dict[str, Any] = Field(default_factory=dict)
+    it_collaboration_result: DepartmentCollaborationResult | None = None

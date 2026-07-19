@@ -303,6 +303,9 @@ class DepartmentExecutionContext(StrictContract):
     company_id: UUID
     requester_user_id: UUID
     requester_employee_id: UUID | None = None
+    requester_department_id: UUID | None = None
+    requester_actor_type: ActorType = ActorType.EXTERNAL_USER
+    requester_is_manager: bool = False
     owner_department_type: DepartmentType
     active_department_type: DepartmentType
     request_type: str = Field(min_length=1, max_length=100)
@@ -314,13 +317,23 @@ class DepartmentExecutionContext(StrictContract):
     relevant_custom_data: dict[str, Any] = Field(default_factory=dict)
     latest_user_input: str | None = Field(default=None, max_length=10_000)
     collaboration_input: DepartmentCollaborationRequest | None = None
+    collaboration_result: DepartmentCollaborationResult | None = None
     review_feedback: ReviewFeedbackContext | None = None
     human_response: HumanResponseContext | None = None
+    tool_results: list[dict[str, Any]] = Field(default_factory=list, max_length=100)
+    department_data: dict[str, Any] = Field(default_factory=dict)
 
-    @field_validator("relevant_custom_data")
+    @field_validator("relevant_custom_data", "department_data")
     @classmethod
     def validate_custom_data(cls, value: dict[str, Any]) -> dict[str, Any]:
         return _validate_safe_object(value, path="relevant_custom_data")
+
+    @field_validator("tool_results")
+    @classmethod
+    def validate_tool_results(cls, value: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        for item in value:
+            _validate_safe_object(item, path="tool_results")
+        return value
 
 
 class DepartmentExecutionResult(StrictContract):

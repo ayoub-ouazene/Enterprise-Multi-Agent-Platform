@@ -80,12 +80,18 @@ class CustomerSupportService:
             latest_user_input=context.latest_user_input,
             evidence=[self._evidence(item) for item in evidence],
             issue_history=issue_history,
+            it_collaboration_result=context.collaboration_result,
         )
         result = await self.llm.generate(payload, role=SupportModelRole.FAST)
         if requires_reasoning_pass(result):
             result = await self.llm.generate(payload, role=SupportModelRole.REASONING)
         self._validate_sources(result, evidence)
-        return self._to_department_result(result)
+        department_result = self._to_department_result(result)
+        if context.collaboration_result is not None:
+            updates = department_result.state_updates.model_copy(update={
+                "collaboration": DepartmentCollaborationUpdates(is_active=False)})
+            department_result = department_result.model_copy(update={"state_updates": updates})
+        return department_result
 
     @staticmethod
     def _query_text(context: DepartmentExecutionContext, history: dict[str, Any]) -> str:

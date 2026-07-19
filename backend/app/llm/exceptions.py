@@ -28,3 +28,19 @@ class CustomerSupportProviderError(CustomerSupportClientError):
 
 class CustomerSupportOutputError(CustomerSupportClientError):
     pass
+
+
+class ITClientError(Exception):
+    """Safe base exception for IT model failures."""
+
+
+class ITConfigurationError(ITClientError):
+    pass
+
+
+class ITProviderError(ITClientError):
+    pass
+
+
+class ITOutputError(ITClientError):
+    pass

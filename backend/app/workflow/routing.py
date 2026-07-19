@@ -3,6 +3,7 @@ from typing import Literal
 from langgraph.graph import END
 
 from app.departments.contracts import DepartmentExecutionResult, DepartmentNextAction
+from app.core.enums import DepartmentType
 from app.workflow.router_output import RouterMessageCategory
 
 from app.workflow.state import (
@@ -88,3 +89,10 @@ def route_after_department(
         DepartmentNextAction.FAIL_REQUEST: "failure",
     }
     return routes[result.next_action]
+
+
+def route_after_collaboration(state: WorkflowState) -> Literal["department_execution", "__end__"]:
+    result = state.collaboration.structured_result
+    if result and result.get("sender_department") == DepartmentType.CUSTOMER_SUPPORT.value and result.get("receiver_department") == DepartmentType.IT.value:
+        return "department_execution"
+    return END

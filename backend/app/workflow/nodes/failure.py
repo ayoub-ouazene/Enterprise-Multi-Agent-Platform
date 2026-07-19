@@ -1,10 +1,11 @@
-from typing import NoReturn
-
+from typing import Any
+from app.departments.contracts import DepartmentExecutionResult, DepartmentExecutionStatus
 from app.workflow.exceptions import InactiveWorkflowNodeError
 from app.workflow.state import WorkflowState
 
 
-def inactive_failure_node(_: WorkflowState) -> NoReturn:
-    raise InactiveWorkflowNodeError(
-        "Graph failures are handled by WorkflowService in Step 9"
-    )
+def terminal_failure_node(state: WorkflowState) -> dict[str, Any]:
+    result = DepartmentExecutionResult.model_validate(state.execution.department_result)
+    if result.status == DepartmentExecutionStatus.UNSUPPORTED:
+        return {}
+    raise InactiveWorkflowNodeError("Operational graph failures are handled by WorkflowService")

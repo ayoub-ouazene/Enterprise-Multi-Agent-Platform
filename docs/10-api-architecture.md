@@ -163,3 +163,10 @@ Internal error details go to logs and failure records.
 ## 10.6 Idempotency
 
 Important mutation endpoints should support idempotent behavior where repeated requests could cause duplicate operations, especially approvals and financial confirmations.
+
+## 10.7 IT API Surface
+
+Step 14 adds no direct IT execution endpoint. IT remains available through
+`POST /api/v1/assistant/message` and existing request workflow start/resume endpoints. Asset and
+software imports/writes remain later onboarding work. Normal users cannot directly invoke asset
+assignment, password reset, account unlock, supplier, budget, or purchase operations.

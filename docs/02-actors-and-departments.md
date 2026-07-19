@@ -245,3 +245,11 @@ questions only from tenant-scoped, requester-authorized knowledge evidence, prov
 troubleshooting, prepare an IT diagnostic collaboration, or prepare a human escalation. It cannot
 execute refunds, payments, account or order changes, IT actions, approvals, or other mutations.
 Human Resources, IT, Finance, and Procurement remain deterministic placeholders.
+
+## Step 14 IT implementation
+
+IT is now real alongside Customer Support. It answers authorized IT questions, prepares access and
+identity operations, performs tenant-scoped inventory/software checks, diagnoses incidents, accepts
+Customer Support diagnostics, and prepares Finance, Procurement, or technician handoffs. IT does not
+spend money, approve budgets, choose suppliers, execute identity-provider operations, transfer
+assets, or claim physical work is complete. HR, Finance, and Procurement remain placeholders.

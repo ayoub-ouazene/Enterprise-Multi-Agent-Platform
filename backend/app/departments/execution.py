@@ -22,6 +22,12 @@ from app.departments.exceptions import (
 from app.departments.registry import DepartmentRegistry, build_default_department_registry
 from app.departments.customer_support.agent import CustomerSupportDepartmentAgent
 from app.departments.customer_support.service import CustomerSupportService
+from app.departments.it.agent import ITDepartmentAgent
+from app.departments.it.service import ITService
+from app.departments.it.schemas import ITDepartmentResult
+from app.departments.it.tools import ITToolService
+from app.users.repository import UserRepository
+from app.departments.contracts import DepartmentCollaborationResult
 from app.rag.pinecone import PineconeProvider
 from app.rag.retrieval import KnowledgeRetrievalService
 from app.departments.repository import DepartmentRepository
@@ -43,6 +49,8 @@ class DepartmentExecutionService:
         settings: Settings | None = None,
         pinecone_provider: PineconeProvider | None = None,
         customer_support_service: CustomerSupportService | None = None,
+        it_service: ITService | None = None,
+        user_repository: UserRepository | None = None,
     ) -> None:
         self.session = session
         self.current_user = current_user
@@ -55,6 +63,8 @@ class DepartmentExecutionService:
             current_user.company_id,
         )
         self.customer_support_service = customer_support_service
+        self.it_service = it_service
+        self.user_repository = user_repository or UserRepository(session, current_user.company_id)
         if registry is None:
             if customer_support_service is None:
                 if settings is None or pinecone_provider is None:
@@ -66,8 +76,15 @@ class DepartmentExecutionService:
                     KnowledgeRetrievalService(session, current_user, settings, pinecone_provider),
                 )
                 self.customer_support_service = customer_support_service
+            if it_service is None:
+                if settings is None or pinecone_provider is None:
+                    raise ValueError("IT settings and Pinecone provider are required")
+                it_service = ITService(session, current_user, settings,
+                    KnowledgeRetrievalService(session, current_user, settings, pinecone_provider))
+                self.it_service = it_service
             registry = build_default_department_registry(
-                CustomerSupportDepartmentAgent(customer_support_service)
+                CustomerSupportDepartmentAgent(customer_support_service),
+                ITDepartmentAgent(it_service),
             )
         self.registry = registry
 
@@ -122,11 +139,16 @@ class DepartmentExecutionService:
             )
 
         agent = self.registry.resolve(active.department_type)
+        requester = await self.user_repository.get_by_id_with_employee(
+            business_request.requester_user_id)
+        if requester is None or not requester.is_active:
+            raise NotFoundError("Requesting user not found")
         context = self._build_context(
             state,
             business_request=business_request,
             owner_department_type=owner.department_type,
             active_department_type=active.department_type,
+            requester=requester,
         )
         await self.session.rollback()
         raw_result = await agent.execute(context)
@@ -142,19 +164,81 @@ class DepartmentExecutionService:
             )
         return self._safe_state_update(state, result)
 
-    async def persist_customer_support_result(self, state: WorkflowState) -> None:
-        if self.customer_support_service is None:
+    async def execute_it_collaboration(
+        self, state: WorkflowState, request: DepartmentCollaborationRequest
+    ) -> DepartmentCollaborationResult:
+        if request.request_id != state.request.request_id or request.sender_department != DepartmentType.CUSTOMER_SUPPORT or request.receiver_department != DepartmentType.IT or request.action != "diagnose_external_technical_issue":
+            raise DepartmentContextMismatchError("IT collaboration request is invalid")
+        business_request = await self.request_repository.get_by_id(state.request.request_id)
+        requester = await self.user_repository.get_by_id_with_employee(state.request.requester_user_id)
+        it_department = await self.department_repository.get_by_type(DepartmentType.IT)
+        if business_request is None or requester is None or it_department is None or not it_department.is_active:
+            raise NotFoundError("IT collaboration context not found")
+        context = self._build_context(state, business_request=business_request,
+            owner_department_type=DepartmentType.CUSTOMER_SUPPORT,
+            active_department_type=DepartmentType.IT, requester=requester).model_copy(
+                update={"collaboration_input": request})
+        await self.session.rollback()
+        raw = await self.registry.resolve(DepartmentType.IT).execute(context)
+        result = DepartmentExecutionResult.model_validate(raw)
+        if result.department_type != DepartmentType.IT:
+            raise DepartmentResultValidationError("IT collaboration returned the wrong department")
+        if result.requires_tool or result.requires_collaboration:
+            raise DepartmentResultValidationError(
+                "IT collaboration cannot start a nested tool or department action"
+            )
+        data = result.state_updates.execution.department_data if result.state_updates.execution else {}
+        return DepartmentCollaborationResult(request_id=request.request_id,
+            sender_department=DepartmentType.CUSTOMER_SUPPORT,
+            receiver_department=DepartmentType.IT,
+            action=request.action,
+            status=("unsupported" if result.status.value == "unsupported" else
+                "failed" if result.status.value == "failed" else "completed"),
+            result={"decision": result.decision, "user_message": result.user_message,
+                "requires_human_technician": result.requires_human_action,
+                "diagnostic": data or {}}, reason=result.reason)
+
+    async def execute_it_tool(self, state: WorkflowState) -> dict[str, Any]:
+        result = DepartmentExecutionResult.model_validate(state.execution.department_result)
+        if result.department_type != DepartmentType.IT or result.tool_request is None:
+            raise DepartmentContextMismatchError("Only validated IT tools are active")
+        operation = result.tool_request.operation
+        if any(item.get("operation") == operation for item in state.execution.tool_results):
+            raise DepartmentStateUpdateError("The IT read tool already completed")
+        if self.it_service is None:
+            raise DepartmentContextMismatchError("IT service is unavailable")
+        tool = ITToolService(self.it_service.assets, self.it_service.software)
+        output = await tool.execute(result.tool_request)
+        await self.session.rollback()
+        return output
+
+    async def persist_it_collaboration_result(self, state: WorkflowState) -> None:
+        if self.it_service is None or not state.collaboration.structured_result:
             return
+        collaboration = DepartmentCollaborationResult.model_validate(state.collaboration.structured_result)
+        if collaboration.receiver_department != DepartmentType.IT:
+            return
+        diagnostic = collaboration.result.get("diagnostic")
+        if diagnostic:
+            await self.it_service.persist_result(state.request.request_id,
+                ITDepartmentResult.model_validate(diagnostic),
+                reported_by_user_id=state.request.requester_user_id)
+
+    async def persist_department_result(self, state: WorkflowState) -> None:
         raw = state.execution.department_result
-        if not raw or raw.get("department_type") != DepartmentType.CUSTOMER_SUPPORT.value:
+        if not raw:
             return
         data = raw.get("state_updates", {}).get("execution", {}).get("department_data")
-        if data:
+        if data and raw.get("department_type") == DepartmentType.CUSTOMER_SUPPORT.value and self.customer_support_service:
             from app.departments.customer_support.schemas import CustomerSupportResult
             await self.customer_support_service.persist_result(
                 state.request.request_id,
                 CustomerSupportResult.model_validate(data),
             )
+        if data and raw.get("department_type") == DepartmentType.IT.value and self.it_service:
+            await self.it_service.persist_result(state.request.request_id,
+                ITDepartmentResult.model_validate(data),
+                reported_by_user_id=state.request.requester_user_id)
 
     @staticmethod
     def _build_context(
@@ -163,12 +247,17 @@ class DepartmentExecutionService:
         business_request: Any,
         owner_department_type: DepartmentType,
         active_department_type: DepartmentType,
+        requester: Any,
     ) -> DepartmentExecutionContext:
         collaboration_input = None
         if state.collaboration.request:
             collaboration_input = DepartmentCollaborationRequest.model_validate(
                 state.collaboration.request
             )
+        collaboration_result = None
+        if state.collaboration.structured_result:
+            collaboration_result = DepartmentCollaborationResult.model_validate(
+                state.collaboration.structured_result)
         review_feedback = None
         if state.review.feedback:
             review_feedback = ReviewFeedbackContext.model_validate(
@@ -184,6 +273,9 @@ class DepartmentExecutionService:
             company_id=state.request.company_id,
             requester_user_id=state.request.requester_user_id,
             requester_employee_id=state.request.requester_employee_id,
+            requester_department_id=(requester.employee.department_id if requester.employee else None),
+            requester_actor_type=requester.actor_type,
+            requester_is_manager=requester.actor_type.value == "department_manager",
             owner_department_type=owner_department_type,
             active_department_type=active_department_type,
             request_type=state.request.request_type,
@@ -195,8 +287,11 @@ class DepartmentExecutionService:
             relevant_custom_data=business_request.custom_data,
             latest_user_input=state.routing.latest_answer,
             collaboration_input=collaboration_input,
+            collaboration_result=collaboration_result,
             review_feedback=review_feedback,
             human_response=human_response,
+            tool_results=state.execution.tool_results,
+            department_data=state.execution.department_data,
         )
 
     @staticmethod

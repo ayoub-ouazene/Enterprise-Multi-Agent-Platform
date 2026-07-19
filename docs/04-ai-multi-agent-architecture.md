@@ -166,3 +166,11 @@ Customer Support always starts with the configured Fast Groq model. A validated 
 trigger at most one Reasoning-model pass when deterministic signals identify a complex technical
 issue, conflicting evidence, low confidence, material risk, or a prepared IT/human handoff. The
 agent uses strict structured output and cannot select arbitrary model identifiers.
+
+## IT model and tool policy
+
+IT uses only configured Fast and Reasoning Groq roles. Simple questions, extraction, access
+preparation, and known incidents use Fast. Complex incidents, conflicting evidence, higher-risk
+access, and purchase-collaboration decisions use Reasoning. Tools are limited to read-only
+`check_asset_inventory` and `check_software_availability`; arbitrary tools, SQL, shell,
+identity-provider, physical, and purchasing operations are prohibited.

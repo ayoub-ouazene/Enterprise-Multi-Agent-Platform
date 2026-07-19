@@ -182,3 +182,11 @@ The department agent revises once.
 There is no second review loop.
 
 If the revised result remains unsafe or uncertain, the workflow moves to human review or terminates.
+
+## IT request flows
+
+IT informational answers remain nonpersistent when immediate and grounded. Access, account,
+hardware, and incident work uses the existing Request ID. Hardware inventory is checked before
+purchase collaboration. Available assets produce assignment or delivery preparation; unavailable
+stock produces Finance validation, with Procurement preparation allowed only after trusted Finance
+validation state exists.

@@ -105,3 +105,10 @@ company namespace. Access-scope filters are derived from the persisted requester
 client input or the workflow controller. Returned source references expose document title/type,
 version, chunk index, and effective date; raw record IDs, scores, and unauthorized text are not
 included in responses.
+
+## IT retrieval
+
+IT retrieves only `it` and `shared` knowledge from the trusted company namespace. Access scope is
+derived from the persisted requester, not the workflow controller or client. Existing policy,
+procedure, manual, troubleshooting-guide, internal-rule, and product-documentation metadata covers
+IT sources. References are validated against active retrieved records before persistence or display.

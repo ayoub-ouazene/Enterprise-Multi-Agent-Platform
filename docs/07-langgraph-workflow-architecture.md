@@ -185,3 +185,10 @@ The centralized graph supports three Step 13 Customer Support outcomes in additi
 `wait_for_user_input` pauses for one clarification, collaboration prepares an IT diagnostic handoff,
 and human action prepares an authorized escalation. These paths preserve the original Request ID,
 owner department, and checkpointed state. They do not execute IT work or human actions.
+
+## IT graph behavior
+
+The graph executes allowlisted IT read tools and returns results to IT. Customer Support-to-IT
+`diagnose_external_technical_issue` runs IT as a collaborator and returns a structured result without
+changing ownership. IT-to-Finance and IT-to-Procurement are prepared pauses because those agents
+remain placeholders. IT clarification and technician preparation reuse controlled pauses.

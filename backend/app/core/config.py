@@ -254,6 +254,13 @@ def validate_customer_support_configuration(settings: Settings) -> None:
         raise ConfigurationError("Fast and Reasoning Groq models must be configured for Customer Support")
 
 
+def validate_it_configuration(settings: Settings) -> None:
+    if settings.groq_api_key is None or not settings.groq_api_key.get_secret_value().strip():
+        raise ConfigurationError("GROQ_API_KEY must be configured for IT")
+    if not settings.groq_model_fast.strip() or not settings.groq_model_reasoning.strip():
+        raise ConfigurationError("Fast and Reasoning Groq models must be configured for IT")
+
+
 def validate_pinecone_configuration(settings: Settings) -> None:
     """Validate Pinecone only when knowledge functionality is invoked."""
     if (

@@ -90,3 +90,10 @@ failures are sanitized and recorded through the existing failure service. Prepar
 creates a manager-visible workflow event and notifies active Customer Support managers, falling back
 to active Company accounts. No prompt, evidence text, credential, or complete provider payload is
 logged.
+
+## IT failures and notifications
+
+IT Pinecone and Groq failures use bounded retries and sanitized RAG/LLM categories. Malformed output
+uses the centralized correction policy and terminal failures use `FailureService`. Checkpoints
+atomically persist the IT extension, request state, event, and applicable notification. Technician
+preparation notifies an authorized IT manager or Company account without claiming execution.
