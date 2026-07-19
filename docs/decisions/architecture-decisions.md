@@ -102,7 +102,10 @@ No Tool Selector agent in Version 1.
 
 ## ADR-026 — Company Knowledge Organization
 
-One logical company knowledge base with department metadata filters.
+Use one configured Pinecone index with one deterministic namespace per company.
+The namespace is the primary vector tenant boundary. Department, access scope,
+document type, version, activity, and company ID remain metadata filters inside
+the namespace. Namespace values are derived only from trusted company IDs.
 
 ## ADR-027 — Modular Monolith
 

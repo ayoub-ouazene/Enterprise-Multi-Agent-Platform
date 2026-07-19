@@ -1,10 +1,20 @@
 # 9. RAG and Company Knowledge
 
-## 9.1 One Logical Knowledge Base Per Company
+## 9.1 One Index and One Namespace Per Company
 
-All company documents are stored in one logical company knowledge space.
+Version 1 uses one configured Pinecone index. Each company receives one
+deterministic namespace derived by the backend from its trusted company ID:
+
+```text
+<configured-prefix>_<company-uuid>
+```
+
+The namespace is the primary vector tenant boundary. `company_id` remains in
+record metadata as defense in depth. Clients cannot choose a namespace or
+supply a trusted company ID.
 
 Do not create a separate physical collection for every department unless later required.
+Departments share their company's namespace and are separated by metadata filters.
 
 ## 9.2 Metadata
 
@@ -56,7 +66,8 @@ Upload
 
 ## 9.6 Retrieval Behavior
 
-Retrieval must always filter by company ID.
+Retrieval must use only the authenticated company's namespace and must also
+filter by company ID metadata.
 
 Additional filters may include:
 
@@ -64,6 +75,9 @@ Additional filters may include:
 - document type;
 - access scope;
 - active version.
+
+Access scope is derived by the backend from the authenticated actor. Namespace,
+company ID, and allowed access scopes are never accepted from normal client input.
 
 ## 9.7 Business Rules
 

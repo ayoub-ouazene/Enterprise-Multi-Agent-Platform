@@ -4,6 +4,7 @@ from app.departments.models import Department
 from app.employees.models import Employee
 from app.failures.models import CapabilityGap, FailureLog
 from app.notifications.models import Notification
+from app.rag.models import KnowledgeDocument
 from app.requests.models import BusinessRequest
 from app.users.models import User
 from app.workflow.models import WorkflowEvent
@@ -16,6 +17,7 @@ __all__ = [
     "FailureLog",
     "CapabilityGap",
     "Notification",
+    "KnowledgeDocument",
     "RefreshToken",
     "User",
     "WorkflowEvent",

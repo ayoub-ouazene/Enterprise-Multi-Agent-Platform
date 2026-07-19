@@ -151,6 +151,14 @@ class Settings(BaseSettings):
             return None
         return value
 
+    @field_validator("pinecone_namespace_prefix")
+    @classmethod
+    def validate_namespace_prefix(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("must not be empty")
+        return value
+
     @field_validator("jwt_algorithm")
     @classmethod
     def validate_jwt_algorithm(cls, value: str) -> str:
@@ -235,4 +243,27 @@ def validate_router_configuration(settings: Settings) -> None:
     if not settings.groq_model_router.strip():
         raise ConfigurationError(
             "GROQ_MODEL_ROUTER must be configured for Router functionality"
+        )
+
+
+def validate_pinecone_configuration(settings: Settings) -> None:
+    """Validate Pinecone only when knowledge functionality is invoked."""
+    if (
+        settings.pinecone_api_key is None
+        or not settings.pinecone_api_key.get_secret_value().strip()
+    ):
+        raise ConfigurationError(
+            "PINECONE_API_KEY must be configured for knowledge functionality"
+        )
+    if settings.pinecone_index_host is None:
+        raise ConfigurationError(
+            "PINECONE_INDEX_HOST must be configured for knowledge functionality"
+        )
+    if not settings.pinecone_index_name.strip():
+        raise ConfigurationError(
+            "PINECONE_INDEX_NAME must be configured for knowledge functionality"
+        )
+    if not settings.pinecone_embedding_model.strip():
+        raise ConfigurationError(
+            "PINECONE_EMBEDDING_MODEL must be configured for knowledge functionality"
         )

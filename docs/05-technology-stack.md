@@ -51,7 +51,7 @@ Normal HTTP endpoints handle:
 - One FastAPI backend
 - One centralized LangGraph graph
 - One shared PostgreSQL schema
-- One logical Pinecone knowledge space per company, implemented using metadata filters
+- One configured Pinecone index with one namespace per company and metadata filters inside each namespace
 - Managed hosted infrastructure
 
 ## 5.7 Explicitly Avoided in Version 1
