@@ -345,7 +345,16 @@ class ProcurementService:
             ):
                 raise ValueError("Procurement changed deterministic candidate facts")
         finance = context.finance_result
-        finance_approved = bool(finance and finance.get("budget_validated"))
+        finance_approved = bool(
+            finance
+            and (
+                finance.get("budget_validated")
+                or (
+                    finance.get("budget_sufficient") is True
+                    and finance.get("approval_required") is False
+                )
+            )
+        )
         if result.finance_result_received != bool(finance):
             raise ValueError("Procurement Finance-result state is inconsistent")
         if (
@@ -354,7 +363,7 @@ class ProcurementService:
         ):
             raise ValueError("Procurement invented Finance approval")
         if finance:
-            if not finance.get("budget_validated") and result.state_updates.selected_candidate_id:
+            if not finance_approved and result.state_updates.selected_candidate_id:
                 raise ValueError("Finance did not authorize supplier selection")
         if result.state_updates.selected_candidate_id is not None:
             human_decision = str(context.approval_state.get("decision", "")).casefold()

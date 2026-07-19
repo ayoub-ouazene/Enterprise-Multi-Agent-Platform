@@ -8,6 +8,38 @@ from app.workflow.exceptions import InactiveWorkflowNodeError
 from app.workflow.state import WorkflowRuntimeContext, WorkflowState
 
 
+def _collaboration_service(runtime: Runtime[WorkflowRuntimeContext]):
+    context = runtime.context
+    service = context.collaboration_service if context is not None else None
+    if service is None:
+        raise InactiveWorkflowNodeError("Collaboration runtime is unavailable")
+    return service
+
+
+def collaboration_start_node(
+    state: WorkflowState,
+    runtime: Runtime[WorkflowRuntimeContext],
+) -> dict[str, Any]:
+    service = _collaboration_service(runtime)
+    return service.prepare(state, runtime.context.departments)
+
+
+async def collaboration_receiver_node(
+    state: WorkflowState,
+    runtime: Runtime[WorkflowRuntimeContext],
+) -> dict[str, Any]:
+    service = _collaboration_service(runtime)
+    return await service.execute(state)
+
+
+def collaboration_return_node(
+    state: WorkflowState,
+    runtime: Runtime[WorkflowRuntimeContext],
+) -> dict[str, Any]:
+    service = _collaboration_service(runtime)
+    return service.finish(state, runtime.context.departments)
+
+
 def customer_support_collaboration_node(state: WorkflowState) -> dict[str, Any]:
     """Compatibility helper that validates and prepares the Step 13 handoff."""
     request = DepartmentCollaborationRequest.model_validate(state.collaboration.request)

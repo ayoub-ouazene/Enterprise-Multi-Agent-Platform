@@ -201,3 +201,11 @@ leave extraction, onboarding checklists, and job-description drafts. Reasoning i
 conflicting policy, staffing/overlap conflicts, exceptions, sensitive decisions, and complex
 onboarding. Backend calculations and trusted records are authoritative; payroll, hiring decisions,
 discipline, and IT execution are prohibited.
+
+## Shared Collaboration Contract
+
+Department agents may propose collaboration only through the typed shared contract. A deterministic
+registry validates the sender, receiver, action, request payload, and receiver result before the
+central graph changes departments. LLM output cannot register routes, select arbitrary receivers,
+alter the tenant, change the owner, or determine a return target. The only nested Version 1 path is
+IT-to-Procurement-to-Finance, controlled by workflow state rather than agent memory.

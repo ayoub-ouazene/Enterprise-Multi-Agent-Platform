@@ -45,6 +45,7 @@ from app.rag.retrieval import KnowledgeRetrievalService
 from app.departments.repository import DepartmentRepository
 from app.requests.repository import BusinessRequestRepository
 from app.workflow.state import WorkflowState, add_completed_step, apply_state_update
+from app.workflow.collaboration.schemas import CollaborationReceiverOutcome
 
 
 class DepartmentExecutionService:
@@ -221,6 +222,127 @@ class DepartmentExecutionService:
             )
         return self._safe_state_update(state, result)
 
+    async def execute_collaboration_receiver(
+        self,
+        state: WorkflowState,
+        request: DepartmentCollaborationRequest,
+    ) -> CollaborationReceiverOutcome:
+        """Execute one allowlisted receiver and translate its output to the route schema."""
+        if request.receiver_department == DepartmentType.IT:
+            envelope = await self.execute_it_collaboration(state, request)
+            data = envelope.result.get("diagnostic") or {}
+            if self.it_service is not None and data:
+                await self.it_service.persist_result(
+                    state.request.request_id,
+                    ITDepartmentResult.model_validate(data),
+                    reported_by_user_id=state.request.requester_user_id,
+                )
+            if envelope.result.get("requires_human_technician"):
+                return CollaborationReceiverOutcome(
+                    reason=envelope.reason,
+                    human_action={
+                        "action_type": "it_technician_assistance",
+                        "summary": envelope.reason,
+                        "receiver_department": DepartmentType.IT.value,
+                    },
+                )
+            if request.action == "prepare_employee_onboarding_it":
+                return CollaborationReceiverOutcome(
+                    reason=envelope.reason,
+                    result={
+                        "access_preparation": data.get("access_actions", data.get("prepared_access_actions", [])),
+                        "hardware_availability": data.get("hardware_checks", data.get("hardware_availability", [])),
+                        "missing_information": data.get("missing_information", []),
+                        "approval_required": bool(data.get("approval_required", False)),
+                        "human_physical_action_required": bool(data.get("human_physical_action_required", False)),
+                        "readiness_status": data.get("readiness_status", envelope.result.get("decision", "prepared")),
+                    },
+                )
+            return CollaborationReceiverOutcome(
+                reason=envelope.reason,
+                result={
+                    "diagnosis_status": envelope.result.get("decision", "completed"),
+                    "diagnosis_category": data.get("incident_category", data.get("category")),
+                    "additional_troubleshooting": data.get("troubleshooting_steps", []),
+                    "technician_action_required": False,
+                    "internal_resolution_summary": envelope.reason,
+                    "safe_customer_support_response": envelope.result.get("user_message", envelope.reason),
+                    "confidence": data.get("confidence", "medium"),
+                    "unresolved_reason": data.get("unresolved_reason"),
+                },
+            )
+        if request.receiver_department == DepartmentType.FINANCE:
+            envelope = await self.execute_finance_collaboration(state, request)
+            data = envelope.result
+            finance_data = data.get("finance_data")
+            if self.finance_service is not None and finance_data:
+                await self.finance_service.persist_result(
+                    state.request.request_id,
+                    FinanceDepartmentResult.model_validate(finance_data),
+                )
+            reservation = data.get("reservation_result") or {}
+            if data.get("approval_required"):
+                return CollaborationReceiverOutcome(
+                    reason=envelope.reason,
+                    human_action={
+                        "action_type": "finance_purchase_approval",
+                        "summary": envelope.reason,
+                        "receiver_department": DepartmentType.FINANCE.value,
+                    },
+                )
+            result = {
+                "finance_decision": data.get("decision", "validated"),
+                "validated_amount": data.get("validated_amount"),
+                "currency": data.get("currency") or request.payload.get("currency", "USD"),
+                "budget_sufficient": data.get("budget_sufficient"),
+                "approval_required": bool(data.get("approval_required", False)),
+                "reservation_reference": reservation.get("transaction_reference"),
+                "reason": envelope.reason,
+                "required_next_action": data.get("required_next_action"),
+            }
+            if request.action == "validate_procurement_purchase":
+                result["commitment_reference"] = reservation.get("transaction_reference")
+            return CollaborationReceiverOutcome(reason=envelope.reason, result=result)
+        if request.receiver_department == DepartmentType.PROCUREMENT:
+            envelope = await self.execute_procurement_collaboration(state, request)
+            nested = envelope.result.get("nested_request")
+            if nested is not None:
+                return CollaborationReceiverOutcome(
+                    reason=envelope.reason,
+                    nested_request=DepartmentCollaborationRequest.model_validate(nested),
+                    continuation_data={
+                        "tool_results": envelope.result.get("tool_results", [])
+                    },
+                )
+            data = envelope.result.get("procurement_data") or {}
+            if self.procurement_service is not None and data:
+                await self.procurement_service.persist_result(
+                    state.request.request_id,
+                    ProcurementDepartmentResult.model_validate(data),
+                )
+            if envelope.result.get("requires_human_action"):
+                return CollaborationReceiverOutcome(
+                    reason=envelope.reason,
+                    human_action={
+                        "action_type": "supplier_selection",
+                        "summary": envelope.reason,
+                        "receiver_department": DepartmentType.PROCUREMENT.value,
+                    },
+                )
+            return CollaborationReceiverOutcome(
+                reason=envelope.reason,
+                result={
+                    "eligible_candidate_count": data.get("eligible_candidate_count", 0),
+                    "shortlist": data.get("shortlist", []),
+                    "recommendation": data.get("recommendation"),
+                    "estimated_total_costs": data.get("estimated_total_costs", []),
+                    "finance_revalidation_required": bool(data.get("finance_revalidation_required", False)),
+                    "reason": envelope.reason,
+                    "required_next_action": data.get("next_action"),
+                },
+            )
+        raise DepartmentContextMismatchError("Unsupported collaboration receiver")
+
     async def execute_it_collaboration(
         self, state: WorkflowState, request: DepartmentCollaborationRequest
     ) -> DepartmentCollaborationResult:
@@ -235,8 +357,14 @@ class DepartmentExecutionService:
         it_department = await self.department_repository.get_by_type(DepartmentType.IT)
         if business_request is None or requester is None or it_department is None or not it_department.is_active:
             raise NotFoundError("IT collaboration context not found")
+        if (
+            business_request.owner_department_id != state.request.owner_department_id
+            or business_request.active_department_id != it_department.id
+            or state.request.active_department_id != it_department.id
+        ):
+            raise DepartmentContextMismatchError("IT collaboration context is inconsistent")
         context = self._build_context(state, business_request=business_request,
-            owner_department_type=request.sender_department,
+            owner_department_type=(state.routing.selected_department or request.sender_department),
             active_department_type=DepartmentType.IT, requester=requester).model_copy(
                 update={"collaboration_input": request})
         await self.session.rollback()
@@ -285,10 +413,18 @@ class DepartmentExecutionService:
             or self.finance_service is None
         ):
             raise NotFoundError("Finance collaboration context not found")
+        if (
+            business_request.owner_department_id != state.request.owner_department_id
+            or business_request.active_department_id != finance_department.id
+            or state.request.active_department_id != finance_department.id
+        ):
+            raise DepartmentContextMismatchError(
+                "Finance collaboration context is inconsistent"
+            )
         context = self._build_context(
             state,
             business_request=business_request,
-            owner_department_type=request.sender_department,
+            owner_department_type=(state.routing.selected_department or request.sender_department),
             active_department_type=DepartmentType.FINANCE,
             requester=requester,
         ).model_copy(update={"collaboration_input": request})
@@ -484,10 +620,18 @@ class DepartmentExecutionService:
             or self.procurement_service is None
         ):
             raise NotFoundError("Procurement collaboration context not found")
+        if (
+            business_request.owner_department_id != state.request.owner_department_id
+            or business_request.active_department_id != department.id
+            or state.request.active_department_id != department.id
+        ):
+            raise DepartmentContextMismatchError(
+                "Procurement collaboration context is inconsistent"
+            )
         context = self._build_context(
             state,
             business_request=business_request,
-            owner_department_type=DepartmentType.IT,
+            owner_department_type=(state.routing.selected_department or DepartmentType.IT),
             active_department_type=DepartmentType.PROCUREMENT,
             requester=requester,
         ).model_copy(update={"collaboration_input": request})
@@ -517,26 +661,23 @@ class DepartmentExecutionService:
                 await self.registry.resolve(DepartmentType.PROCUREMENT).execute(context)
             )
 
-        finance_data = None
         if department_result.requires_collaboration:
             finance_request = department_result.collaboration_request
             if finance_request is None:
                 raise DepartmentResultValidationError(
                     "Procurement Finance collaboration request is missing"
                 )
-            finance_result = await self.execute_finance_collaboration(
-                state, finance_request
-            )
-            finance_data = finance_result.result.get("finance_data")
-            await self.session.rollback()
-            context = context.model_copy(
-                update={
-                    "collaboration_result": finance_result,
+            return DepartmentCollaborationResult(
+                request_id=request.request_id,
+                sender_department=DepartmentType.PROCUREMENT,
+                receiver_department=DepartmentType.IT,
+                action=request.action,
+                status="completed",
+                result={
+                    "nested_request": finance_request.model_dump(mode="json"),
                     "tool_results": tool_results,
-                }
-            )
-            department_result = DepartmentExecutionResult.model_validate(
-                await self.registry.resolve(DepartmentType.PROCUREMENT).execute(context)
+                },
+                reason="Procurement prepared Finance validation.",
             )
         if department_result.requires_tool or department_result.requires_collaboration:
             raise DepartmentResultValidationError(
@@ -563,7 +704,6 @@ class DepartmentExecutionService:
                 "decision": department_result.decision,
                 "user_message": department_result.user_message,
                 "procurement_data": data or {},
-                "finance_data": finance_data,
             },
             reason=department_result.reason,
         )

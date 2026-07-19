@@ -194,3 +194,12 @@ Candidate and evaluation data are stored together in `supplier_candidates`.
 Leave arithmetic, balance, entitlement, overlap, and staffing calculations are authoritative
 backend operations. Approval locks balance and staffing rows, pending manager approval does not
 reserve days, and request-owned reservations are idempotent.
+
+## ADR-048 — State-Backed Interdepartment Collaboration
+
+Version 1 uses one explicit collaboration registry and three centralized LangGraph phases for
+start, receiver execution, and return. Calls keep the same Business Request and owner, temporarily
+change the active department, and persist only in bounded workflow-state JSONB. Canonical payload
+hashes provide completed-result replay; a bounded return stack permits the approved
+IT-to-Procurement-to-Finance nested path. No sub-request, collaboration table, permanent message
+record, dynamic route, or public collaboration mutation API is introduced.

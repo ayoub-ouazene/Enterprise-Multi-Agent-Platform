@@ -216,3 +216,15 @@ deterministic. Automatic approval requires structured policy and row-locked reva
 HR prepares manager approval without a pre-approval reservation. Approval reserves once, while
 rejection and cancellation release request-owned reservations idempotently. Onboarding and IT
 collaboration retain the owner and original Request ID.
+
+## 3.15 Interdepartment Collaboration Runtime
+
+Collaboration always uses the existing business request. The owner department and Request ID are
+immutable; only the active department changes while an allowlisted receiver works. Version 1
+allows Customer Support-to-IT diagnosis, IT-to-Finance budget validation, IT-to-Procurement
+supplier search, Procurement-to-Finance validation, and HR-to-IT onboarding preparation.
+
+The runtime rejects every other route or action. It records temporary payloads in bounded workflow
+state, restores senders from an explicit return stack, and never creates a sub-request or permanent
+department-message record. Completed identical calls replay their validated result without
+executing the receiver again.

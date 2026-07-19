@@ -6,5 +6,5 @@ def test_central_graph_keeps_procurement_on_existing_nodes() -> None:
     nodes = set(graph.nodes)
     assert "department_execution" in nodes
     assert "tool" in nodes
-    assert "collaboration" in nodes
+    assert {"collaboration_start", "collaboration_receiver", "collaboration_return"} <= nodes
     assert "human_action" in nodes

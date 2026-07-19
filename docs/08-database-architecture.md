@@ -226,3 +226,11 @@ request. There is no separate evaluation, shortlist, purchase-order, contract, o
 `leave_requests` and `onboarding_requests` use the original Request ID. Leave balances store exact
 allocated, used, and reserved days; remaining days are derived. Holidays and staffing rules support
 deterministic calculations. Job descriptions remain drafts. Approval locks shared rows.
+
+## Collaboration Persistence
+
+There is no collaboration or department-message table. Active calls, temporary validated payloads,
+the bounded return stack, idempotency keys, and bounded safe result history live in the existing
+`business_requests.workflow_state` JSONB document. `business_requests.owner_department_id` remains
+unchanged; `active_department_id` is checkpointed as the receiver and restored on return. No schema
+migration is required for the collaboration runtime.

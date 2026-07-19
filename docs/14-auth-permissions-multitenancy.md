@@ -111,3 +111,10 @@ Employees view their own leave data. A verified direct manager may view records 
 authority. Active HR managers and Company accounts may view authorized tenant HR records. External
 users have no HR access, cross-company IDs behave as not found, and private reasons, medical
 details, unrelated employee data, and internal staffing details are excluded.
+
+## 14.12 Collaboration Authorization
+
+The authenticated company scopes the business request, department lookups, receiver services, and
+checkpoint updates. The runtime derives sender identity from the persisted active department and
+derives receiver IDs from active tenant departments. It rejects cross-tenant or client-provided
+identity, mismatched Request IDs, owner changes, inactive receivers, and non-allowlisted routes.

@@ -79,7 +79,9 @@ def test_graph_compiles() -> None:
     assert graph is not None
     assert "router" in graph.get_graph().nodes
     assert "tool" in graph.get_graph().nodes
-    assert "collaboration" in graph.get_graph().nodes
+    assert "collaboration_start" in graph.get_graph().nodes
+    assert "collaboration_receiver" in graph.get_graph().nodes
+    assert "collaboration_return" in graph.get_graph().nodes
 
 
 def test_deterministic_graph_reaches_completion() -> None:

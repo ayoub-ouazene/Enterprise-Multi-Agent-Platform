@@ -122,7 +122,13 @@ class ITService:
                 or collaboration.receiver_department != DepartmentType.IT
                 or collaboration.action != "validate_it_purchase_budget"
                 or collaboration.status.value != "completed"
-                or collaboration.result.get("budget_validated") is not True
+                or not (
+                    collaboration.result.get("budget_validated") is True
+                    or (
+                        collaboration.result.get("budget_sufficient") is True
+                        and collaboration.result.get("approval_required") is False
+                    )
+                )
             ):
                 raise ValueError("Procurement preparation requires trusted Finance validation")
         previous_question = context.previous_it_state.get("clarification_question")

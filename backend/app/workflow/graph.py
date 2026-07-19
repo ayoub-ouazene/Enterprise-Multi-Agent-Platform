@@ -3,7 +3,11 @@ from typing import Any
 from langgraph.graph import END, START, StateGraph
 
 from app.workflow.nodes.completion import completion_node
-from app.workflow.nodes.collaboration import department_collaboration_node
+from app.workflow.nodes.collaboration import (
+    collaboration_receiver_node,
+    collaboration_return_node,
+    collaboration_start_node,
+)
 from app.workflow.nodes.department import (
     department_stage_start_node,
     department_execution_node,
@@ -18,7 +22,9 @@ from app.workflow.routing import (
     route_after_department,
     route_after_router,
     route_next_skeleton_node,
-    route_after_collaboration,
+    route_after_collaboration_receiver,
+    route_after_collaboration_return,
+    route_after_collaboration_start,
 )
 from app.workflow.state import WorkflowRuntimeContext, WorkflowState
 
@@ -30,7 +36,9 @@ def build_workflow_graph() -> Any:
     builder.add_node("department_stage_start", department_stage_start_node)
     builder.add_node("department_execution", department_execution_node)
     builder.add_node("tool", department_tool_node)
-    builder.add_node("collaboration", department_collaboration_node)
+    builder.add_node("collaboration_start", collaboration_start_node)
+    builder.add_node("collaboration_receiver", collaboration_receiver_node)
+    builder.add_node("collaboration_return", collaboration_return_node)
     builder.add_node("reviewer", inactive_reviewer_node)
     builder.add_node("human_action", customer_support_human_action_node)
     builder.add_node("failure", terminal_failure_node)
@@ -44,7 +52,11 @@ def build_workflow_graph() -> Any:
             "router": "router",
             "department_stage_start": "department_stage_start",
             "department_execution": "department_execution",
+            "collaboration_start": "collaboration_start",
+            "collaboration_receiver": "collaboration_receiver",
+            "collaboration_return": "collaboration_return",
             "completion": "completion",
+            END: END,
         },
     )
     builder.add_conditional_edges(
@@ -63,7 +75,7 @@ def build_workflow_graph() -> Any:
         {
             "department_execution": "department_execution",
             "tool": "tool",
-            "collaboration": "collaboration",
+            "collaboration": "collaboration_start",
             "reviewer": "reviewer",
             "human_action": "human_action",
             "completion": "completion",
@@ -72,8 +84,31 @@ def build_workflow_graph() -> Any:
         },
     )
     builder.add_edge("tool", "department_execution")
-    builder.add_conditional_edges("collaboration", route_after_collaboration,
-        {"department_execution": "department_execution", END: END})
+    builder.add_conditional_edges(
+        "collaboration_start",
+        route_after_collaboration_start,
+        {
+            "collaboration_receiver": "collaboration_receiver",
+            "collaboration_return": "collaboration_return",
+        },
+    )
+    builder.add_conditional_edges(
+        "collaboration_receiver",
+        route_after_collaboration_receiver,
+        {
+            "collaboration_start": "collaboration_start",
+            "collaboration_return": "collaboration_return",
+            END: END,
+        },
+    )
+    builder.add_conditional_edges(
+        "collaboration_return",
+        route_after_collaboration_return,
+        {
+            "collaboration_receiver": "collaboration_receiver",
+            "department_execution": "department_execution",
+        },
+    )
     builder.add_edge("completion", END)
     return builder.compile()
 

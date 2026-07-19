@@ -18,6 +18,10 @@ from app.workflow.router_output import (
     RouterMessageCategory,
     RouterOutput,
 )
+from app.workflow.collaboration.schemas import (
+    CollaborationCallState,
+    CollaborationHistoryEntry,
+)
 
 
 STATE_VERSION = 1
@@ -79,6 +83,11 @@ class WorkflowCollaborationState(WorkflowStateSection):
     request: dict[str, Any] = Field(default_factory=dict)
     structured_result: dict[str, Any] = Field(default_factory=dict)
     is_active: bool = False
+    active: CollaborationCallState | None = None
+    return_stack: list[CollaborationCallState] = Field(default_factory=list, max_length=3)
+    history: list[CollaborationHistoryEntry] = Field(default_factory=list, max_length=6)
+    total_call_count: int = Field(default=0, ge=0, le=6)
+    last_replayed: bool = False
 
 
 class WorkflowExecutionState(WorkflowStateSection):
@@ -193,6 +202,7 @@ class WorkflowRuntimeContext:
     departments: dict[DepartmentType, DepartmentRuntimeContext]
     preclassified_output: RouterOutput | None = None
     department_execution_service: Any | None = None
+    collaboration_service: Any | None = None
     precomputed_department_result: dict[str, Any] | None = None
 
 

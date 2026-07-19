@@ -193,3 +193,11 @@ The frontend never directly calls:
 - the LLM provider.
 
 All access goes through FastAPI.
+
+## 6.8 Collaboration Runtime
+
+`app.workflow.collaboration` owns action schemas, the explicit route registry, canonical
+idempotency keys, runtime limits, and collaboration state transitions. Department-specific work
+remains in department services and `DepartmentExecutionService`; collaboration orchestration does
+not contain receiver business logic. Start, receiver-result, and return checkpoints use short
+service-owned transactions. No transaction remains open across Pinecone or Groq calls.

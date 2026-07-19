@@ -102,6 +102,9 @@ class Settings(BaseSettings):
     router_max_clarification_questions: int = Field(default=3, ge=0, le=3)
     workflow_max_tool_retries: int = Field(default=2, ge=0)
     workflow_review_max_revisions: int = Field(default=1, ge=0, le=1)
+    workflow_max_collaboration_depth: int = Field(default=3, ge=1, le=3)
+    workflow_max_collaboration_calls: int = Field(default=6, ge=1, le=6)
+    workflow_max_collaboration_attempts: int = Field(default=2, ge=1, le=2)
     sse_heartbeat_seconds: int = Field(default=15, gt=0)
 
     @classmethod

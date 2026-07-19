@@ -190,16 +190,15 @@ owner department, and checkpointed state. They do not execute IT work or human a
 
 The graph executes allowlisted IT read tools and returns results to IT. Customer Support-to-IT
 `diagnose_external_technical_issue` runs IT as a collaborator and returns a structured result without
-changing ownership. IT-to-Finance and IT-to-Procurement are prepared pauses because those agents
-remain placeholders. IT clarification and technician preparation reuse controlled pauses.
+changing ownership. IT-to-Finance and IT-to-Procurement use the shared collaboration dispatcher.
+IT clarification and technician preparation reuse controlled pauses.
 
 ## Finance graph behavior
 
 Finance runs inside the centralized graph. Read and validation results return to Finance; controlled
 tools checkpoint before Finance continues. IT-to-Finance validation executes Finance temporarily and
-returns a structured result to IT under the same Request ID and unchanged owner. The future
-Procurement contract follows the same pattern. Approval-required work enters the existing human
-waiting state. HR and Procurement remain placeholders.
+returns a structured result to IT under the same Request ID and unchanged owner. Procurement uses
+the same Finance contract. Approval-required work enters the existing human waiting state.
 
 ## Procurement graph behavior
 
@@ -209,10 +208,21 @@ Procurement `find_it_asset_suppliers` executes Procurement as a collaborator wit
 IT owner. When final financial validation is needed, the same workflow runs Finance with
 `validate_procurement_purchase`, returns the result to Procurement, and then returns the shortlist
 to IT. Clarification, human selection preparation, failures, and completion reuse existing nodes
-and checkpoints. HR remains the only placeholder.
+and checkpoints. All five departments execute through the shared department foundation.
 
 ## HR graph behavior
 
 HR is the fifth real department in the centralized graph. Leave processing validates
 deterministically, then reserves and completes or prepares a manager pause. Onboarding invokes IT
 under the same Request ID without changing ownership. Job-description drafts persist before completion.
+
+## Shared Collaboration Nodes
+
+The centralized graph uses three durable phases: `collaboration_start` validates and checkpoints
+the receiver; `collaboration_receiver` executes and validates receiver work; and
+`collaboration_return` records a bounded safe history entry and restores the sender. A nested call
+pushes its parent onto a bounded return stack and uses the same phases.
+
+On restart, pending/running calls route to receiver execution, completed/failed calls route to
+return, and human-action pauses keep their active call and return path. Defaults cap collaboration
+depth at three, total calls at six, and attempts at two.

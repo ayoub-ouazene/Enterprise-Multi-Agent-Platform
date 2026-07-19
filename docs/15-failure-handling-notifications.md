@@ -124,3 +124,13 @@ HR provider failures use bounded retries and sanitized categories. Invalid struc
 one correction attempt. Persistence failures use `FailureService`; invalid dates, insufficient
 balance, staffing conflicts, and manager rejection are business outcomes. Approval preparation
 notifies an authorized HR manager or Company account. Confidential HR data is never logged.
+
+## Collaboration failures and notifications
+
+Invalid routes, mismatched identities, cycles, exhausted limits, and malformed receiver output fail
+with sanitized messages. A nonterminal receiver failure returns control to the sender so it may
+choose a safe alternative; an unhandled workflow or persistence failure continues through
+`FailureService`. Ordinary collaboration produces no notification. A receiver that prepares
+authorized human action preserves its call and return path, pauses the graph, and notifies only an
+authorized manager or Company account through the existing human-action path. Events contain action
+and department summaries only, never raw payloads, prompts, credentials, or hidden reasoning.

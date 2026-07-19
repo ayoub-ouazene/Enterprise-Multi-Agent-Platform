@@ -196,3 +196,10 @@ HR executes through assistant/workflow APIs. Read-only endpoints expose an emplo
 narrowly authorized leave, onboarding, and job-description records. Direct managers, HR managers,
 and Company accounts receive only permitted tenant scope. External users have no HR access, and no
 public HR mutation endpoint exists.
+
+## 10.11 Collaboration API Surface
+
+There is no public collaboration mutation endpoint. Clients cannot submit a company, sender,
+receiver, action, owner, active department, depth, or return target. Collaboration runs only from a
+trusted department result inside the existing assistant and request-workflow APIs. Authorized
+timeline APIs expose sanitized meaningful events rather than temporary collaboration payloads.

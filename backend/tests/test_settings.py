@@ -24,6 +24,9 @@ def test_settings_parse_typed_environment_values(monkeypatch) -> None:
     monkeypatch.setenv("DATABASE_POOL_TIMEOUT", "45")
     monkeypatch.setenv("DATABASE_ECHO", "true")
     monkeypatch.setenv("ALLOWED_UPLOAD_EXTENSIONS", '["pdf", "csv"]')
+    monkeypatch.setenv("WORKFLOW_MAX_COLLABORATION_DEPTH", "3")
+    monkeypatch.setenv("WORKFLOW_MAX_COLLABORATION_CALLS", "6")
+    monkeypatch.setenv("WORKFLOW_MAX_COLLABORATION_ATTEMPTS", "2")
 
     settings = Settings(_env_file=None)
 
@@ -39,6 +42,9 @@ def test_settings_parse_typed_environment_values(monkeypatch) -> None:
     assert settings.database_pool_timeout == 45
     assert settings.database_echo is True
     assert settings.allowed_upload_extensions == ["pdf", "csv"]
+    assert settings.workflow_max_collaboration_depth == 3
+    assert settings.workflow_max_collaboration_calls == 6
+    assert settings.workflow_max_collaboration_attempts == 2
 
 
 def test_database_urls_are_redacted_from_settings_representation(monkeypatch) -> None:

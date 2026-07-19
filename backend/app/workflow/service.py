@@ -72,6 +72,7 @@ from app.workflow.state import (
     add_completed_step,
     apply_state_update,
 )
+from app.workflow.collaboration.service import CollaborationService
 
 
 ACTOR_LABELS: dict[WorkflowEventActorType, str] = {
@@ -253,6 +254,11 @@ class WorkflowService:
                     PineconeProvider(settings) if settings is not None else None
                 ),
             )
+        )
+        self.collaboration_service = (
+            CollaborationService(settings, self.department_execution_service)
+            if settings is not None
+            else None
         )
         self.workflow_event_service = workflow_event_service or WorkflowEventService(
             session,
@@ -541,6 +547,7 @@ class WorkflowService:
             departments=departments,
             preclassified_output=preclassified_output,
             department_execution_service=self.department_execution_service,
+            collaboration_service=self.collaboration_service,
             precomputed_department_result=precomputed_department_result,
         )
         try:
@@ -600,7 +607,7 @@ class WorkflowService:
                 )
                 if persist_support is not None:
                     await persist_support(state)
-            if node_name == "collaboration":
+            if node_name == "collaboration_return":
                 persist_collaboration = getattr(self.department_execution_service,
                     "persist_it_collaboration_result", None)
                 if persist_collaboration is not None:
@@ -633,6 +640,8 @@ class WorkflowService:
                     commit=False,
                 )
             if node_name == "human_action":
+                await self._notify_human_escalation(state)
+            if node_name == "collaboration_receiver" and state.human_action.required:
                 await self._notify_human_escalation(state)
             await self.session.commit()
             return state
@@ -735,22 +744,57 @@ class WorkflowService:
                 visibility=WorkflowEventVisibility.REQUESTER,
                 event_data={"department_type": result.department_type.value},
             )
-        if node_name == "collaboration":
-            request = state.collaboration.request
-            receiver = request.get("receiver_department") if request else None
+        if node_name == "collaboration_start":
+            active = state.collaboration.active
+            if state.collaboration.last_replayed:
+                return None
             return WorkflowEventCreate(
                 event_type=WorkflowEventType.DEPARTMENT_COLLABORATION_STARTED,
                 stage=state.request.current_stage,
-                title="Department collaboration updated",
-                message=(
-                    "A collaborating department returned a structured result."
-                    if state.collaboration.structured_result
-                    else f"A collaboration with {receiver or 'another department'} was prepared."
-                ),
+                title="Department collaboration started",
+                message="An authorized collaborating department started work on this request.",
                 actor_type=WorkflowEventActorType.DEPARTMENT_AGENT,
                 department_id=state.request.owner_department_id,
                 visibility=WorkflowEventVisibility.REQUESTER,
-                event_data={"owner_department": state.routing.selected_department.value if state.routing.selected_department else "unknown"},
+                event_data={
+                    "receiver_department": active.receiver_department.value if active else "unknown",
+                    "action": active.action if active else "unknown",
+                },
+            )
+        if node_name == "collaboration_return":
+            if state.collaboration.last_replayed:
+                return None
+            latest = state.collaboration.history[-1] if state.collaboration.history else None
+            successful = bool(
+                latest and latest.status.value == "completed"
+            )
+            return WorkflowEventCreate(
+                event_type=WorkflowEventType.DEPARTMENT_COLLABORATION_COMPLETED,
+                stage=state.request.current_stage,
+                title=(
+                    "Department collaboration completed"
+                    if successful
+                    else "Department collaboration could not complete"
+                ),
+                message=latest.safe_summary if latest else "The collaborating department returned its result.",
+                actor_type=WorkflowEventActorType.DEPARTMENT_AGENT,
+                department_id=state.request.owner_department_id,
+                visibility=WorkflowEventVisibility.REQUESTER,
+                event_data={
+                    "receiver_department": latest.receiver_department.value if latest else "unknown",
+                    "action": latest.action if latest else "unknown",
+                },
+            )
+        if node_name == "collaboration_receiver" and state.human_action.required:
+            return WorkflowEventCreate(
+                event_type=WorkflowEventType.WAITING_FOR_HUMAN_ACTION,
+                stage=state.request.current_stage,
+                title="Authorized action prepared",
+                message="A collaborating department prepared an action for authorized human assistance.",
+                actor_type=WorkflowEventActorType.DEPARTMENT_AGENT,
+                department_id=state.request.active_department_id,
+                visibility=WorkflowEventVisibility.MANAGER,
+                event_data={},
             )
         if node_name == "human_action":
             department = state.execution.department_result.get("department_type")
