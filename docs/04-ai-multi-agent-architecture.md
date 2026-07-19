@@ -174,3 +174,12 @@ preparation, and known incidents use Fast. Complex incidents, conflicting eviden
 access, and purchase-collaboration decisions use Reasoning. Tools are limited to read-only
 `check_asset_inventory` and `check_software_availability`; arbitrary tools, SQL, shell,
 identity-provider, physical, and purchasing operations are prohibited.
+
+## Finance model and tool policy
+
+Finance uses only configured Fast and Reasoning Groq roles. Fast handles policy explanations,
+extraction, inquiries, and straightforward validation. Reasoning is limited to conflicting policy,
+multiple budgets or cost centers, exceptions, high impact, and complex collaboration. The model
+cannot calculate authoritative balances. Allowlisted tools are `get_budget_status`,
+`validate_budget_availability`, `reserve_budget`, `release_budget_reservation`, and
+`record_financial_transaction`; all monetary mutation remains deterministic and tenant-scoped.

@@ -253,3 +253,12 @@ identity operations, performs tenant-scoped inventory/software checks, diagnoses
 Customer Support diagnostics, and prepares Finance, Procurement, or technician handoffs. IT does not
 spend money, approve budgets, choose suppliers, execute identity-provider operations, transfer
 assets, or claim physical work is complete. HR, Finance, and Procurement remain placeholders.
+
+## Step 15 Finance implementation
+
+Finance is now real alongside Customer Support and IT. It answers authorized Finance questions,
+reads tenant-scoped budgets, performs deterministic availability checks, creates controlled
+reservations, accepts IT and future Procurement financial-validation collaboration, prepares human
+spending approval, and records authorized confirmed financial movements. Finance cannot choose
+suppliers, source products, execute purchases or payments, initiate bank transfers, or approve
+restricted spending. Human Resources and Procurement remain placeholders.

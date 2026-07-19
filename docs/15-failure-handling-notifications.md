@@ -97,3 +97,12 @@ IT Pinecone and Groq failures use bounded retries and sanitized RAG/LLM categori
 uses the centralized correction policy and terminal failures use `FailureService`. Checkpoints
 atomically persist the IT extension, request state, event, and applicable notification. Technician
 preparation notifies an authorized IT manager or Company account without claiming execution.
+
+## Finance failures and notifications
+
+Finance Pinecone and Groq failures use bounded retries and sanitized RAG/LLM failure categories.
+Malformed structured output receives one bounded correction attempt. Persistence, locking, or
+provider failures use `FailureService`; insufficient balance, inactive periods, and currency mismatch
+are business decisions and do not create failure logs. Approval preparation notifies an authorized
+Finance manager or Company account. No prompt, raw evidence, credential, financial secret, or
+provider payload is logged.

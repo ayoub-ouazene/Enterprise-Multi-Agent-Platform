@@ -192,3 +192,11 @@ The graph executes allowlisted IT read tools and returns results to IT. Customer
 `diagnose_external_technical_issue` runs IT as a collaborator and returns a structured result without
 changing ownership. IT-to-Finance and IT-to-Procurement are prepared pauses because those agents
 remain placeholders. IT clarification and technician preparation reuse controlled pauses.
+
+## Finance graph behavior
+
+Finance runs inside the centralized graph. Read and validation results return to Finance; controlled
+tools checkpoint before Finance continues. IT-to-Finance validation executes Finance temporarily and
+returns a structured result to IT under the same Request ID and unchanged owner. The future
+Procurement contract follows the same pattern. Approval-required work enters the existing human
+waiting state. HR and Procurement remain placeholders.

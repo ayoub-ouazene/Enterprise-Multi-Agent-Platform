@@ -13,7 +13,7 @@ from app.workflow.nodes.human_action import customer_support_human_action_node
 from app.workflow.nodes.reviewer import inactive_reviewer_node
 from app.workflow.nodes.router import router_node
 from app.workflow.nodes.start import initialize_node
-from app.workflow.nodes.tool import it_read_tool_node
+from app.workflow.nodes.tool import department_tool_node
 from app.workflow.routing import (
     route_after_department,
     route_after_router,
@@ -29,7 +29,7 @@ def build_workflow_graph() -> Any:
     builder.add_node("router", router_node)
     builder.add_node("department_stage_start", department_stage_start_node)
     builder.add_node("department_execution", department_execution_node)
-    builder.add_node("tool", it_read_tool_node)
+    builder.add_node("tool", department_tool_node)
     builder.add_node("collaboration", department_collaboration_node)
     builder.add_node("reviewer", inactive_reviewer_node)
     builder.add_node("human_action", customer_support_human_action_node)

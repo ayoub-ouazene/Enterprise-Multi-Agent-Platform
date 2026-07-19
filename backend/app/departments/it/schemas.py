@@ -209,3 +209,15 @@ class ITExecutionInput(BaseModel):
     @classmethod
     def safe_objects(cls, value: dict[str, Any]) -> dict[str, Any]:
         return validate_safe_json(value, path="it_context")
+
+    @model_validator(mode="after")
+    def trusted_finance_result(self) -> "ITExecutionInput":
+        result = self.collaboration_result
+        if result is not None and result.sender_department == DepartmentType.FINANCE:
+            if (
+                result.request_id != self.request_id
+                or result.receiver_department != DepartmentType.IT
+                or result.action != "validate_it_purchase_budget"
+            ):
+                raise ValueError("Finance collaboration result is inconsistent")
+        return self

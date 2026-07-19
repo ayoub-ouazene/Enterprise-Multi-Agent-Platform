@@ -15,6 +15,8 @@ from app.failures.schemas import CapabilityGapCreate, FailureCreate
 from app.llm.exceptions import (
     CustomerSupportClientError,
     CustomerSupportOutputError,
+    FinanceClientError,
+    FinanceOutputError,
     ITClientError,
     ITOutputError,
     RouterConfigurationError,
@@ -601,6 +603,13 @@ class WorkflowService:
                     "persist_it_collaboration_result", None)
                 if persist_collaboration is not None:
                     await persist_collaboration(state)
+                persist_finance = getattr(
+                    self.department_execution_service,
+                    "persist_finance_collaboration_result",
+                    None,
+                )
+                if persist_finance is not None:
+                    await persist_finance(state)
             event = self._event_for_node(node_name, state)
             if event is not None:
                 await self.workflow_event_service.append(
@@ -629,8 +638,16 @@ class WorkflowService:
     async def _notify_human_escalation(self, state: WorkflowState) -> None:
         users = UserRepository(self.session, self.current_user.company_id)
         recipients = []
-        if state.request.owner_department_id is not None:
-            recipients = await users.list_department_managers(state.request.owner_department_id)
+        target_department_id = state.request.owner_department_id
+        raw_result = state.execution.department_result
+        if raw_result.get("department_type") == DepartmentType.FINANCE.value:
+            finance = await DepartmentRepository(
+                self.session, self.current_user.company_id
+            ).get_by_type(DepartmentType.FINANCE)
+            if finance is not None:
+                target_department_id = finance.id
+        if target_department_id is not None:
+            recipients = await users.list_department_managers(target_department_id)
         if not recipients:
             recipients = await users.list_company_accounts()
         for recipient in recipients:
@@ -716,18 +733,27 @@ class WorkflowService:
                 event_type=WorkflowEventType.DEPARTMENT_COLLABORATION_STARTED,
                 stage=state.request.current_stage,
                 title="Department collaboration updated",
-                message=("IT returned a diagnostic result to Customer Support." if state.collaboration.structured_result else f"A collaboration with {receiver or 'another department'} was prepared."),
+                message=(
+                    "A collaborating department returned a structured result."
+                    if state.collaboration.structured_result
+                    else f"A collaboration with {receiver or 'another department'} was prepared."
+                ),
                 actor_type=WorkflowEventActorType.DEPARTMENT_AGENT,
                 department_id=state.request.owner_department_id,
                 visibility=WorkflowEventVisibility.REQUESTER,
                 event_data={"owner_department": state.routing.selected_department.value if state.routing.selected_department else "unknown"},
             )
         if node_name == "human_action":
+            department = state.execution.department_result.get("department_type")
             return WorkflowEventCreate(
                 event_type=WorkflowEventType.WAITING_FOR_HUMAN_ACTION,
                 stage=state.request.current_stage,
-                title="Human support prepared",
-                message="Customer Support prepared this request for authorized human assistance.",
+                title="Authorized action prepared",
+                message=(
+                    "Finance prepared this request for authorized spending approval."
+                    if department == DepartmentType.FINANCE.value
+                    else "The department prepared this request for authorized human assistance."
+                ),
                 actor_type=WorkflowEventActorType.DEPARTMENT_AGENT,
                 department_id=state.request.owner_department_id,
                 visibility=WorkflowEventVisibility.MANAGER,
@@ -837,6 +863,14 @@ class WorkflowService:
             failure_type = FailureType.EXTERNAL_SERVICE_FAILURE
             failure_source = FailureSource.LLM
             safe_message = "IT is temporarily unavailable."
+        elif isinstance(exc, FinanceOutputError):
+            failure_type = FailureType.VALIDATION_FAILURE
+            failure_source = FailureSource.LLM
+            safe_message = "Finance could not validate its response."
+        elif isinstance(exc, FinanceClientError):
+            failure_type = FailureType.EXTERNAL_SERVICE_FAILURE
+            failure_source = FailureSource.LLM
+            safe_message = "Finance is temporarily unavailable."
         try:
             failure = await self.failure_service.record(
                 FailureCreate(

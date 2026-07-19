@@ -26,6 +26,10 @@ from app.departments.it.agent import ITDepartmentAgent
 from app.departments.it.service import ITService
 from app.departments.it.schemas import ITDepartmentResult
 from app.departments.it.tools import ITToolService
+from app.departments.finance.agent import FinanceDepartmentAgent
+from app.departments.finance.schemas import FinanceDepartmentResult
+from app.departments.finance.service import FinanceService
+from app.departments.finance.tools import FinanceBusinessDecisionError, FinanceToolService
 from app.users.repository import UserRepository
 from app.departments.contracts import DepartmentCollaborationResult
 from app.rag.pinecone import PineconeProvider
@@ -50,6 +54,7 @@ class DepartmentExecutionService:
         pinecone_provider: PineconeProvider | None = None,
         customer_support_service: CustomerSupportService | None = None,
         it_service: ITService | None = None,
+        finance_service: FinanceService | None = None,
         user_repository: UserRepository | None = None,
     ) -> None:
         self.session = session
@@ -64,6 +69,7 @@ class DepartmentExecutionService:
         )
         self.customer_support_service = customer_support_service
         self.it_service = it_service
+        self.finance_service = finance_service
         self.user_repository = user_repository or UserRepository(session, current_user.company_id)
         if registry is None:
             if customer_support_service is None:
@@ -82,9 +88,22 @@ class DepartmentExecutionService:
                 it_service = ITService(session, current_user, settings,
                     KnowledgeRetrievalService(session, current_user, settings, pinecone_provider))
                 self.it_service = it_service
+            if finance_service is None:
+                if settings is None or pinecone_provider is None:
+                    raise ValueError("Finance settings and Pinecone provider are required")
+                finance_service = FinanceService(
+                    session,
+                    current_user,
+                    settings,
+                    KnowledgeRetrievalService(
+                        session, current_user, settings, pinecone_provider
+                    ),
+                )
+                self.finance_service = finance_service
             registry = build_default_department_registry(
                 CustomerSupportDepartmentAgent(customer_support_service),
                 ITDepartmentAgent(it_service),
+                FinanceDepartmentAgent(finance_service),
             )
         self.registry = registry
 
@@ -198,6 +217,108 @@ class DepartmentExecutionService:
                 "requires_human_technician": result.requires_human_action,
                 "diagnostic": data or {}}, reason=result.reason)
 
+    async def execute_finance_collaboration(
+        self, state: WorkflowState, request: DepartmentCollaborationRequest
+    ) -> DepartmentCollaborationResult:
+        allowed = {
+            (DepartmentType.IT, "validate_it_purchase_budget"),
+            (DepartmentType.PROCUREMENT, "validate_procurement_purchase"),
+        }
+        if (
+            request.request_id != state.request.request_id
+            or request.receiver_department != DepartmentType.FINANCE
+            or (request.sender_department, request.action) not in allowed
+        ):
+            raise DepartmentContextMismatchError("Finance collaboration request is invalid")
+        business_request = await self.request_repository.get_by_id(state.request.request_id)
+        requester = await self.user_repository.get_by_id_with_employee(
+            state.request.requester_user_id
+        )
+        finance_department = await self.department_repository.get_by_type(DepartmentType.FINANCE)
+        if (
+            business_request is None
+            or requester is None
+            or finance_department is None
+            or not finance_department.is_active
+            or self.finance_service is None
+        ):
+            raise NotFoundError("Finance collaboration context not found")
+        context = self._build_context(
+            state,
+            business_request=business_request,
+            owner_department_type=request.sender_department,
+            active_department_type=DepartmentType.FINANCE,
+            requester=requester,
+        ).model_copy(update={"collaboration_input": request})
+        await self.session.rollback()
+        raw = await self.registry.resolve(DepartmentType.FINANCE).execute(context)
+        department_result = DepartmentExecutionResult.model_validate(raw)
+        if department_result.department_type != DepartmentType.FINANCE:
+            raise DepartmentResultValidationError(
+                "Finance collaboration returned the wrong department"
+            )
+        finance_data = (
+            department_result.state_updates.execution.department_data
+            if department_result.state_updates.execution else {}
+        )
+        finance_result = FinanceDepartmentResult.model_validate(finance_data)
+        tool_result = None
+        if department_result.requires_tool:
+            if department_result.tool_request is None:
+                raise DepartmentResultValidationError("Finance tool request is missing")
+            tool = FinanceToolService(
+                self.finance_service.budgets,
+                self.finance_service.finance_requests,
+                self.finance_service.transactions,
+                request_id=state.request.request_id,
+                user_id=state.request.requester_user_id,
+            )
+            try:
+                tool_result = await tool.execute(department_result.tool_request)
+            except FinanceBusinessDecisionError as exc:
+                tool_result = {
+                    "operation": department_result.tool_request.operation,
+                    "business_decision": "rejected",
+                    "reason": str(exc),
+                }
+        if department_result.requires_collaboration or department_result.requires_review:
+            raise DepartmentResultValidationError(
+                "Finance collaboration cannot start nested collaboration or review"
+            )
+        result = {
+            "decision": finance_result.decision.value,
+            "validated_amount": (
+                str(finance_result.requested_amount)
+                if finance_result.requested_amount is not None else None
+            ),
+            "currency": finance_result.currency,
+            "budget_reference": finance_result.state_updates.safe_budget_reference,
+            "budget_sufficient": finance_result.budget_sufficient,
+            "budget_validated": bool(
+                finance_result.budget_sufficient
+                and finance_result.policy_compliant
+                and not finance_result.approval_required
+                and not (tool_result and tool_result.get("business_decision") == "rejected")
+            ),
+            "approval_required": finance_result.approval_required,
+            "reservation_result": tool_result,
+            "required_next_action": finance_result.next_action.value,
+            "finance_data": finance_result.model_dump(mode="json"),
+        }
+        return DepartmentCollaborationResult(
+            request_id=request.request_id,
+            sender_department=DepartmentType.FINANCE,
+            receiver_department=request.sender_department,
+            action=request.action,
+            status=(
+                "unsupported" if department_result.status.value == "unsupported"
+                else "failed" if department_result.status.value == "failed"
+                else "completed"
+            ),
+            result=result,
+            reason=department_result.reason,
+        )
+
     async def execute_it_tool(self, state: WorkflowState) -> dict[str, Any]:
         result = DepartmentExecutionResult.model_validate(state.execution.department_result)
         if result.department_type != DepartmentType.IT or result.tool_request is None:
@@ -208,8 +329,40 @@ class DepartmentExecutionService:
         if self.it_service is None:
             raise DepartmentContextMismatchError("IT service is unavailable")
         tool = ITToolService(self.it_service.assets, self.it_service.software)
-        output = await tool.execute(result.tool_request)
+        try:
+            output = await tool.execute(result.tool_request)
+        except FinanceBusinessDecisionError as exc:
+            output = {
+                "operation": result.tool_request.operation,
+                "business_decision": "rejected",
+                "reason": str(exc),
+            }
         await self.session.rollback()
+        return output
+
+    async def execute_finance_tool(self, state: WorkflowState) -> dict[str, Any]:
+        result = DepartmentExecutionResult.model_validate(state.execution.department_result)
+        if result.department_type != DepartmentType.FINANCE or result.tool_request is None:
+            raise DepartmentContextMismatchError("Only validated Finance tools are active")
+        reference = result.tool_request.idempotency_key
+        if any(
+            item.get("operation") == result.tool_request.operation
+            and (reference is None or item.get("idempotency_reference") == reference)
+            for item in state.execution.tool_results
+        ):
+            raise DepartmentStateUpdateError("The Finance tool already completed")
+        if self.finance_service is None:
+            raise DepartmentContextMismatchError("Finance service is unavailable")
+        tool = FinanceToolService(
+            self.finance_service.budgets,
+            self.finance_service.finance_requests,
+            self.finance_service.transactions,
+            request_id=state.request.request_id,
+            user_id=state.request.requester_user_id,
+        )
+        output = await tool.execute(result.tool_request)
+        if reference is not None:
+            output["idempotency_reference"] = reference
         return output
 
     async def persist_it_collaboration_result(self, state: WorkflowState) -> None:
@@ -223,6 +376,21 @@ class DepartmentExecutionService:
             await self.it_service.persist_result(state.request.request_id,
                 ITDepartmentResult.model_validate(diagnostic),
                 reported_by_user_id=state.request.requester_user_id)
+
+    async def persist_finance_collaboration_result(self, state: WorkflowState) -> None:
+        if self.finance_service is None or not state.collaboration.structured_result:
+            return
+        collaboration = DepartmentCollaborationResult.model_validate(
+            state.collaboration.structured_result
+        )
+        if collaboration.sender_department != DepartmentType.FINANCE:
+            return
+        data = collaboration.result.get("finance_data")
+        if data:
+            await self.finance_service.persist_result(
+                state.request.request_id,
+                FinanceDepartmentResult.model_validate(data),
+            )
 
     async def persist_department_result(self, state: WorkflowState) -> None:
         raw = state.execution.department_result
@@ -239,6 +407,15 @@ class DepartmentExecutionService:
             await self.it_service.persist_result(state.request.request_id,
                 ITDepartmentResult.model_validate(data),
                 reported_by_user_id=state.request.requester_user_id)
+        if (
+            data
+            and raw.get("department_type") == DepartmentType.FINANCE.value
+            and self.finance_service
+        ):
+            await self.finance_service.persist_result(
+                state.request.request_id,
+                FinanceDepartmentResult.model_validate(data),
+            )
 
     @staticmethod
     def _build_context(

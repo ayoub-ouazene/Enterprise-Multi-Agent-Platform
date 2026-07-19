@@ -260,3 +260,5 @@ def test_completed_step_cannot_be_reintroduced_as_pending() -> None:
 def test_no_permanent_department_messages_table_exists() -> None:
     assert "department_messages" not in Base.metadata.tables
     assert "collaboration_messages" not in Base.metadata.tables
+    assert "finance_requests" in Base.metadata.tables
+    assert "financial_transactions" in Base.metadata.tables

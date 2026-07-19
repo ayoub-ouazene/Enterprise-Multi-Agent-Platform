@@ -12,6 +12,7 @@ from app.database.health import get_database_health
 from app.database import models as database_models
 from app.database.session import create_database_engine, create_session_factory
 from app.failures.router import router as failures_router
+from app.departments.finance.router import router as finance_router
 from app.notifications.router import router as notifications_router
 from app.rag.router import router as rag_router
 from app.requests.router import router as requests_router
@@ -58,6 +59,7 @@ def create_app(settings_override: Settings | None = None) -> FastAPI:
     application.include_router(workflow_router)
     application.include_router(notifications_router)
     application.include_router(failures_router)
+    application.include_router(finance_router)
     application.include_router(rag_router)
 
     @application.get("/health", response_model=HealthResponse)

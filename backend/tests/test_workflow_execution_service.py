@@ -13,7 +13,7 @@ from app.departments.repository import DepartmentRepository
 from app.departments.contracts import DepartmentExecutionResult
 from app.departments.execution import DepartmentExecutionService
 from app.notifications.service import NotificationService
-from app.llm.exceptions import RouterProviderError
+from app.llm.exceptions import FinanceOutputError, RouterProviderError
 from app.requests.enums import RequestStatus
 from app.workflow.enums import WorkflowEventType
 from app.workflow.enums import WorkflowEventActorType
@@ -115,6 +115,11 @@ class FakeDepartmentExecutionService:
 class FailingDepartmentExecutionService:
     async def execute(self, state):
         raise RuntimeError("internal department implementation details")
+
+
+class InvalidFinanceExecutionService:
+    async def execute(self, state):
+        raise FinanceOutputError("raw malformed provider output")
 
 
 def service_fixture(current_user, request, *, graph=workflow_graph, state=None):
@@ -410,3 +415,16 @@ def test_department_lookup_is_tenant_repository_call() -> None:
     asyncio.run(service.start(request.id))
 
     departments.list.assert_awaited_once_with()
+
+
+def test_finance_output_failure_is_sanitized_through_failure_service() -> None:
+    current = user()
+    request = request_record(current)
+    service, _, persistence, _, _, _, failures = service_fixture(current, request)
+    service.department_execution_service = InvalidFinanceExecutionService()
+    with pytest.raises(WorkflowExecutionFailedError):
+        asyncio.run(service.start(request.id))
+    payload = failures.record.await_args.args[0]
+    assert payload.safe_message == "Finance could not validate its response."
+    failed_state = persistence.save_checkpoint.await_args_list[-1].args[0]
+    assert "malformed" not in failed_state.failure.safe_message

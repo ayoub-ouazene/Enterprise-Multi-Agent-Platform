@@ -26,6 +26,9 @@ from app.llm.exceptions import (
     CustomerSupportConfigurationError,
     CustomerSupportOutputError,
     CustomerSupportProviderError,
+    FinanceConfigurationError,
+    FinanceOutputError,
+    FinanceProviderError,
     ITConfigurationError,
     ITOutputError,
     ITProviderError,
@@ -200,6 +203,88 @@ class GroqITClient:
     def _log_it(started: float, role: str, model: str, retries: int, category: str) -> None:
         logger.info("LLM request completed role=%s model=%s latency_ms=%d retry_count=%d category=%s",
             f"it_{role}", model, int((monotonic() - started) * 1000), retries, category)
+
+
+class GroqFinanceClient:
+    """Centralized Groq client restricted to Finance Fast and Reasoning roles."""
+
+    def __init__(self, settings: Settings, *, client: Any | None = None,
+                 sleep: Callable[[float], Awaitable[None]] = asyncio.sleep) -> None:
+        if settings.groq_api_key is None or not settings.groq_api_key.get_secret_value().strip():
+            raise FinanceConfigurationError("GROQ_API_KEY must be configured for Finance")
+        if not settings.groq_model_fast.strip() or not settings.groq_model_reasoning.strip():
+            raise FinanceConfigurationError(
+                "Fast and Reasoning Groq models must be configured for Finance"
+            )
+        self.settings, self._sleep = settings, sleep
+        self._client = client or AsyncGroq(
+            api_key=settings.groq_api_key.get_secret_value(),
+            base_url=str(settings.groq_base_url),
+            timeout=float(settings.llm_request_timeout_seconds),
+            max_retries=0,
+        )
+
+    async def generate(self, payload: Any, *, role: Any) -> Any:
+        from app.departments.finance.enums import FinanceModelRole
+        from app.departments.finance.prompt import FINANCE_SYSTEM_PROMPT, build_finance_user_message
+        from app.departments.finance.schemas import FinanceDepartmentResult
+
+        if role not in {FinanceModelRole.FAST, FinanceModelRole.REASONING}:
+            raise FinanceConfigurationError("Unsupported Finance model role")
+        model = (
+            self.settings.groq_model_fast
+            if role == FinanceModelRole.FAST
+            else self.settings.groq_model_reasoning
+        ).strip()
+        messages = [
+            {"role": "system", "content": FINANCE_SYSTEM_PROMPT},
+            {"role": "user", "content": build_finance_user_message(payload)},
+        ]
+        retries, validation_retry = 0, False
+        while True:
+            started = monotonic()
+            try:
+                response = await self._client.chat.completions.create(
+                    model=model,
+                    messages=messages,
+                    temperature=self.settings.llm_temperature,
+                    response_format={"type": "json_object"},
+                )
+                content = response.choices[0].message.content
+                if not isinstance(content, str) or not content.strip():
+                    raise ValueError("empty response")
+                result = FinanceDepartmentResult.model_validate(json.loads(content))
+            except TemporaryProviderError:
+                self._log(started, role.value, model, retries, "temporary_failure")
+                if retries >= self.settings.llm_max_retries:
+                    raise FinanceProviderError("Finance is temporarily unavailable") from None
+                retries += 1
+                await self._sleep(min(0.25 * 2 ** (retries - 1), 2.0))
+                continue
+            except (json.JSONDecodeError, ValidationError, ValueError, IndexError, TypeError):
+                self._log(started, role.value, model, retries, "invalid_output")
+                if validation_retry or retries >= self.settings.llm_max_retries:
+                    raise FinanceOutputError(
+                        "Finance returned an invalid structured response"
+                    ) from None
+                validation_retry, retries = True, retries + 1
+                messages.append({
+                    "role": "system",
+                    "content": "Correct the response and return only valid FinanceDepartmentResult JSON.",
+                })
+                continue
+            except Exception:
+                self._log(started, role.value, model, retries, "permanent_failure")
+                raise FinanceProviderError("Finance provider request failed") from None
+            self._log(started, role.value, model, retries, "success")
+            return result
+
+    @staticmethod
+    def _log(started: float, role: str, model: str, retries: int, category: str) -> None:
+        logger.info(
+            "LLM request completed role=%s model=%s latency_ms=%d retry_count=%d category=%s",
+            f"finance_{role}", model, int((monotonic() - started) * 1000), retries, category,
+        )
 
 
 class GroqRouterClient:

@@ -44,3 +44,19 @@ class ITProviderError(ITClientError):
 
 class ITOutputError(ITClientError):
     pass
+
+
+class FinanceClientError(Exception):
+    """Safe base exception for Finance model failures."""
+
+
+class FinanceConfigurationError(FinanceClientError):
+    pass
+
+
+class FinanceProviderError(FinanceClientError):
+    pass
+
+
+class FinanceOutputError(FinanceClientError):
+    pass

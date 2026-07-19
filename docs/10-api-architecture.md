@@ -170,3 +170,13 @@ Step 14 adds no direct IT execution endpoint. IT remains available through
 `POST /api/v1/assistant/message` and existing request workflow start/resume endpoints. Asset and
 software imports/writes remain later onboarding work. Normal users cannot directly invoke asset
 assignment, password reset, account unlock, supplier, budget, or purchase operations.
+
+## 10.8 Finance API Surface
+
+Finance execution remains available only through `POST /api/v1/assistant/message` and existing
+request workflow start/resume endpoints. Read-only management endpoints are `GET /api/v1/budgets`,
+`GET /api/v1/budgets/{budget_id}`, `GET /api/v1/financial-transactions`, and
+`GET /api/v1/financial-transactions/{transaction_id}`. Company accounts and Finance managers may
+read company financial records; other department managers may read only their department budget
+summary. Employees and external users cannot list full financial data. No public financial mutation
+endpoint exists.

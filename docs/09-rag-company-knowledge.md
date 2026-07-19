@@ -112,3 +112,11 @@ IT retrieves only `it` and `shared` knowledge from the trusted company namespace
 derived from the persisted requester, not the workflow controller or client. Existing policy,
 procedure, manual, troubleshooting-guide, internal-rule, and product-documentation metadata covers
 IT sources. References are validated against active retrieved records before persistence or display.
+
+## Finance retrieval
+
+Finance retrieves only `finance` and `shared` knowledge in the trusted company namespace. Existing
+policy, procedure, manual, and internal-rule document types represent expense policies, approval
+matrices, purchasing policies, budget procedures, and financial manuals. Requester access scope is
+derived from trusted authentication records. Database balances remain authoritative when RAG policy
+and financial records are used together.

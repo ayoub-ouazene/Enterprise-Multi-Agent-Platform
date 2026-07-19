@@ -199,3 +199,13 @@ original Request ID. `assets` and `software_catalog` are tenant-owned reference 
 status, type, employee, reporter, and active fields are relational columns; safe optional company
 fields remain JSONB. Password, reset-token, supplier, budget, purchase, and physical-execution data
 is not stored by this foundation.
+
+## Finance foundation tables
+
+`budgets` stores tenant-owned company, department, project, operational, or capital allocations with
+fixed-precision allocated, reserved, committed, and spent totals. `finance_requests` is a one-to-one
+request extension using the original Request ID; it replaces the earlier conceptual
+`purchase_requests` name for the Step 15 Finance scope. `financial_transactions` records idempotent
+pending or confirmed reservation, commitment, expense, release, adjustment, and reversal entries.
+Only confirmed movements change authoritative totals. Budget mutation locks the tenant-scoped budget
+row and repositories never commit independently.

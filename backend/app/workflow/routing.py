@@ -95,4 +95,8 @@ def route_after_collaboration(state: WorkflowState) -> Literal["department_execu
     result = state.collaboration.structured_result
     if result and result.get("sender_department") == DepartmentType.CUSTOMER_SUPPORT.value and result.get("receiver_department") == DepartmentType.IT.value:
         return "department_execution"
+    if result and result.get("sender_department") == DepartmentType.FINANCE.value and result.get("receiver_department") in {
+        DepartmentType.IT.value, DepartmentType.PROCUREMENT.value
+    }:
+        return "department_execution"
     return END

@@ -117,7 +117,14 @@ class ITService:
             raise ValueError("IT returned an unauthorized source reference")
         if result.requires_procurement_collaboration:
             collaboration = context.collaboration_result
-            if collaboration is None or collaboration.receiver_department != DepartmentType.FINANCE or collaboration.status.value != "completed" or collaboration.result.get("budget_validated") is not True:
+            if (
+                collaboration is None
+                or collaboration.sender_department != DepartmentType.FINANCE
+                or collaboration.receiver_department != DepartmentType.IT
+                or collaboration.action != "validate_it_purchase_budget"
+                or collaboration.status.value != "completed"
+                or collaboration.result.get("budget_validated") is not True
+            ):
                 raise ValueError("Procurement preparation requires trusted Finance validation")
         previous_question = context.previous_it_state.get("clarification_question")
         if result.clarification_question and result.clarification_question == previous_question:

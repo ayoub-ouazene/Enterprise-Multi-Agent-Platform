@@ -86,3 +86,11 @@ Department and access filters are additionally applied.
 ## 14.8 Audit
 
 Important mutations, approvals, rejections, financial confirmations, and natural-language data edits should produce audit-relevant records.
+
+## 14.9 Finance Authorization
+
+Company accounts and trusted Finance managers may read company budgets and financial transactions.
+Other department managers may read only their own department budget summaries and cannot list
+transactions. Employees and external users cannot access full financial listings. Finance tools
+derive company, requester, and approval identity from trusted context; cross-company identifiers
+behave as not found. Restricted confirmed movements require an independent approver.

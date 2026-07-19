@@ -84,13 +84,24 @@ class AssistantService:
         precomputed = None
         if (
             output.message_category == RouterMessageCategory.DEPARTMENT_QUESTION
-            and output.owner_department in {DepartmentType.CUSTOMER_SUPPORT, DepartmentType.IT}
+            and output.owner_department in {
+                DepartmentType.CUSTOMER_SUPPORT,
+                DepartmentType.IT,
+                DepartmentType.FINANCE,
+            }
         ):
             request_id = uuid4()
             execution_service = getattr(self.workflow_service, "department_execution_service", None)
-            department_service = (getattr(execution_service, "customer_support_service", None)
-                if output.owner_department == DepartmentType.CUSTOMER_SUPPORT
-                else getattr(execution_service, "it_service", None))
+            service_names = {
+                DepartmentType.CUSTOMER_SUPPORT: "customer_support_service",
+                DepartmentType.IT: "it_service",
+                DepartmentType.FINANCE: "finance_service",
+            }
+            department_service = getattr(
+                execution_service,
+                service_names[output.owner_department],
+                None,
+            )
             if department_service is not None and inspect.iscoroutinefunction(
                 getattr(department_service, "execute", None)
             ):
@@ -105,9 +116,9 @@ class AssistantService:
                         requester_is_manager=self.current_user.is_manager,
                         owner_department_type=output.owner_department,
                         active_department_type=output.owner_department,
-                        request_type=output.request_type or "customer_support_question",
+                        request_type=output.request_type or f"{output.owner_department.value}_question",
                         request_summary=payload.message,
-                        current_stage="customer_support_analysis",
+                        current_stage=f"{output.owner_department.value}_analysis",
                     )
                 )
                 if result.next_action == DepartmentNextAction.COMPLETE_REQUEST:

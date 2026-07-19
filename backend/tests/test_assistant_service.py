@@ -13,6 +13,7 @@ from app.core.enums import ActorType, DepartmentType
 from app.requests.enums import RequestStatus
 from app.workflow.router_output import RouterOutput
 from app.workflow.schemas import WorkflowControlResponse
+from app.departments.contracts import DepartmentExecutionResult
 
 
 def settings() -> Settings:
@@ -189,3 +190,24 @@ def test_clarification_answer_resumes_same_request_without_reclassification() ->
     )
     router_client.classify.assert_not_awaited()
     requests.create.assert_not_awaited()
+
+
+def test_grounded_finance_question_can_remain_nonpersistent() -> None:
+    service, _, requests, workflows, _ = service_for(
+        router_output("department_question", DepartmentType.FINANCE)
+    )
+    finance = Mock()
+    finance.execute = AsyncMock(return_value=DepartmentExecutionResult(
+        department_type="finance", status="completed", decision="answer",
+        reason="Authorized policy evidence supports the answer.",
+        user_message="The policy requires a documented business reason.",
+        current_stage="finance_completed", completed_step="finance_analysis_completed",
+        next_action="complete_request", is_terminal=True,
+        safe_event_title="Finance answer completed",
+        safe_event_message="Finance answered an authorized policy question.",
+    ))
+    workflows.department_execution_service = SimpleNamespace(finance_service=finance)
+    result = asyncio.run(service.handle(AssistantMessageRequest(message="What is the expense policy?")))
+    assert result.request_id is None
+    requests.create.assert_not_awaited()
+    finance.execute.assert_awaited_once()

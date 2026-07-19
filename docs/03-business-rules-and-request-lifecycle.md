@@ -190,3 +190,12 @@ hardware, and incident work uses the existing Request ID. Hardware inventory is 
 purchase collaboration. Available assets produce assignment or delivery preparation; unavailable
 stock produces Finance validation, with Procurement preparation allowed only after trusted Finance
 validation state exists.
+
+## Finance request flows
+
+Finance policy answers may remain nonpersistent when grounded and immediately complete. Budget
+mutations use the existing Request ID and deterministic database calculations. A reservation is a
+non-spending hold and may be automatic only when policy clearly permits it and no approval is
+required. Approval-required work pauses without a pre-approval hold. Commitments and expenses need
+trusted authorization; an expense also needs confirmed execution evidence. Insufficient balance is
+a safe business rejection rather than a technical failure.

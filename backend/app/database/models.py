@@ -2,6 +2,7 @@ from app.auth.models import RefreshToken
 from app.companies.models import Company
 from app.departments.models import Department
 from app.departments.customer_support.models import SupportIssue
+from app.departments.finance.models import Budget, FinanceRequest, FinancialTransaction
 from app.departments.it.models import AccessRequest, Asset, HardwareRequest, ITIncident, SoftwareCatalog
 from app.employees.models import Employee
 from app.failures.models import CapabilityGap, FailureLog
@@ -16,6 +17,9 @@ __all__ = [
     "Company",
     "Department",
     "SupportIssue",
+    "Budget",
+    "FinanceRequest",
+    "FinancialTransaction",
     "AccessRequest",
     "Asset",
     "HardwareRequest",
