@@ -93,8 +93,10 @@ class BusinessRequestRepository:
         priority: RequestPriority,
         workflow_state: dict[str, Any],
         custom_data: dict[str, Any],
+        request_id: UUID | None = None,
     ) -> BusinessRequest:
         business_request = BusinessRequest(
+            **({"id": request_id} if request_id is not None else {}),
             company_id=self.company_id,
             requester_user_id=requester_user_id,
             requester_employee_id=requester_employee_id,

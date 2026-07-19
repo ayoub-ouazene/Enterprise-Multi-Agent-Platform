@@ -98,3 +98,10 @@ When a company uploads a new policy version:
 When appropriate, answers should mention the policy source in a user-friendly way.
 
 Internal vector IDs, embedding details, and raw retrieved chunks must not be exposed.
+## Customer Support retrieval
+
+Customer Support queries only the `customer_support` and `shared` scopes in the authenticated
+company namespace. Access-scope filters are derived from the persisted requester actor, never from
+client input or the workflow controller. Returned source references expose document title/type,
+version, chunk index, and effective date; raw record IDs, scores, and unauthorized text are not
+included in responses.

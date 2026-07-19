@@ -91,6 +91,7 @@ class WorkflowExecutionState(WorkflowStateSection):
     last_operation: str | None = Field(default=None, max_length=255)
     last_operation_status: str | None = Field(default=None, max_length=100)
     department_result: dict[str, Any] = Field(default_factory=dict)
+    department_data: dict[str, Any] = Field(default_factory=dict)
 
 
 class WorkflowRoutingState(WorkflowStateSection):
@@ -192,6 +193,7 @@ class WorkflowRuntimeContext:
     departments: dict[DepartmentType, DepartmentRuntimeContext]
     preclassified_output: RouterOutput | None = None
     department_execution_service: Any | None = None
+    precomputed_department_result: dict[str, Any] | None = None
 
 
 def _reject_sensitive_string_values(

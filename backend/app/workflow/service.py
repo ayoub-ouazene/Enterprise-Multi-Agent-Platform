@@ -12,9 +12,18 @@ from app.departments.contracts import DepartmentExecutionResult
 from app.departments.execution import DepartmentExecutionService
 from app.failures.enums import FailureSource, FailureType
 from app.failures.schemas import CapabilityGapCreate, FailureCreate
-from app.llm.exceptions import RouterConfigurationError
+from app.llm.exceptions import (
+    CustomerSupportClientError,
+    CustomerSupportOutputError,
+    RouterConfigurationError,
+)
+from app.rag.exceptions import KnowledgeProviderError
 from app.llm.groq import GroqRouterClient
 from app.notifications.service import NotificationService
+from app.notifications.enums import NotificationActionType, NotificationSeverity, NotificationType
+from app.notifications.schemas import NotificationCreate
+from app.rag.pinecone import PineconeProvider
+from app.users.repository import UserRepository
 from app.requests.enums import TERMINAL_REQUEST_STATUSES, RequestStatus
 from app.requests.models import BusinessRequest
 from app.requests.permissions import can_view_business_request
@@ -215,6 +224,7 @@ class WorkflowService:
         failure_service: Any | None = None,
         capability_gap_service: Any | None = None,
         graph: Any | None = None,
+        pinecone_provider: PineconeProvider | None = None,
     ) -> None:
         self.session = session
         self.current_user = current_user
@@ -232,6 +242,10 @@ class WorkflowService:
                 session,
                 current_user,
                 department_repository=self.department_repository,
+                settings=settings,
+                pinecone_provider=pinecone_provider or (
+                    PineconeProvider(settings) if settings is not None else None
+                ),
             )
         )
         self.workflow_event_service = workflow_event_service or WorkflowEventService(
@@ -330,11 +344,13 @@ class WorkflowService:
         request_id: UUID,
         *,
         preclassified_output: RouterOutput,
+        precomputed_department_result: dict[str, Any] | None = None,
     ) -> WorkflowControlResponse:
         return await self._start(
             request_id,
             allow_requester=True,
             preclassified_output=preclassified_output,
+            precomputed_department_result=precomputed_department_result,
         )
 
     async def _start(
@@ -343,6 +359,7 @@ class WorkflowService:
         *,
         allow_requester: bool,
         preclassified_output: RouterOutput | None = None,
+        precomputed_department_result: dict[str, Any] | None = None,
     ) -> WorkflowControlResponse:
         try:
             business_request = await self.persistence.load_request(
@@ -410,6 +427,7 @@ class WorkflowService:
             router_client=router_client,
             departments=departments,
             preclassified_output=preclassified_output,
+            precomputed_department_result=precomputed_department_result,
         )
 
     async def resume(self, request_id: UUID) -> WorkflowControlResponse:
@@ -455,8 +473,7 @@ class WorkflowService:
                 raise WorkflowNotStartedError("Workflow has no start checkpoint")
             router_client = self._get_router_client()
             if (
-                state.routing.routing_pending
-                and state.routing.needs_clarification
+                state.routing.needs_clarification
                 and clarification_answer is None
             ):
                 raise WorkflowClarificationAnswerRequiredError(
@@ -464,8 +481,7 @@ class WorkflowService:
                 )
             if clarification_answer is not None:
                 if not (
-                    state.routing.routing_pending
-                    and state.routing.needs_clarification
+                    state.routing.needs_clarification
                 ):
                     raise WorkflowClarificationAnswerRequiredError(
                         "The workflow is not waiting for clarification"
@@ -511,6 +527,7 @@ class WorkflowService:
         router_client: Any,
         departments: dict[DepartmentType, DepartmentRuntimeContext],
         preclassified_output: RouterOutput | None = None,
+        precomputed_department_result: dict[str, Any] | None = None,
     ) -> WorkflowControlResponse:
         current_state = state
         runtime_context = WorkflowRuntimeContext(
@@ -518,6 +535,7 @@ class WorkflowService:
             departments=departments,
             preclassified_output=preclassified_output,
             department_execution_service=self.department_execution_service,
+            precomputed_department_result=precomputed_department_result,
         )
         try:
             async for part in self.graph.astream(
@@ -536,8 +554,11 @@ class WorkflowService:
                     )
         except RouterConfigurationError:
             raise
-        except WorkflowPersistenceError:
-            raise
+        except WorkflowPersistenceError as exc:
+            await self._record_graph_failure(current_state, exc)
+            raise WorkflowExecutionFailedError(
+                "Workflow persistence failed and was recorded safely"
+            ) from exc
         except Exception as exc:
             await self._record_graph_failure(current_state, exc)
             raise WorkflowExecutionFailedError(
@@ -559,6 +580,14 @@ class WorkflowService:
                 state = await self._record_capability_gap(state)
 
             business_request = await self.persistence.save_checkpoint(state)
+            if node_name == "department_execution":
+                persist_support = getattr(
+                    self.department_execution_service,
+                    "persist_customer_support_result",
+                    None,
+                )
+                if persist_support is not None:
+                    await persist_support(state)
             event = self._event_for_node(node_name, state)
             if event is not None:
                 await self.workflow_event_service.append(
@@ -572,6 +601,8 @@ class WorkflowService:
                     RequestStatus.COMPLETED,
                     commit=False,
                 )
+            if node_name == "human_action":
+                await self._notify_human_escalation(state)
             await self.session.commit()
             return state
         except Exception as exc:
@@ -581,6 +612,30 @@ class WorkflowService:
             raise WorkflowPersistenceError(
                 "Workflow checkpoint transaction failed"
             ) from exc
+
+    async def _notify_human_escalation(self, state: WorkflowState) -> None:
+        users = UserRepository(self.session, self.current_user.company_id)
+        recipients = []
+        if state.request.owner_department_id is not None:
+            recipients = await users.list_department_managers(state.request.owner_department_id)
+        if not recipients:
+            recipients = await users.list_company_accounts()
+        for recipient in recipients:
+            await self.notification_service.create(
+                NotificationCreate(
+                    recipient_user_id=recipient.id,
+                    request_id=state.request.request_id,
+                    notification_type=NotificationType.HUMAN_ACTION_REQUIRED,
+                    title="Customer Support action required",
+                    message="A Customer Support request needs authorized human assistance.",
+                    severity=NotificationSeverity.WARNING,
+                    action_required=True,
+                    action_type=NotificationActionType.VIEW_REQUEST,
+                    action_url=f"/requests/{state.request.request_id}",
+                    metadata={"stage": state.request.current_stage},
+                ),
+                commit=False,
+            )
 
     @staticmethod
     def _event_for_node(
@@ -640,6 +695,28 @@ class WorkflowService:
                 department_id=state.request.active_department_id,
                 visibility=WorkflowEventVisibility.REQUESTER,
                 event_data={"department_type": result.department_type.value},
+            )
+        if node_name == "collaboration":
+            return WorkflowEventCreate(
+                event_type=WorkflowEventType.DEPARTMENT_COLLABORATION_STARTED,
+                stage=state.request.current_stage,
+                title="IT diagnostic collaboration prepared",
+                message="Customer Support prepared an IT diagnostic collaboration on this request.",
+                actor_type=WorkflowEventActorType.DEPARTMENT_AGENT,
+                department_id=state.request.owner_department_id,
+                visibility=WorkflowEventVisibility.REQUESTER,
+                event_data={"owner_department": DepartmentType.CUSTOMER_SUPPORT.value},
+            )
+        if node_name == "human_action":
+            return WorkflowEventCreate(
+                event_type=WorkflowEventType.WAITING_FOR_HUMAN_ACTION,
+                stage=state.request.current_stage,
+                title="Human support prepared",
+                message="Customer Support prepared this request for authorized human assistance.",
+                actor_type=WorkflowEventActorType.DEPARTMENT_AGENT,
+                department_id=state.request.owner_department_id,
+                visibility=WorkflowEventVisibility.MANAGER,
+                event_data={},
             )
         if node_name == "completion":
             return WorkflowEventCreate(
@@ -704,6 +781,20 @@ class WorkflowService:
         safe_message = (
             "The workflow could not be completed due to an internal processing error."
         )
+        failure_type = FailureType.WORKFLOW_FAILURE
+        failure_source = FailureSource.WORKFLOW
+        if isinstance(exc, KnowledgeProviderError):
+            failure_type = FailureType.RETRIEVAL_FAILURE
+            failure_source = FailureSource.RAG
+            safe_message = "Company knowledge is temporarily unavailable."
+        elif isinstance(exc, CustomerSupportOutputError):
+            failure_type = FailureType.VALIDATION_FAILURE
+            failure_source = FailureSource.LLM
+            safe_message = "Customer Support could not validate its response."
+        elif isinstance(exc, CustomerSupportClientError):
+            failure_type = FailureType.EXTERNAL_SERVICE_FAILURE
+            failure_source = FailureSource.LLM
+            safe_message = "Customer Support is temporarily unavailable."
         try:
             failure = await self.failure_service.record(
                 FailureCreate(
@@ -712,10 +803,10 @@ class WorkflowService:
                         state.request.active_department_id
                         or state.request.owner_department_id
                     ),
-                    failure_type=FailureType.WORKFLOW_FAILURE,
-                    failure_source=FailureSource.WORKFLOW,
+                    failure_type=failure_type,
+                    failure_source=failure_source,
                     failed_operation=state.request.current_stage,
-                    internal_message=f"{type(exc).__name__}: {exc}",
+                    internal_message=type(exc).__name__,
                     safe_message=safe_message,
                     alternative_attempted=False,
                     is_terminal=True,
@@ -731,7 +822,7 @@ class WorkflowService:
             )
             failure_state = WorkflowFailureState(
                 has_failure=True,
-                failure_type=FailureType.WORKFLOW_FAILURE.value,
+                failure_type=failure_type.value,
                 safe_message=safe_message,
                 failure_log_id=failure.id,
                 alternative_attempted=False,

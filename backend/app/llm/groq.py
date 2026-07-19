@@ -1,9 +1,10 @@
 import asyncio
 import json
 import logging
+from enum import StrEnum
 from collections.abc import Awaitable, Callable
 from time import monotonic
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from groq import (
     APIConnectionError,
@@ -18,12 +19,18 @@ from app.core.config import (
     ConfigurationError,
     Settings,
     validate_router_configuration,
+    validate_customer_support_configuration,
 )
 from app.llm.exceptions import (
+    CustomerSupportConfigurationError,
+    CustomerSupportOutputError,
+    CustomerSupportProviderError,
     RouterConfigurationError,
     RouterOutputError,
     RouterProviderError,
 )
+if TYPE_CHECKING:
+    from app.departments.customer_support.schemas import CustomerSupportModelInput, CustomerSupportResult
 from app.workflow.prompts.router import (
     ROUTER_SYSTEM_PROMPT,
     build_router_user_message,
@@ -39,6 +46,97 @@ TemporaryProviderError = (
     InternalServerError,
     RateLimitError,
 )
+
+
+class SupportModelRole(StrEnum):
+    FAST = "fast"
+    REASONING = "reasoning"
+
+
+class GroqCustomerSupportClient:
+    """Centralized Groq access for the two approved Customer Support model roles."""
+
+    def __init__(self, settings: Settings, *, client: Any | None = None,
+                 sleep: Callable[[float], Awaitable[None]] = asyncio.sleep) -> None:
+        try:
+            validate_customer_support_configuration(settings)
+        except ConfigurationError as exc:
+            raise CustomerSupportConfigurationError(str(exc)) from None
+        self.settings = settings
+        self._sleep = sleep
+        self._client = client or AsyncGroq(
+            api_key=settings.groq_api_key.get_secret_value(),
+            base_url=str(settings.groq_base_url),
+            timeout=float(settings.llm_request_timeout_seconds),
+            max_retries=0,
+        )
+
+    async def generate(
+        self, payload: "CustomerSupportModelInput", *, role: SupportModelRole
+    ) -> "CustomerSupportResult":
+        from app.departments.customer_support.prompt import (
+            CUSTOMER_SUPPORT_SYSTEM_PROMPT,
+            build_customer_support_user_message,
+        )
+        from app.departments.customer_support.schemas import CustomerSupportResult
+        model = (
+            self.settings.groq_model_fast if role == SupportModelRole.FAST
+            else self.settings.groq_model_reasoning
+        ).strip()
+        messages = [
+            {"role": "system", "content": CUSTOMER_SUPPORT_SYSTEM_PROMPT},
+            {"role": "user", "content": build_customer_support_user_message(payload)},
+        ]
+        retries = 0
+        validation_retry = False
+        while True:
+            started = monotonic()
+            try:
+                response = await self._client.chat.completions.create(
+                    model=model, messages=messages,
+                    temperature=self.settings.llm_temperature,
+                    response_format={"type": "json_object"},
+                )
+                content = response.choices[0].message.content
+                if not isinstance(content, str) or not content.strip():
+                    raise ValueError("empty response")
+                result = CustomerSupportResult.model_validate(json.loads(content))
+            except TemporaryProviderError:
+                self._log_support(started, role, model, retries, "temporary_failure")
+                if retries >= self.settings.llm_max_retries:
+                    raise CustomerSupportProviderError(
+                        "Customer Support is temporarily unavailable"
+                    ) from None
+                retries += 1
+                await self._sleep(min(0.25 * 2 ** (retries - 1), 2.0))
+                continue
+            except (json.JSONDecodeError, ValidationError, ValueError, IndexError, TypeError):
+                self._log_support(started, role, model, retries, "invalid_output")
+                if validation_retry or retries >= self.settings.llm_max_retries:
+                    raise CustomerSupportOutputError(
+                        "Customer Support returned an invalid structured response"
+                    ) from None
+                validation_retry = True
+                retries += 1
+                messages.append({
+                    "role": "system",
+                    "content": "Correct the previous response and return only schema-valid JSON.",
+                })
+                continue
+            except Exception:
+                self._log_support(started, role, model, retries, "permanent_failure")
+                raise CustomerSupportProviderError("Customer Support request failed") from None
+            self._log_support(started, role, model, retries, "success")
+            return result
+
+    @staticmethod
+    def _log_support(started: float, role: SupportModelRole, model: str,
+                     retries: int, category: str) -> None:
+        logger.info(
+            "LLM request completed role=%s model=%s latency_ms=%d retry_count=%d category=%s",
+            f"customer_support_{role.value}", model,
+            int((monotonic() - started) * 1000), retries, category,
+        )
 
 
 class GroqRouterClient:

@@ -68,7 +68,7 @@ def execution_fixture(*, agent=None, active_type=DepartmentType.IT):
         is_active=True,
     )
     requests = Mock(spec=BusinessRequestRepository)
-    requests.get_by_id_for_update = AsyncMock(return_value=business_request)
+    requests.get_by_id = AsyncMock(return_value=business_request)
     departments = Mock(spec=DepartmentRepository)
     departments.get_by_id = AsyncMock(
         side_effect=lambda department_id: owner if department_id == owner_id else active
@@ -128,7 +128,7 @@ def test_context_is_built_from_trusted_tenant_request_and_state() -> None:
     assert agent.context.relevant_custom_data == {"asset_category": "laptop"}
     assert update["request"].company_id == state.request.company_id
     assert update["request"].owner_department_id == state.request.owner_department_id
-    requests.get_by_id_for_update.assert_awaited_once_with(state.request.request_id)
+    requests.get_by_id.assert_awaited_once_with(state.request.request_id)
     assert departments.get_by_id.await_count == 2
 
 
@@ -171,7 +171,7 @@ def test_inactive_department_is_rejected_before_agent_execution() -> None:
 
 def test_cross_company_request_behaves_as_not_found() -> None:
     service, state, _, _, requests, _ = execution_fixture()
-    requests.get_by_id_for_update.return_value = None
+    requests.get_by_id.return_value = None
 
     with pytest.raises(NotFoundError, match="Business request not found"):
         asyncio.run(service.execute(state))

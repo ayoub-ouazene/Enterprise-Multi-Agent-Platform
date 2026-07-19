@@ -82,3 +82,11 @@ Safe temporary failures may be retried a limited number of times.
 Do not use endless retry loops.
 
 Irreversible operations must avoid duplicate execution.
+## Customer Support failures and escalation
+
+Provider timeouts and transient failures use bounded retries; invalid structured output receives one
+correction attempt within the configured retry limit. Persistent RAG, Groq, validation, or checkpoint
+failures are sanitized and recorded through the existing failure service. Prepared human escalation
+creates a manager-visible workflow event and notifies active Customer Support managers, falling back
+to active Company accounts. No prompt, evidence text, credential, or complete provider payload is
+logged.

@@ -238,3 +238,10 @@ Examples:
 - IT → HR when employee role or employment status is required.
 
 The owner department remains responsible for completing or terminating the request.
+## Step 13 Customer Support implementation
+
+Customer Support is the first real department implementation. It may answer company-specific
+questions only from tenant-scoped, requester-authorized knowledge evidence, provide reversible
+troubleshooting, prepare an IT diagnostic collaboration, or prepare a human escalation. It cannot
+execute refunds, payments, account or order changes, IT actions, approvals, or other mutations.
+Human Resources, IT, Finance, and Procurement remain deterministic placeholders.

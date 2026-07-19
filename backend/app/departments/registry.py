@@ -42,10 +42,12 @@ class DepartmentRegistry:
         return tuple(sorted(self._agents, key=lambda item: item.value))
 
 
-def build_default_department_registry() -> DepartmentRegistry:
+def build_default_department_registry(
+    customer_support_agent: CustomerSupportDepartmentAgent | None = None,
+) -> DepartmentRegistry:
     return DepartmentRegistry(
         (
-            CustomerSupportDepartmentAgent(),
+            customer_support_agent or CustomerSupportDepartmentAgent(),
             HRDepartmentAgent(),
             ITDepartmentAgent(),
             FinanceDepartmentAgent(),

@@ -25,7 +25,10 @@ def context(department_type: DepartmentType) -> DepartmentExecutionContext:
     )
 
 
-@pytest.mark.parametrize("department_type", list(DepartmentType))
+@pytest.mark.parametrize(
+    "department_type",
+    [item for item in DepartmentType if item != DepartmentType.CUSTOMER_SUPPORT],
+)
 def test_each_placeholder_returns_strict_deterministic_completion(
     department_type: DepartmentType,
 ) -> None:

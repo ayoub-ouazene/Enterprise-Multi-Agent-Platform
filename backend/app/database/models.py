@@ -1,6 +1,7 @@
 from app.auth.models import RefreshToken
 from app.companies.models import Company
 from app.departments.models import Department
+from app.departments.customer_support.models import SupportIssue
 from app.employees.models import Employee
 from app.failures.models import CapabilityGap, FailureLog
 from app.notifications.models import Notification
@@ -13,6 +14,7 @@ __all__ = [
     "BusinessRequest",
     "Company",
     "Department",
+    "SupportIssue",
     "Employee",
     "FailureLog",
     "CapabilityGap",

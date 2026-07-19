@@ -246,6 +246,14 @@ def validate_router_configuration(settings: Settings) -> None:
         )
 
 
+def validate_customer_support_configuration(settings: Settings) -> None:
+    """Validate Customer Support model roles without exposing configuration values."""
+    if settings.groq_api_key is None or not settings.groq_api_key.get_secret_value().strip():
+        raise ConfigurationError("GROQ_API_KEY must be configured for Customer Support")
+    if not settings.groq_model_fast.strip() or not settings.groq_model_reasoning.strip():
+        raise ConfigurationError("Fast and Reasoning Groq models must be configured for Customer Support")
+
+
 def validate_pinecone_configuration(settings: Settings) -> None:
     """Validate Pinecone only when knowledge functionality is invoked."""
     if (

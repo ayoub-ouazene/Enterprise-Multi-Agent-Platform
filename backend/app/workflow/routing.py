@@ -72,6 +72,7 @@ def route_after_department(
     "human_action",
     "completion",
     "failure",
+    "__end__",
 ]:
     result = DepartmentExecutionResult.model_validate(
         state.execution.department_result
@@ -82,6 +83,7 @@ def route_after_department(
         DepartmentNextAction.COLLABORATE: "collaboration",
         DepartmentNextAction.REQUEST_REVIEW: "reviewer",
         DepartmentNextAction.REQUEST_HUMAN_ACTION: "human_action",
+        DepartmentNextAction.WAIT_FOR_USER_INPUT: END,
         DepartmentNextAction.COMPLETE_REQUEST: "completion",
         DepartmentNextAction.FAIL_REQUEST: "failure",
     }

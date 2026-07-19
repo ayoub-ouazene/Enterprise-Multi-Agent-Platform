@@ -110,6 +110,14 @@ class KnowledgeRetrievalService:
 
     async def search(self, request: KnowledgeSearchRequest) -> list[KnowledgeChunkResult]:
         query = await self.trusted_query(request)
+        return await self.search_trusted(query)
+
+    async def search_trusted(
+        self, query: KnowledgeRetrievalQuery
+    ) -> list[KnowledgeChunkResult]:
+        """Execute a query whose tenant and access filters were derived internally."""
+        if query.company_id != self.current_user.company_id:
+            raise KnowledgePermissionError("Knowledge tenant scope is invalid")
         namespace = build_company_namespace(
             query.company_id, self.settings.pinecone_namespace_prefix
         )

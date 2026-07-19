@@ -188,7 +188,9 @@ class BusinessRequestService:
             raise NotFoundError("Business request not found")
         return business_request
 
-    async def create(self, payload: BusinessRequestCreate) -> BusinessRequest:
+    async def create(
+        self, payload: BusinessRequestCreate, *, request_id: UUID | None = None
+    ) -> BusinessRequest:
         if (
             self.current_user.actor_type
             not in {ActorType.COMPANY, ActorType.DEPARTMENT_MANAGER}
@@ -199,7 +201,7 @@ class BusinessRequestService:
             raise RequestPermissionError("This actor cannot assign custom request data")
 
         try:
-            business_request = await self.repository.create(
+            create_values = dict(
                 requester_user_id=self.current_user.user_id,
                 requester_employee_id=self.current_user.employee_id,
                 request_type=payload.request_type,
@@ -209,6 +211,9 @@ class BusinessRequestService:
                 workflow_state={},
                 custom_data=payload.custom_data,
             )
+            if request_id is not None:
+                create_values["request_id"] = request_id
+            business_request = await self.repository.create(**create_values)
             business_request.workflow_state = build_initial_workflow_state(
                 business_request
             ).to_storage()

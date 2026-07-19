@@ -160,3 +160,9 @@ Tool, retrieval, and department failures return to the owner department agent.
 The agent may try a valid alternative.
 
 If no alternative exists, it produces a safe user-facing response and terminates.
+## Customer Support model policy
+
+Customer Support always starts with the configured Fast Groq model. A validated Fast result may
+trigger at most one Reasoning-model pass when deterministic signals identify a complex technical
+issue, conflicting evidence, low confidence, material risk, or a prepared IT/human handoff. The
+agent uses strict structured output and cannot select arbitrary model identifiers.

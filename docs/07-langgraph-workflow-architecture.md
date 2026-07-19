@@ -179,3 +179,9 @@ Agents generate an initial high-level plan.
 They may modify future steps after each important event.
 
 The graph controls persistence and transitions; the agent decides appropriate next actions within policy and tool boundaries.
+## Customer Support pause paths
+
+The centralized graph supports three Step 13 Customer Support outcomes in addition to completion:
+`wait_for_user_input` pauses for one clarification, collaboration prepares an IT diagnostic handoff,
+and human action prepares an authorized escalation. These paths preserve the original Request ID,
+owner department, and checkpointed state. They do not execute IT work or human actions.

@@ -3,13 +3,13 @@ from typing import Any
 from langgraph.graph import END, START, StateGraph
 
 from app.workflow.nodes.completion import completion_node
-from app.workflow.nodes.collaboration import inactive_collaboration_node
+from app.workflow.nodes.collaboration import customer_support_collaboration_node
 from app.workflow.nodes.department import (
     department_stage_start_node,
     department_execution_node,
 )
 from app.workflow.nodes.failure import inactive_failure_node
-from app.workflow.nodes.human_action import inactive_human_action_node
+from app.workflow.nodes.human_action import customer_support_human_action_node
 from app.workflow.nodes.reviewer import inactive_reviewer_node
 from app.workflow.nodes.router import router_node
 from app.workflow.nodes.start import initialize_node
@@ -29,9 +29,9 @@ def build_workflow_graph() -> Any:
     builder.add_node("department_stage_start", department_stage_start_node)
     builder.add_node("department_execution", department_execution_node)
     builder.add_node("tool", inactive_tool_node)
-    builder.add_node("collaboration", inactive_collaboration_node)
+    builder.add_node("collaboration", customer_support_collaboration_node)
     builder.add_node("reviewer", inactive_reviewer_node)
-    builder.add_node("human_action", inactive_human_action_node)
+    builder.add_node("human_action", customer_support_human_action_node)
     builder.add_node("failure", inactive_failure_node)
     builder.add_node("completion", completion_node)
 
@@ -67,6 +67,7 @@ def build_workflow_graph() -> Any:
             "human_action": "human_action",
             "completion": "completion",
             "failure": "failure",
+            END: END,
         },
     )
     builder.add_edge("completion", END)

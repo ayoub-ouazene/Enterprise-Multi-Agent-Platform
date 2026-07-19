@@ -4,6 +4,7 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.context import AuthenticatedUser
+from app.core.config import Settings
 from app.core.enums import DepartmentType
 from app.core.exceptions import NotFoundError
 from app.departments.contracts import (
@@ -19,6 +20,10 @@ from app.departments.exceptions import (
     DepartmentStateUpdateError,
 )
 from app.departments.registry import DepartmentRegistry, build_default_department_registry
+from app.departments.customer_support.agent import CustomerSupportDepartmentAgent
+from app.departments.customer_support.service import CustomerSupportService
+from app.rag.pinecone import PineconeProvider
+from app.rag.retrieval import KnowledgeRetrievalService
 from app.departments.repository import DepartmentRepository
 from app.requests.repository import BusinessRequestRepository
 from app.workflow.state import WorkflowState, add_completed_step, apply_state_update
@@ -35,7 +40,11 @@ class DepartmentExecutionService:
         request_repository: BusinessRequestRepository | None = None,
         department_repository: DepartmentRepository | None = None,
         registry: DepartmentRegistry | None = None,
+        settings: Settings | None = None,
+        pinecone_provider: PineconeProvider | None = None,
+        customer_support_service: CustomerSupportService | None = None,
     ) -> None:
+        self.session = session
         self.current_user = current_user
         self.request_repository = request_repository or BusinessRequestRepository(
             session,
@@ -45,10 +54,25 @@ class DepartmentExecutionService:
             session,
             current_user.company_id,
         )
-        self.registry = registry or build_default_department_registry()
+        self.customer_support_service = customer_support_service
+        if registry is None:
+            if customer_support_service is None:
+                if settings is None or pinecone_provider is None:
+                    raise ValueError("Customer Support settings and Pinecone provider are required")
+                customer_support_service = CustomerSupportService(
+                    session,
+                    current_user,
+                    settings,
+                    KnowledgeRetrievalService(session, current_user, settings, pinecone_provider),
+                )
+                self.customer_support_service = customer_support_service
+            registry = build_default_department_registry(
+                CustomerSupportDepartmentAgent(customer_support_service)
+            )
+        self.registry = registry
 
     async def execute(self, state: WorkflowState) -> dict[str, Any]:
-        business_request = await self.request_repository.get_by_id_for_update(
+        business_request = await self.request_repository.get_by_id(
             state.request.request_id
         )
         if business_request is None:
@@ -104,6 +128,7 @@ class DepartmentExecutionService:
             owner_department_type=owner.department_type,
             active_department_type=active.department_type,
         )
+        await self.session.rollback()
         raw_result = await agent.execute(context)
         try:
             result = DepartmentExecutionResult.model_validate(raw_result)
@@ -116,6 +141,20 @@ class DepartmentExecutionService:
                 "The department result does not match the active department"
             )
         return self._safe_state_update(state, result)
+
+    async def persist_customer_support_result(self, state: WorkflowState) -> None:
+        if self.customer_support_service is None:
+            return
+        raw = state.execution.department_result
+        if not raw or raw.get("department_type") != DepartmentType.CUSTOMER_SUPPORT.value:
+            return
+        data = raw.get("state_updates", {}).get("execution", {}).get("department_data")
+        if data:
+            from app.departments.customer_support.schemas import CustomerSupportResult
+            await self.customer_support_service.persist_result(
+                state.request.request_id,
+                CustomerSupportResult.model_validate(data),
+            )
 
     @staticmethod
     def _build_context(
@@ -194,6 +233,10 @@ class DepartmentExecutionService:
             update={"department_result": result.model_dump(mode="json")}
         )
 
+        routing = state.routing
+        if updates.routing is not None:
+            routing = routing.model_copy(update=updates.routing.model_dump(exclude_none=True))
+
         collaboration = state.collaboration
         if updates.collaboration is not None:
             collaboration = collaboration.model_copy(
@@ -248,6 +291,7 @@ class DepartmentExecutionService:
                 "request": request,
                 "planning": planning,
                 "execution": execution,
+                "routing": routing,
                 "collaboration": collaboration,
                 "review": review,
                 "human_action": human_action,
@@ -258,6 +302,7 @@ class DepartmentExecutionService:
             "request": merged.request,
             "planning": merged.planning,
             "execution": merged.execution,
+            "routing": merged.routing,
             "collaboration": merged.collaboration,
             "review": merged.review,
             "human_action": merged.human_action,

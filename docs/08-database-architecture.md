@@ -185,3 +185,9 @@ Creates automatically assign the repository company ID.
 Updates and deletes include the company filter.
 
 Cross-company record IDs must behave as not found.
+## Customer Support extension
+
+`support_issues` is a tenant-owned one-to-one extension of `business_requests`; its `request_id` is
+both the primary key and a cascading foreign key. It stores issue category/status, product or
+service, symptoms, error messages, structured troubleshooting progress, resolution, escalation
+flags, safe custom state, and timestamps. Repository access always includes `company_id`.

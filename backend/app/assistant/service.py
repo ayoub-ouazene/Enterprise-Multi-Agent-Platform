@@ -1,4 +1,5 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+from uuid import uuid4
 
 from app.assistant.schemas import AssistantMessageRequest, AssistantMessageResponse
 from app.auth.context import AuthenticatedUser
@@ -8,6 +9,9 @@ from app.requests.schemas import BusinessRequestCreate
 from app.requests.service import BusinessRequestService
 from app.workflow.router_output import RouterMessageCategory, RouterOutput
 from app.workflow.service import WorkflowService
+from app.core.enums import DepartmentType
+from app.departments.contracts import DepartmentExecutionContext, DepartmentNextAction
+from app.rag.pinecone import PineconeProvider
 
 
 class AssistantService:
@@ -20,6 +24,7 @@ class AssistantService:
         router_client=None,
         request_service: BusinessRequestService | None = None,
         workflow_service: WorkflowService | None = None,
+        pinecone_provider: PineconeProvider | None = None,
     ) -> None:
         self.session = session
         self.current_user = current_user
@@ -38,6 +43,7 @@ class AssistantService:
             current_user,
             settings=settings,
             router_client=self.router_client,
+            pinecone_provider=pinecone_provider,
         )
 
     async def handle(self, payload: AssistantMessageRequest) -> AssistantMessageResponse:
@@ -74,17 +80,63 @@ class AssistantService:
                 or "This message is not supported by the platform.",
             )
 
-        business_request = await self.request_service.create(
-            BusinessRequestCreate(
+        precomputed = None
+        if (
+            output.message_category == RouterMessageCategory.DEPARTMENT_QUESTION
+            and output.owner_department == DepartmentType.CUSTOMER_SUPPORT
+        ):
+            request_id = uuid4()
+            support = getattr(
+                self.workflow_service.department_execution_service,
+                "customer_support_service",
+                None,
+            )
+            if support is not None:
+                result = await support.execute(
+                    DepartmentExecutionContext(
+                        request_id=request_id,
+                        company_id=self.current_user.company_id,
+                        requester_user_id=self.current_user.user_id,
+                        requester_employee_id=self.current_user.employee_id,
+                        owner_department_type=DepartmentType.CUSTOMER_SUPPORT,
+                        active_department_type=DepartmentType.CUSTOMER_SUPPORT,
+                        request_type=output.request_type or "customer_support_question",
+                        request_summary=payload.message,
+                        current_stage="customer_support_analysis",
+                    )
+                )
+                if result.next_action == DepartmentNextAction.COMPLETE_REQUEST:
+                    return self._nonpersistent_response(
+                        output, self._with_sources(result.user_message, result)
+                    )
+                precomputed = result.model_dump(mode="json")
+            else:
+                request_id = None
+        else:
+            request_id = None
+
+        create_payload = BusinessRequestCreate(
                 request_type=output.request_type or "routing_pending",
                 title=(output.short_summary or "Request awaiting clarification")[:255],
                 summary=payload.message,
             )
-        )
-        control = await self.workflow_service.start_for_submission(
-            business_request.id,
-            preclassified_output=output,
-        )
+        if request_id is None:
+            business_request = await self.request_service.create(create_payload)
+        else:
+            business_request = await self.request_service.create(
+                create_payload, request_id=request_id
+            )
+        if precomputed is None:
+            control = await self.workflow_service.start_for_submission(
+                business_request.id,
+                preclassified_output=output,
+            )
+        else:
+            control = await self.workflow_service.start_for_submission(
+                business_request.id,
+                preclassified_output=output,
+                precomputed_department_result=precomputed,
+            )
         return AssistantMessageResponse(
             message_category=control.message_category,
             owner_department=control.owner_department,
@@ -96,6 +148,13 @@ class AssistantService:
             request_type=output.request_type,
             short_summary=output.short_summary,
         )
+
+    @staticmethod
+    def _with_sources(message: str, result) -> str:
+        data = result.state_updates.execution
+        refs = data.department_data.get("sources", []) if data and data.department_data else []
+        titles = list(dict.fromkeys(item["title"] for item in refs if item.get("title")))
+        return message if not titles else f"{message}\n\nSources: {', '.join(titles)}"
 
     @staticmethod
     def _nonpersistent_response(

@@ -41,6 +41,7 @@ class DepartmentExecutionStatus(StrEnum):
     WAITING_FOR_DEPARTMENT = "waiting_for_department"
     WAITING_FOR_REVIEW = "waiting_for_review"
     WAITING_FOR_HUMAN = "waiting_for_human"
+    WAITING_FOR_USER = "waiting_for_user"
     FAILED = "failed"
     UNSUPPORTED = "unsupported"
 
@@ -51,6 +52,7 @@ class DepartmentNextAction(StrEnum):
     COLLABORATE = "collaborate"
     REQUEST_REVIEW = "request_review"
     REQUEST_HUMAN_ACTION = "request_human_action"
+    WAIT_FOR_USER_INPUT = "wait_for_user_input"
     COMPLETE_REQUEST = "complete_request"
     FAIL_REQUEST = "fail_request"
 
@@ -242,6 +244,22 @@ class DepartmentExecutionUpdates(StrictContract):
     last_operation: str | None = Field(default=None, max_length=255)
     last_operation_status: str | None = Field(default=None, max_length=100)
     retry_counts: dict[str, int] | None = None
+    department_data: dict[str, Any] | None = None
+
+    @field_validator("department_data")
+    @classmethod
+    def validate_department_data(
+        cls, value: dict[str, Any] | None
+    ) -> dict[str, Any] | None:
+        if value is not None:
+            return _validate_safe_object(value, path="department_data")
+        return value
+
+
+class DepartmentRoutingUpdates(StrictContract):
+    needs_clarification: bool | None = None
+    latest_question: str | None = Field(default=None, max_length=300)
+    routing_pending: bool | None = None
 
 
 class DepartmentCollaborationUpdates(StrictContract):
@@ -273,6 +291,7 @@ class DepartmentStateUpdates(StrictContract):
     current_stage: str | None = Field(default=None, max_length=100)
     planning: DepartmentPlanningUpdates | None = None
     execution: DepartmentExecutionUpdates | None = None
+    routing: DepartmentRoutingUpdates | None = None
     collaboration: DepartmentCollaborationUpdates | None = None
     review: DepartmentReviewUpdates | None = None
     human_action: DepartmentHumanActionUpdates | None = None
@@ -375,6 +394,14 @@ class DepartmentExecutionResult(StrictContract):
                 False,
                 False,
                 True,
+                False,
+            ),
+            DepartmentNextAction.WAIT_FOR_USER_INPUT: (
+                DepartmentExecutionStatus.WAITING_FOR_USER,
+                False,
+                False,
+                False,
+                False,
                 False,
             ),
             DepartmentNextAction.COMPLETE_REQUEST: (

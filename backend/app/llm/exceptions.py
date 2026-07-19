@@ -12,3 +12,19 @@ class RouterProviderError(RouterClientError):
 
 class RouterOutputError(RouterClientError):
     """Raised when model output remains invalid after correction."""
+
+
+class CustomerSupportClientError(Exception):
+    """Safe base exception for Customer Support model failures."""
+
+
+class CustomerSupportConfigurationError(CustomerSupportClientError):
+    pass
+
+
+class CustomerSupportProviderError(CustomerSupportClientError):
+    pass
+
+
+class CustomerSupportOutputError(CustomerSupportClientError):
+    pass
