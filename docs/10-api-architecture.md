@@ -189,3 +189,10 @@ accounts and active Procurement managers may create and update request-scoped ca
 authorized collaborating department managers may read only the relevant shortlist. Employees and
 external users cannot mutate candidates. No public endpoint executes Procurement, selects a final
 supplier, creates a purchase order, pays a supplier, or signs a contract.
+
+## 10.10 HR API Surface
+
+HR executes through assistant/workflow APIs. Read-only endpoints expose an employee's own data and
+narrowly authorized leave, onboarding, and job-description records. Direct managers, HR managers,
+and Company accounts receive only permitted tenant scope. External users have no HR access, and no
+public HR mutation endpoint exists.

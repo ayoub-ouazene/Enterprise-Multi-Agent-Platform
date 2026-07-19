@@ -14,6 +14,9 @@ def initial_model_role(context: ITExecutionInput) -> ITModelRole:
         symptoms = collaboration.payload.get("symptoms", [])
         if len(symptoms) > 2 or collaboration.payload.get("evidence_conflict") is True:
             return ITModelRole.REASONING
+    if collaboration is not None and collaboration.action == "prepare_employee_onboarding_it":
+        if collaboration.payload.get("multi_department") or len(collaboration.payload.get("required_systems", [])) > 3:
+            return ITModelRole.REASONING
     return ITModelRole.FAST
 
 

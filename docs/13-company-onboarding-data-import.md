@@ -96,3 +96,9 @@ Postponed:
 - hybrid uploaded and connected data.
 
 These should use adapters that map company-specific schemas to the platform's standard service functions.
+
+## Employee onboarding distinction
+
+Company data-import onboarding and HR employee onboarding are separate. Employee onboarding uses
+the original request plus `onboarding_requests` for checklist/status persistence and structured
+HR-to-IT collaboration. It does not implement spreadsheet import or IT provisioning.

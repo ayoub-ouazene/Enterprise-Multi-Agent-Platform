@@ -17,6 +17,6 @@ def test_registry_has_real_customer_support_it_finance_and_procurement() -> None
     assert isinstance(
         registry.resolve(DepartmentType.PROCUREMENT), ProcurementDepartmentAgent
     )
-    assert isinstance(
+    assert not isinstance(
         registry.resolve(DepartmentType.HR), DeterministicPlaceholderDepartmentAgent
     )

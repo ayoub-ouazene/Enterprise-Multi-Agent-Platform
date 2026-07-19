@@ -88,6 +88,7 @@ class AssistantService:
                 DepartmentType.CUSTOMER_SUPPORT,
                 DepartmentType.IT,
                 DepartmentType.FINANCE,
+                DepartmentType.HR,
             }
         ):
             request_id = uuid4()
@@ -96,6 +97,7 @@ class AssistantService:
                 DepartmentType.CUSTOMER_SUPPORT: "customer_support_service",
                 DepartmentType.IT: "it_service",
                 DepartmentType.FINANCE: "finance_service",
+                DepartmentType.HR: "hr_service",
             }
             department_service = getattr(
                 execution_service,

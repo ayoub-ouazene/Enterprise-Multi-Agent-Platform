@@ -4,10 +4,7 @@ from uuid import uuid4
 import pytest
 
 from app.core.enums import DepartmentType
-from app.departments.contracts import (
-    DepartmentExecutionContext,
-    DepartmentExecutionResult,
-)
+from app.departments.contracts import DepartmentExecutionContext
 from app.departments.exceptions import DepartmentContextMismatchError
 from app.departments.registry import build_default_department_registry
 
@@ -25,30 +22,7 @@ def context(department_type: DepartmentType) -> DepartmentExecutionContext:
     )
 
 
-@pytest.mark.parametrize(
-    "department_type",
-    [DepartmentType.HR],
-)
-def test_each_placeholder_returns_strict_deterministic_completion(
-    department_type: DepartmentType,
-) -> None:
-    agent = build_default_department_registry().resolve(department_type)
-
-    first = asyncio.run(agent.execute(context(department_type)))
-    second = asyncio.run(agent.execute(context(department_type)))
-
-    assert isinstance(first, DepartmentExecutionResult)
-    assert first.department_type == department_type
-    assert first.next_action.value == "complete_request"
-    assert first.status.value == "completed"
-    assert first.is_terminal is True
-    assert first.completed_step == f"{department_type.value}_placeholder_completed"
-    assert first.model_dump(exclude={"state_updates"}) == second.model_dump(
-        exclude={"state_updates"}
-    )
-
-
-def test_placeholder_rejects_another_active_department() -> None:
+def test_real_department_rejects_another_active_department() -> None:
     agent = build_default_department_registry().resolve(DepartmentType.IT)
     mismatched = context(DepartmentType.HR).model_copy(
         update={"owner_department_type": DepartmentType.IT}

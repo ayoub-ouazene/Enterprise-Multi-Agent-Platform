@@ -76,3 +76,19 @@ class ProcurementProviderError(ProcurementClientError):
 
 class ProcurementOutputError(ProcurementClientError):
     pass
+
+
+class HRClientError(Exception):
+    """Safe base exception for HR model failures."""
+
+
+class HRConfigurationError(HRClientError):
+    pass
+
+
+class HRProviderError(HRClientError):
+    pass
+
+
+class HROutputError(HRClientError):
+    pass

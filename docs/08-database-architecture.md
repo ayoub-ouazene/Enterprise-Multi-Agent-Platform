@@ -27,8 +27,10 @@ Every tenant-owned table includes `company_id`.
 
 - `leave_balances`
 - `leave_requests`
-
-No dedicated onboarding table in Version 1.
+- `company_holidays`
+- `department_staffing_rules`
+- `onboarding_requests`
+- `job_descriptions`
 
 ### IT Tables
 
@@ -218,3 +220,9 @@ state, shortlist state, and authorized selection state. `supplier_candidates` co
 facts and deterministic evaluation results in one table. Money uses fixed-precision decimals;
 scores are bounded to 0–100. A partial unique index permits at most one selected candidate for a
 request. There is no separate evaluation, shortlist, purchase-order, contract, or payment table.
+
+## HR foundation tables
+
+`leave_requests` and `onboarding_requests` use the original Request ID. Leave balances store exact
+allocated, used, and reserved days; remaining days are derived. Holidays and staffing rules support
+deterministic calculations. Job descriptions remain drafts. Approval locks shared rows.

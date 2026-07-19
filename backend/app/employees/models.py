@@ -1,8 +1,10 @@
+from datetime import date
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from sqlalchemy import (
     Enum as SAEnum,
+    Date,
     ForeignKey,
     Index,
     String,
@@ -50,6 +52,7 @@ class Employee(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     )
     employee_code: Mapped[str] = mapped_column(String(100), nullable=False)
     job_title: Mapped[str | None] = mapped_column(String(160), nullable=True)
+    hire_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     manager_employee_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("employees.id", ondelete="SET NULL"),
         nullable=True,

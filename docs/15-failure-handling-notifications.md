@@ -117,3 +117,10 @@ failure logs. Unsupported external supplier discovery creates a capability gap o
 is required. Human selection preparation notifies an authorized Procurement manager or Company
 account without claiming that selection or purchase occurred. Prompts, raw evidence, quotation
 contacts, credentials, and complete provider payloads are never logged.
+
+## HR failures and notifications
+
+HR provider failures use bounded retries and sanitized categories. Invalid structured output gets
+one correction attempt. Persistence failures use `FailureService`; invalid dates, insufficient
+balance, staffing conflicts, and manager rejection are business outcomes. Approval preparation
+notifies an authorized HR manager or Company account. Confidential HR data is never logged.

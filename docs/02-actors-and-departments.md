@@ -146,7 +146,9 @@ The HR agent may:
 
 Recruitment is postponed because it is a large independent product area and is not essential for Version 1.
 
-Onboarding does not require a dedicated onboarding table. It is represented by a business request, workflow state, and updates to employee, account, access, and asset records.
+Employee onboarding uses the original business request plus a narrow `onboarding_requests`
+extension for durable checklist/status data. IT access and asset work remains in IT-owned records;
+the extension is not a separate request or general onboarding subsystem.
 
 ## 2.5 Information Technology
 
@@ -272,3 +274,10 @@ advisory shortlist. It accepts IT purchase requirements and may request Finance 
 the same Request ID. Procurement cannot discover suppliers on the public internet, execute a
 purchase or payment, sign a contract, or silently make final supplier selection. Human Resources
 remains the only placeholder department.
+
+## Step 17 HR implementation
+
+HR is now real, so all five departments have service-backed implementations. HR retrieves
+authorized HR/shared knowledge, performs deterministic leave and staffing checks, prepares manager
+approval, persists onboarding state, prepares IT collaboration, and stores job-description drafts.
+Payroll, hiring decisions, discipline, unrelated employee disclosure, and IT execution are forbidden.

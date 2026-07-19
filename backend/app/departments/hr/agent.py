@@ -1,10 +1,20 @@
 from app.core.enums import DepartmentType
-from app.departments.base import DeterministicPlaceholderDepartmentAgent
+from app.departments.contracts import DepartmentExecutionContext, DepartmentExecutionResult
+from app.departments.exceptions import DepartmentContextMismatchError
+from app.departments.hr.service import HRService
 
 
-class HRDepartmentAgent(DeterministicPlaceholderDepartmentAgent):
-    """Step 11 placeholder; it contains no HR business logic."""
+class HRDepartmentAgent:
+    """Real Step 17 HR implementation."""
 
     department_type = DepartmentType.HR
-    department_label = "HR"
-    completed_step = "hr_placeholder_completed"
+
+    def __init__(self, service: HRService | None = None) -> None:
+        self.service = service
+
+    async def execute(self, context: DepartmentExecutionContext) -> DepartmentExecutionResult:
+        if context.active_department_type != DepartmentType.HR:
+            raise DepartmentContextMismatchError("The active department does not match HR")
+        if self.service is None:
+            raise RuntimeError("HR dependencies are unavailable")
+        return await self.service.execute(context)

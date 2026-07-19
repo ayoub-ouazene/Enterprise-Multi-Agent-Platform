@@ -104,3 +104,10 @@ alter candidates, and external users have no Procurement data access. Candidate,
 Finance, and collaboration identity are derived from trusted records; cross-company identifiers
 behave as not found. Contact references and confidential custom metadata are excluded from public
 candidate responses.
+
+## 14.11 HR Authorization
+
+Employees view their own leave data. A verified direct manager may view records requiring their
+authority. Active HR managers and Company accounts may view authorized tenant HR records. External
+users have no HR access, cross-company IDs behave as not found, and private reasons, medical
+details, unrelated employee data, and internal staffing details are excluded.

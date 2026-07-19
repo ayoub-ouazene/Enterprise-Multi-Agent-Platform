@@ -99,8 +99,7 @@ class ITService:
     def _query(context: DepartmentExecutionContext) -> str:
         parts = [context.request_summary, context.latest_user_input or ""]
         if context.collaboration_input:
-            parts.append(str(context.collaboration_input.payload.get("issue_summary", "")))
-            parts.extend(context.collaboration_input.payload.get("symptoms", []))
+            parts.extend(str(value) for value in context.collaboration_input.payload.values() if value)
         return "\n".join(item for item in parts if item)[:2000]
 
     @staticmethod

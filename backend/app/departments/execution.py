@@ -34,6 +34,10 @@ from app.departments.procurement.agent import ProcurementDepartmentAgent
 from app.departments.procurement.schemas import ProcurementDepartmentResult
 from app.departments.procurement.service import ProcurementService
 from app.departments.procurement.tools import ProcurementToolService
+from app.departments.hr.agent import HRDepartmentAgent
+from app.departments.hr.schemas import HRDepartmentResult
+from app.departments.hr.service import HRService
+from app.departments.hr.tools import HRToolService
 from app.users.repository import UserRepository
 from app.departments.contracts import DepartmentCollaborationResult
 from app.rag.pinecone import PineconeProvider
@@ -60,6 +64,7 @@ class DepartmentExecutionService:
         it_service: ITService | None = None,
         finance_service: FinanceService | None = None,
         procurement_service: ProcurementService | None = None,
+        hr_service: HRService | None = None,
         user_repository: UserRepository | None = None,
     ) -> None:
         self.session = session
@@ -76,6 +81,7 @@ class DepartmentExecutionService:
         self.it_service = it_service
         self.finance_service = finance_service
         self.procurement_service = procurement_service
+        self.hr_service = hr_service
         self.user_repository = user_repository or UserRepository(session, current_user.company_id)
         if registry is None:
             if customer_support_service is None:
@@ -118,11 +124,24 @@ class DepartmentExecutionService:
                     ),
                 )
                 self.procurement_service = procurement_service
+            if hr_service is None:
+                if settings is None or pinecone_provider is None:
+                    raise ValueError("HR settings and Pinecone provider are required")
+                hr_service = HRService(
+                    session,
+                    current_user,
+                    settings,
+                    KnowledgeRetrievalService(
+                        session, current_user, settings, pinecone_provider
+                    ),
+                )
+                self.hr_service = hr_service
             registry = build_default_department_registry(
                 CustomerSupportDepartmentAgent(customer_support_service),
                 ITDepartmentAgent(it_service),
                 FinanceDepartmentAgent(finance_service),
                 ProcurementDepartmentAgent(procurement_service),
+                HRDepartmentAgent(hr_service),
             )
         self.registry = registry
 
@@ -205,7 +224,11 @@ class DepartmentExecutionService:
     async def execute_it_collaboration(
         self, state: WorkflowState, request: DepartmentCollaborationRequest
     ) -> DepartmentCollaborationResult:
-        if request.request_id != state.request.request_id or request.sender_department != DepartmentType.CUSTOMER_SUPPORT or request.receiver_department != DepartmentType.IT or request.action != "diagnose_external_technical_issue":
+        allowed = {
+            (DepartmentType.CUSTOMER_SUPPORT, "diagnose_external_technical_issue"),
+            (DepartmentType.HR, "prepare_employee_onboarding_it"),
+        }
+        if request.request_id != state.request.request_id or request.receiver_department != DepartmentType.IT or (request.sender_department, request.action) not in allowed:
             raise DepartmentContextMismatchError("IT collaboration request is invalid")
         business_request = await self.request_repository.get_by_id(state.request.request_id)
         requester = await self.user_repository.get_by_id_with_employee(state.request.requester_user_id)
@@ -213,7 +236,7 @@ class DepartmentExecutionService:
         if business_request is None or requester is None or it_department is None or not it_department.is_active:
             raise NotFoundError("IT collaboration context not found")
         context = self._build_context(state, business_request=business_request,
-            owner_department_type=DepartmentType.CUSTOMER_SUPPORT,
+            owner_department_type=request.sender_department,
             active_department_type=DepartmentType.IT, requester=requester).model_copy(
                 update={"collaboration_input": request})
         await self.session.rollback()
@@ -227,7 +250,7 @@ class DepartmentExecutionService:
             )
         data = result.state_updates.execution.department_data if result.state_updates.execution else {}
         return DepartmentCollaborationResult(request_id=request.request_id,
-            sender_department=DepartmentType.CUSTOMER_SUPPORT,
+            sender_department=request.sender_department,
             receiver_department=DepartmentType.IT,
             action=request.action,
             status=("unsupported" if result.status.value == "unsupported" else
@@ -413,6 +436,22 @@ class DepartmentExecutionService:
         tool = ProcurementToolService(
             self.procurement_service.candidates,
             request_id=state.request.request_id,
+        )
+        return await tool.execute(result.tool_request)
+
+    async def execute_hr_tool(self, state: WorkflowState) -> dict[str, Any]:
+        result = DepartmentExecutionResult.model_validate(state.execution.department_result)
+        if result.department_type != DepartmentType.HR or result.tool_request is None:
+            raise DepartmentContextMismatchError("Only validated HR tools are active")
+        if self.hr_service is None:
+            raise DepartmentContextMismatchError("HR service is unavailable")
+        operation = result.tool_request.operation
+        if any(item.get("operation") == operation for item in state.execution.tool_results):
+            raise DepartmentStateUpdateError("The HR tool operation already completed")
+        tool = HRToolService(
+            self.hr_service.balances, self.hr_service.leave_requests,
+            self.hr_service.holidays, self.hr_service.onboarding,
+            self.hr_service.job_descriptions, request_id=state.request.request_id,
         )
         return await tool.execute(result.tool_request)
 
@@ -611,6 +650,11 @@ class DepartmentExecutionService:
             await self.procurement_service.persist_result(
                 state.request.request_id,
                 ProcurementDepartmentResult.model_validate(data),
+            )
+        if data and raw.get("department_type") == DepartmentType.HR.value and self.hr_service:
+            await self.hr_service.persist_result(
+                state.request.request_id,
+                HRDepartmentResult.model_validate(data),
             )
 
     @staticmethod

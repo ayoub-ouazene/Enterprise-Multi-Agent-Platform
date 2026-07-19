@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.enums import EmploymentStatus
@@ -12,13 +12,40 @@ class EmployeeRepository:
         self.session = session
         self.company_id = company_id
 
-    async def get_by_id(self, employee_id: UUID) -> Employee | None:
-        return await self.session.scalar(
-            select(Employee).where(
+    async def get_by_id(
+        self, employee_id: UUID, *, for_update: bool = False
+    ) -> Employee | None:
+        statement = select(Employee).where(
                 Employee.id == employee_id,
                 Employee.company_id == self.company_id,
             )
+        if for_update:
+            statement = statement.with_for_update()
+        return await self.session.scalar(statement)
+
+    async def count_active_in_department(self, department_id: UUID) -> int:
+        from app.core.enums import EmploymentStatus
+
+        value = await self.session.scalar(
+            select(func.count(Employee.id)).where(
+                Employee.company_id == self.company_id,
+                Employee.department_id == department_id,
+                Employee.employment_status == EmploymentStatus.ACTIVE,
+            )
         )
+        return int(value or 0)
+
+    async def active_ids_in_department(self, department_id: UUID) -> list[UUID]:
+        from app.core.enums import EmploymentStatus
+
+        values = await self.session.scalars(
+            select(Employee.id).where(
+                Employee.company_id == self.company_id,
+                Employee.department_id == department_id,
+                Employee.employment_status == EmploymentStatus.ACTIVE,
+            )
+        )
+        return list(values.all())
 
     async def get_by_code(self, employee_code: str) -> Employee | None:
         return await self.session.scalar(

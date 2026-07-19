@@ -208,3 +208,11 @@ bounded component scores, weighted overall score, and stable tie-breaking. Recom
 advisory. IT-to-Procurement and Procurement-to-Finance collaboration retain the original owner and
 Request ID. Finance rejection prevents selection; required authorization enters the existing human
 waiting state. Completion returns a shortlist without claiming purchase execution.
+
+## HR request flows
+
+HR policy and benefits answers require authorized evidence. Leave days, balances, and staffing are
+deterministic. Automatic approval requires structured policy and row-locked revalidation; otherwise
+HR prepares manager approval without a pre-approval reservation. Approval reserves once, while
+rejection and cancellation release request-owned reservations idempotently. Onboarding and IT
+collaboration retain the owner and original Request ID.

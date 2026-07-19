@@ -28,6 +28,8 @@ from app.workflow.enums import (
 from app.workflow.schemas import WorkflowEventCreate
 from app.workflow.service import WorkflowEventService, actor_type_for_user
 from app.workflow.state import build_initial_workflow_state
+from app.departments.hr.repository import LeaveBalanceRepository, LeaveRequestRepository
+from app.departments.hr.tools import release_leave_reservation
 
 
 STATUS_TRANSITIONS: dict[RequestStatus, frozenset[RequestStatus]] = {
@@ -405,6 +407,16 @@ class BusinessRequestService:
                 reason = "Cancelled by authorized Company account"
             else:
                 reason = "Cancelled by authorized department manager"
+
+            leave_requests = LeaveRequestRepository(self.session, self.current_user.company_id)
+            leave = await leave_requests.get(request_id)
+            if leave is not None:
+                await release_leave_reservation(
+                    LeaveBalanceRepository(self.session, self.current_user.company_id),
+                    leave_requests,
+                    request_id,
+                )
+                leave.cancelled_at = datetime.now(UTC)
 
             updated = await self.repository.update(
                 request_id,

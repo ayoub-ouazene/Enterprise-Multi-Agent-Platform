@@ -175,9 +175,11 @@ Reviewer data remains in workflow-state JSONB.
 
 Notifications remain stored until seen or handled.
 
-## ADR-044 — No Onboarding Table
+## ADR-044 — Narrow Employee-Onboarding Extension
 
-Onboarding uses a request, workflow state, and updates to other domain records.
+Step 17 supersedes the earlier no-table decision. Employee onboarding uses the original business
+request plus one narrow `onboarding_requests` extension for durable checklist/status data. IT access
+and asset operations remain in IT-owned tables; no sub-request or general subsystem is introduced.
 
 ## ADR-045 — Financial Transactions
 
@@ -186,3 +188,9 @@ Confirmed budget movements are recorded in a simple financial transaction ledger
 ## ADR-046 — One Supplier Candidate Table
 
 Candidate and evaluation data are stored together in `supplier_candidates`.
+
+## ADR-047 — Deterministic HR Leave Control
+
+Leave arithmetic, balance, entitlement, overlap, and staffing calculations are authoritative
+backend operations. Approval locks balance and staffing rows, pending manager approval does not
+reserve days, and request-owned reservations are idempotent.

@@ -19,6 +19,8 @@ from app.llm.exceptions import (
     FinanceOutputError,
     ITClientError,
     ITOutputError,
+    HRClientError,
+    HROutputError,
     RouterConfigurationError,
 )
 from app.rag.exceptions import KnowledgeProviderError
@@ -878,6 +880,14 @@ class WorkflowService:
             failure_type = FailureType.EXTERNAL_SERVICE_FAILURE
             failure_source = FailureSource.LLM
             safe_message = "Finance is temporarily unavailable."
+        elif isinstance(exc, HROutputError):
+            failure_type = FailureType.VALIDATION_FAILURE
+            failure_source = FailureSource.LLM
+            safe_message = "HR could not validate its response."
+        elif isinstance(exc, HRClientError):
+            failure_type = FailureType.EXTERNAL_SERVICE_FAILURE
+            failure_source = FailureSource.LLM
+            safe_message = "HR is temporarily unavailable."
         try:
             failure = await self.failure_service.record(
                 FailureCreate(

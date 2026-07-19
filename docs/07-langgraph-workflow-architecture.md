@@ -210,3 +210,9 @@ IT owner. When final financial validation is needed, the same workflow runs Fina
 `validate_procurement_purchase`, returns the result to Procurement, and then returns the shortlist
 to IT. Clarification, human selection preparation, failures, and completion reuse existing nodes
 and checkpoints. HR remains the only placeholder.
+
+## HR graph behavior
+
+HR is the fifth real department in the centralized graph. Leave processing validates
+deterministically, then reserves and completes or prepares a manager pause. Onboarding invokes IT
+under the same Request ID without changing ownership. Job-description drafts persist before completion.

@@ -24,7 +24,11 @@ async def department_collaboration_node(state: WorkflowState,
     request = DepartmentCollaborationRequest.model_validate(state.collaboration.request)
     if request.request_id != state.request.request_id:
         raise InactiveWorkflowNodeError("Collaboration Request ID is invalid")
-    if request.sender_department == DepartmentType.CUSTOMER_SUPPORT and request.receiver_department == DepartmentType.IT and request.action == "diagnose_external_technical_issue":
+    it_allowed = {
+        (DepartmentType.CUSTOMER_SUPPORT, DepartmentType.IT, "diagnose_external_technical_issue"),
+        (DepartmentType.HR, DepartmentType.IT, "prepare_employee_onboarding_it"),
+    }
+    if (request.sender_department, request.receiver_department, request.action) in it_allowed:
         service = runtime.context.department_execution_service
         if service is None:
             raise InactiveWorkflowNodeError("IT collaboration is unavailable")
@@ -32,7 +36,7 @@ async def department_collaboration_node(state: WorkflowState,
         collaboration = state.collaboration.model_copy(update={
             "structured_result": result.model_dump(mode="json"), "is_active": False})
         request_state = state.request.model_copy(update={"status": RequestStatus.PROCESSING,
-            "current_stage": "customer_support_received_it_diagnosis"})
+            "current_stage": f"{request.sender_department.value}_received_it_result"})
         execution = state.execution.model_copy(update={"department_result": {}})
         return {"request": request_state, "collaboration": collaboration, "execution": execution}
     finance_allowed = {

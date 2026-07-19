@@ -15,6 +15,8 @@ async def department_tool_node(state: WorkflowState, runtime: Runtime[WorkflowRu
         result = await service.execute_finance_tool(state)
     elif department == "procurement":
         result = await service.execute_procurement_tool(state)
+    elif department == "hr":
+        result = await service.execute_hr_tool(state)
     else:
         raise InactiveWorkflowNodeError("Department tool is unavailable")
     execution = state.execution.model_copy(update={

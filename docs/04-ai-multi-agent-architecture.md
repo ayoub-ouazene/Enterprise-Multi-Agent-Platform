@@ -193,3 +193,11 @@ compliance risk, exceptions, and high-impact recommendations. The model cannot c
 facts or calculate authoritative cost, eligibility, scores, or ranks. Allowlisted tools only list
 candidates, calculate total cost, evaluate eligibility, score, rank, and persist a shortlist; they
 cannot search the internet or execute purchasing.
+
+## HR model and tool policy
+
+HR uses configured Fast and Reasoning Groq roles. Fast handles normal policy/benefits answers,
+leave extraction, onboarding checklists, and job-description drafts. Reasoning is limited to
+conflicting policy, staffing/overlap conflicts, exceptions, sensitive decisions, and complex
+onboarding. Backend calculations and trusted records are authoritative; payroll, hiring decisions,
+discipline, and IT execution are prohibited.

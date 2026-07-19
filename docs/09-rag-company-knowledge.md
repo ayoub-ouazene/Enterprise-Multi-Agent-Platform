@@ -128,3 +128,9 @@ Existing policy, procedure, manual, and internal-rule document types represent p
 supplier requirements, approval matrices, compliance rules, and internal procedures. Requester
 access scopes are derived from trusted authentication context. RAG may explain evaluation policy
 but cannot create supplier facts, quotations, scores, Finance decisions, or authorization.
+
+## HR retrieval
+
+HR retrieves only `hr` and `shared` records in the trusted company namespace. Evidence cannot
+override employee records, deterministic leave arithmetic, staffing, or trusted approval state.
+Raw chunks and confidential employee data are never exposed.
