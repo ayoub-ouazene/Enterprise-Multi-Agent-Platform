@@ -34,6 +34,7 @@ DEPARTMENT_COMPLETED_STEP = "department_execution_completed"
 LEGACY_DEPARTMENT_STARTED_STEP = "placeholder_department_started"
 LEGACY_DEPARTMENT_COMPLETED_STEP = "placeholder_department_completed"
 COMPLETED_STEP = "workflow_completed"
+REVIEW_COMPLETED_STEP = "reviewer_completed"
 
 _JWT_PATTERN = re.compile(
     r"\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b"
@@ -122,10 +123,30 @@ class WorkflowRoutingState(WorkflowStateSection):
 
 class WorkflowReviewState(WorkflowStateSection):
     required: bool = False
-    status: str | None = Field(default=None, max_length=100)
-    review_package: dict[str, Any] = Field(default_factory=dict)
-    feedback: dict[str, Any] = Field(default_factory=dict)
+    status: Literal[
+        "not_required",
+        "pending",
+        "in_progress",
+        "approved",
+        "revision_required",
+        "rejected",
+        "human_escalation_required",
+    ] | None = "not_required"
+    review_id: UUID | None = None
+    review_attempt_count: int = Field(default=0, ge=0, le=2)
+    revision_attempt_count: int = Field(default=0, ge=0, le=1)
+    review_reason: str | None = Field(default=None, max_length=500)
+    package_summary: dict[str, Any] = Field(default_factory=dict)
+    decision: str | None = Field(default=None, max_length=100)
+    feedback: list[dict[str, Any]] = Field(default_factory=list)
+    required_changes: list[str] = Field(default_factory=list)
+    reviewed_at: datetime | None = None
     revision_completed: bool = False
+    final_review_completed: bool = False
+    return_department: DepartmentType | None = None
+    return_stage: str | None = Field(default=None, max_length=100)
+    collaboration_id: UUID | None = None
+    human_action_id: UUID | None = None
 
 
 class WorkflowHumanActionState(WorkflowStateSection):
@@ -204,6 +225,7 @@ class WorkflowRuntimeContext:
     department_execution_service: Any | None = None
     collaboration_service: Any | None = None
     precomputed_department_result: dict[str, Any] | None = None
+    review_service: Any | None = None
 
 
 def _reject_sensitive_string_values(

@@ -21,6 +21,7 @@ from app.core.config import (
     validate_router_configuration,
     validate_customer_support_configuration,
     validate_it_configuration,
+    validate_reviewer_configuration,
 )
 from app.llm.exceptions import (
     CustomerSupportConfigurationError,
@@ -41,6 +42,9 @@ from app.llm.exceptions import (
     RouterConfigurationError,
     RouterOutputError,
     RouterProviderError,
+    ReviewerConfigurationError,
+    ReviewerOutputError,
+    ReviewerProviderError,
 )
 if TYPE_CHECKING:
     from app.departments.customer_support.schemas import CustomerSupportModelInput, CustomerSupportResult
@@ -591,5 +595,95 @@ class GroqRouterClient:
             self.model,
             int((monotonic() - started) * 1_000),
             retry_count,
+            category,
+        )
+
+
+class GroqReviewerClient:
+    """Centralized Groq client for the Reviewer model role. No tool access. No mutations."""
+
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        client: Any | None = None,
+        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
+    ) -> None:
+        try:
+            validate_reviewer_configuration(settings)
+        except ConfigurationError as exc:
+            raise ReviewerConfigurationError(str(exc)) from None
+        self.settings = settings
+        self.model = settings.groq_model_reviewer.strip()
+        self.max_retries = settings.llm_max_retries
+        self._sleep = sleep
+        self._client = (
+            client
+            if client is not None
+            else AsyncGroq(
+                api_key=settings.groq_api_key.get_secret_value(),
+                base_url=str(settings.groq_base_url),
+                timeout=float(settings.llm_request_timeout_seconds),
+                max_retries=0,
+            )
+        )
+
+    async def review(self, package: "ReviewPackage") -> "ReviewerResult":
+        from app.workflow.prompts.reviewer import REVIEWER_SYSTEM_PROMPT, build_reviewer_user_message
+        from app.workflow.review.schemas import ReviewerResult
+
+        messages: list[dict[str, str]] = [
+            {"role": "system", "content": REVIEWER_SYSTEM_PROMPT},
+            {"role": "user", "content": build_reviewer_user_message(package)},
+        ]
+        retries = 0
+        validation_retry = False
+        while True:
+            started = monotonic()
+            try:
+                response = await self._client.chat.completions.create(
+                    model=self.model,
+                    messages=messages,
+                    temperature=self.settings.llm_temperature,
+                    response_format={"type": "json_object"},
+                )
+                content = response.choices[0].message.content
+                if not isinstance(content, str) or not content.strip():
+                    raise ValueError("empty reviewer response")
+                result = ReviewerResult.model_validate(json.loads(content))
+            except TemporaryProviderError:
+                self._log(started, retries, "temporary_failure")
+                if retries >= self.max_retries:
+                    raise ReviewerProviderError("Reviewer is temporarily unavailable") from None
+                retries += 1
+                await self._sleep(min(0.25 * 2 ** (retries - 1), 2.0))
+                continue
+            except (json.JSONDecodeError, ValidationError, ValueError, IndexError, TypeError):
+                self._log(started, retries, "invalid_output")
+                if validation_retry or retries >= self.max_retries:
+                    raise ReviewerOutputError("Reviewer returned an invalid structured response") from None
+                validation_retry = True
+                retries += 1
+                messages.append({
+                    "role": "system",
+                    "content": (
+                        "The previous response was invalid. Return strictly valid JSON "
+                        "matching the ReviewerResult schema with no extra fields."
+                    ),
+                })
+                continue
+            except Exception:
+                self._log(started, retries, "permanent_failure")
+                raise ReviewerProviderError("Reviewer provider request failed") from None
+            self._log(started, retries, "success")
+            return result
+
+    def _log(self, started: float, retries: int, category: str) -> None:
+        logger.info(
+            "LLM request completed role=%s model=%s latency_ms=%d retry_count=%d category=%s",
+            "reviewer",
+            self.model,
+            int((monotonic() - started) * 1_000),
+            retries,
             category,
         )

@@ -13,6 +13,7 @@ from app.workflow.state import (
     DEPARTMENT_STARTED_STEP,
     LEGACY_DEPARTMENT_COMPLETED_STEP,
     LEGACY_DEPARTMENT_STARTED_STEP,
+    REVIEW_COMPLETED_STEP,
     ROUTED_STEP,
     LEGACY_ROUTED_STEP,
     WorkflowState,
@@ -99,6 +100,14 @@ def route_after_department(
     result = DepartmentExecutionResult.model_validate(
         state.execution.department_result
     )
+    # Deterministic review policy override; we need not run policy when a prior
+    # review for this department cycle has already completed.
+    _review_done = REVIEW_COMPLETED_STEP in state.planning.completed_steps
+    if not _review_done:
+        from app.workflow.review.policy import should_trigger_review
+        needs_review, _ = should_trigger_review(result)
+        if needs_review:
+            return "reviewer"
     routes = {
         DepartmentNextAction.CONTINUE_DEPARTMENT: "department_execution",
         DepartmentNextAction.EXECUTE_TOOL: "tool",
@@ -157,3 +166,30 @@ def route_after_collaboration_return(
     if state.collaboration.active is not None:
         return "collaboration_receiver"
     return "department_execution"
+
+
+def route_after_reviewer(
+    state: WorkflowState,
+) -> Literal["department_execution", "human_action", "completion", "failure", "__end__"]:
+    """Route after reviewer node based on reviewer decision stored in state."""
+    decision = state.review.decision
+    if decision == "approved":
+        result = DepartmentExecutionResult.model_validate(state.execution.department_result)
+        routes = {
+            DepartmentNextAction.CONTINUE_DEPARTMENT: "department_execution",
+            DepartmentNextAction.EXECUTE_TOOL: "tool",
+            DepartmentNextAction.COLLABORATE: "collaboration",
+            DepartmentNextAction.REQUEST_REVIEW: "reviewer",
+            DepartmentNextAction.REQUEST_HUMAN_ACTION: "human_action",
+            DepartmentNextAction.WAIT_FOR_USER_INPUT: END,
+            DepartmentNextAction.COMPLETE_REQUEST: "completion",
+            DepartmentNextAction.FAIL_REQUEST: "failure",
+        }
+        return routes[result.next_action]
+    if decision == "revision_required":
+        return "department_execution"
+    if decision == "human_escalation_required":
+        return "human_action"
+    if decision == "rejected":
+        return "failure"
+    return END

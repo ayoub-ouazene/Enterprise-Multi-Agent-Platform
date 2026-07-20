@@ -73,6 +73,7 @@ from app.workflow.state import (
     apply_state_update,
 )
 from app.workflow.collaboration.service import CollaborationService
+from app.workflow.review.service import ReviewService
 
 
 ACTOR_LABELS: dict[WorkflowEventActorType, str] = {
@@ -257,6 +258,11 @@ class WorkflowService:
         )
         self.collaboration_service = (
             CollaborationService(settings, self.department_execution_service)
+            if settings is not None
+            else None
+        )
+        self.review_service = (
+            ReviewService(settings)
             if settings is not None
             else None
         )
@@ -549,6 +555,7 @@ class WorkflowService:
             department_execution_service=self.department_execution_service,
             collaboration_service=self.collaboration_service,
             precomputed_department_result=precomputed_department_result,
+            review_service=self.review_service,
         )
         try:
             async for part in self.graph.astream(
@@ -642,6 +649,8 @@ class WorkflowService:
             if node_name == "human_action":
                 await self._notify_human_escalation(state)
             if node_name == "collaboration_receiver" and state.human_action.required:
+                await self._notify_human_escalation(state)
+            if node_name == "reviewer" and state.human_action.required:
                 await self._notify_human_escalation(state)
             await self.session.commit()
             return state
@@ -822,6 +831,23 @@ class WorkflowService:
                 department_id=state.request.active_department_id,
                 visibility=WorkflowEventVisibility.REQUESTER,
                 event_data={},
+            )
+        if node_name == "reviewer":
+            return WorkflowEventCreate(
+                event_type=WorkflowEventType.REVIEW_COMPLETED,
+                stage=state.request.current_stage,
+                title="Quality review completed",
+                message=(
+                    state.review.package_summary.get("reason", "The Reviewer completed its assessment.")
+                    if state.review.package_summary else "The Reviewer completed its assessment."
+                ),
+                actor_type=WorkflowEventActorType.REVIEWER,
+                department_id=state.request.owner_department_id,
+                visibility=WorkflowEventVisibility.MANAGER,
+                event_data={
+                    "decision": state.review.decision,
+                    "revision_count": state.review.revision_attempt_count,
+                },
             )
         return None
 

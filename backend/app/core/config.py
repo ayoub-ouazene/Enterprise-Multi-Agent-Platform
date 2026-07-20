@@ -264,6 +264,14 @@ def validate_it_configuration(settings: Settings) -> None:
         raise ConfigurationError("Fast and Reasoning Groq models must be configured for IT")
 
 
+def validate_reviewer_configuration(settings: Settings) -> None:
+    """Validate Groq Reviewer model configuration without exposing secret values."""
+    if settings.groq_api_key is None or not settings.groq_api_key.get_secret_value().strip():
+        raise ConfigurationError("GROQ_API_KEY must be configured for Reviewer functionality")
+    if not settings.groq_model_reviewer.strip():
+        raise ConfigurationError("GROQ_MODEL_REVIEWER must be configured for Reviewer functionality")
+
+
 def validate_pinecone_configuration(settings: Settings) -> None:
     """Validate Pinecone only when knowledge functionality is invoked."""
     if (

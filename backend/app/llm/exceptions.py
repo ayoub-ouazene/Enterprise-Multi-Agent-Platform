@@ -92,3 +92,16 @@ class HRProviderError(HRClientError):
 
 class HROutputError(HRClientError):
     pass
+
+
+class ReviewerClientError(Exception):
+    '''Safe base exception for Reviewer model failures.'''
+
+class ReviewerConfigurationError(ReviewerClientError):
+    pass
+
+class ReviewerProviderError(ReviewerClientError):
+    pass
+
+class ReviewerOutputError(ReviewerClientError):
+    pass

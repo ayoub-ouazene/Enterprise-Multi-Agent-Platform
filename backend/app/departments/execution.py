@@ -816,10 +816,17 @@ class DepartmentExecutionService:
             collaboration_result = DepartmentCollaborationResult.model_validate(
                 state.collaboration.structured_result)
         review_feedback = None
-        if state.review.feedback:
-            review_feedback = ReviewFeedbackContext.model_validate(
-                state.review.feedback
+        if state.review.feedback and state.review.status == "revision_required":
+            combined = "; ".join(
+                f"[{item.get('category', 'general')}] {item.get('description', '')}"
+                for item in state.review.feedback
             )
+            if combined:
+                review_feedback = ReviewFeedbackContext(
+                    status="revision_required",
+                    feedback=combined[:2000],
+                    reason=state.review.package_summary.get("reason", "The Reviewer requested changes."),
+                )
         human_response = None
         if state.human_action.response:
             human_response = HumanResponseContext.model_validate(
