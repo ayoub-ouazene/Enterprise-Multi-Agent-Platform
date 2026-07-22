@@ -12,3 +12,7 @@ class ConflictError(DomainError):
 
 class BusinessValidationError(DomainError):
     """Raised when an operation violates a domain rule."""
+
+
+class ForbiddenError(DomainError):
+    """Raised when an actor lacks permission for an operation."""

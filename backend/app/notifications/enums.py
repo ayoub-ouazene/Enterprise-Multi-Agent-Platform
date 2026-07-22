@@ -14,6 +14,12 @@ class NotificationType(StrEnum):
     REVIEW_COMPLETED = "review_completed"
     CAPABILITY_GAP = "capability_gap"
     SYSTEM_NOTICE = "system_notice"
+    IMPORT_VALIDATION_COMPLETED = "import_validation_completed"
+    IMPORT_COMPLETED = "import_completed"
+    IMPORT_FAILED = "import_failed"
+    ONBOARDING_ACTIVATION_READY = "onboarding_activation_ready"
+    ONBOARDING_ACTIVATION_BLOCKED = "onboarding_activation_blocked"
+    COMPANY_ACTIVATED = "company_activated"
 
 
 class NotificationSeverity(StrEnum):
