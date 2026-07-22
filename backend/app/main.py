@@ -19,6 +19,7 @@ from app.notifications.router import router as notifications_router
 from app.rag.router import router as rag_router
 from app.requests.router import router as requests_router
 from app.workflow.router import router as workflow_router
+from app.realtime import realtime_router
 
 
 _ = database_models
@@ -59,6 +60,7 @@ def create_app(settings_override: Settings | None = None) -> FastAPI:
     application.include_router(assistant_router)
     application.include_router(requests_router)
     application.include_router(workflow_router)
+    application.include_router(realtime_router)
     application.include_router(notifications_router)
     application.include_router(failures_router)
     application.include_router(finance_router)
