@@ -1,11 +1,14 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/Card';
+import { ArrowLeft, AlertTriangle, Calendar, Clock, Tag, User, CheckCircle } from 'lucide-react';
+import { PageContainer } from '../../components/layout/PageContainer';
+import { Section } from '../../components/layout/PageContainer';
+import { RequestStatusBadge } from '../../components/request/RequestStatusBadge';
+import { LoadingSpinner } from '../../components/feedback/LoadingSpinner';
 import { Button } from '../../components/ui/Button';
-import { Badge } from '../../components/ui/Badge';
 import { Alert } from '../../components/ui/Alert';
 import { EmptyState } from '../../components/ui/EmptyState';
-import { LoadingSpinner } from '../../components/feedback/LoadingSpinner';
 import { useRequest, useCancelRequest } from '../../api/hooks/useRequests';
+import { formatDateTime } from '../../lib/formatters';
 
 export function RequestDetailPage() {
   const { requestId = '' } = useParams();
@@ -13,14 +16,16 @@ export function RequestDetailPage() {
   const { data: request, isLoading, error } = useRequest(requestId);
   const cancelMutation = useCancelRequest();
 
-  if (isLoading) return <LoadingSpinner />;
+  if (isLoading) return <PageContainer><LoadingSpinner /></PageContainer>;
   if (error || !request) {
     return (
-      <EmptyState
-        title="Request not found"
-        description="The request you are looking for does not exist."
-        action={<Button onClick={() => navigate('/app/requests')}>Back to requests</Button>}
-      />
+      <PageContainer>
+        <EmptyState
+          title="Request not found"
+          description="The request you are looking for does not exist."
+          action={<Button onClick={() => navigate('/app/requests')}>Back to requests</Button>}
+        />
+      </PageContainer>
     );
   }
 
@@ -34,12 +39,13 @@ export function RequestDetailPage() {
   };
 
   const canCancel = ['draft', 'submitted', 'in_progress'].includes(request.status);
+  const isResolved = request.status === 'completed' || request.status === 'cancelled' || request.status === 'failed';
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
+    <PageContainer>
+      <div className="mb-6 flex items-center justify-between">
         <Button variant="ghost" onClick={() => navigate('/app/requests')}>
-          <svg className="mr-1 h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+          <ArrowLeft size={16} className="mr-1.5" aria-hidden="true" />
           Back
         </Button>
         {canCancel && (
@@ -49,56 +55,64 @@ export function RequestDetailPage() {
         )}
       </div>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>{request.title}</CardTitle>
-            <StatusBadge status={request.status} />
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <div>
-              <p className="text-xs text-gray-500">Type</p>
-              <p className="text-sm font-medium text-gray-900">{request.request_type}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Stage</p>
-              <p className="text-sm font-medium text-gray-900">{request.current_stage}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Priority</p>
-              <p className="text-sm font-medium text-gray-900 capitalize">{request.priority}</p>
-            </div>
-          </div>
-
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs text-gray-500">Summary</p>
-            <p className="mt-1 text-sm text-gray-700">{request.summary}</p>
+            <h1 className="text-xl font-bold text-neutral-900 dark:text-neutral-100 sm:text-2xl">
+              {request.title}
+            </h1>
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-neutral-500 dark:text-neutral-400">
+              <span className="inline-flex items-center gap-1">
+                <Tag size={14} aria-hidden="true" />
+                {request.request_type}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <Calendar size={14} aria-hidden="true" />
+                {formatDateTime(request.created_at)}
+              </span>
+            </div>
           </div>
+          <RequestStatusBadge status={request.status} />
+        </div>
 
-          {request.final_decision && (
-            <Alert variant="success" title="Decision">
+        {/* Meta grid */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <MetaTile icon={<Tag size={16} />} label="Type" value={request.request_type} />
+          <MetaTile icon={<Clock size={16} />} label="Stage" value={request.current_stage} />
+          <MetaTile icon={<AlertTriangle size={16} />} label="Priority" value={<span className="capitalize">{request.priority}</span>} />
+          <MetaTile icon={<User size={16} />} label="Status" value={<RequestStatusBadge status={request.status} />} />
+        </div>
+
+        {/* Summary */}
+        <Section title="Request Summary">
+          <p className="leading-relaxed text-neutral-700 dark:text-neutral-300">
+            {request.summary || 'No summary provided.'}
+          </p>
+        </Section>
+
+        {/* Decision */}
+        {request.final_decision && isResolved && (
+          <Alert variant="success" title="Decision">
+            <div className="flex items-center gap-2">
+              <CheckCircle size={16} aria-hidden="true" />
               {request.final_decision}
-            </Alert>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+            </div>
+          </Alert>
+        )}
+      </div>
+    </PageContainer>
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const variants: Record<string, 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'info'> = {
-    draft: 'default',
-    submitted: 'info',
-    in_progress: 'primary',
-    pending_approval: 'warning',
-    pending_action: 'warning',
-    completed: 'success',
-    cancelled: 'default',
-    failed: 'danger',
-    rejected: 'danger',
-  };
-  return <Badge variant={variants[status] ?? 'default'}>{status.replace('_', ' ')}</Badge>;
+function MetaTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-800">
+      <div className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+        {icon}
+        {label}
+      </div>
+      <div className="mt-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">{value}</div>
+    </div>
+  );
 }

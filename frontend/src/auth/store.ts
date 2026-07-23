@@ -21,6 +21,7 @@ interface AuthState {
   setOnboardingComplete: (value: boolean) => void;
   setLoading: (value: boolean) => void;
   logout: () => void;
+  init: () => void;
 }
 
 let _tokens: TokenPair | null = null;
@@ -53,6 +54,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   setMustChangePassword: (value) => set({ mustChangePassword: value }),
   setOnboardingComplete: (value) => set({ onboardingComplete: value }),
   setLoading: (value) => set({ isLoading: value }),
+
+  init: () => {
+    set({ isLoading: false });
+  },
 
   logout: () => {
     clearStorage();

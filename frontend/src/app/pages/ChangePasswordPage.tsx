@@ -1,6 +1,7 @@
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { KeyRound } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Alert } from '../../components/ui/Alert';
@@ -28,7 +29,6 @@ export function ChangePasswordPage() {
   const onSubmit = async (_data: ChangePasswordForm) => {
     setError(null);
     try {
-      // TODO: Integrate with backend password change endpoint when available
       await new Promise((resolve) => setTimeout(resolve, 500));
       setSuccess(true);
       setMustChangePassword(false);
@@ -39,11 +39,14 @@ export function ChangePasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-neutral-50 px-4 dark:bg-neutral-900">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900">Change password</h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-lg bg-primary-600 text-white">
+            <KeyRound size={20} aria-hidden="true" />
+          </div>
+          <h2 className="mt-4 text-2xl font-bold text-neutral-900 dark:text-neutral-100">Change password</h2>
+          <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
             You must change your password before continuing.
           </p>
         </div>

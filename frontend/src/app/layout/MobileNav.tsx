@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import { X } from 'lucide-react';
 import type { AuthenticatedUser } from '../../api/types';
 import { Sidebar } from './Sidebar';
 
@@ -36,17 +37,15 @@ export function MobileNav({ isOpen, onClose, user }: MobileNavProps) {
       />
 
       {/* Drawer */}
-      <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-xl">
-        <div className="flex h-16 items-center justify-between border-b border-gray-200 px-4">
-          <span className="text-lg font-semibold text-gray-900">Menu</span>
+      <div className="fixed inset-y-0 left-0 w-64 bg-white shadow-xl dark:bg-neutral-900">
+        <div className="flex h-16 items-center justify-between border-b border-neutral-200 px-4 dark:border-neutral-800">
+          <span className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Menu</span>
           <button
             onClick={onClose}
-            className="rounded-md p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+            className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
             aria-label="Close navigation"
           >
-            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X size={20} aria-hidden="true" />
           </button>
         </div>
         <div className="py-4">
