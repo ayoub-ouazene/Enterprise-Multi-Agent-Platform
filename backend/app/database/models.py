@@ -2,6 +2,7 @@ from app.auth.models import RefreshToken
 from app.companies.models import Company
 from app.departments.models import Department
 from app.onboarding.models import ImportJob
+from app.admin.models import Supplier
 from app.departments.customer_support.models import SupportIssue
 from app.departments.finance.models import Budget, FinanceRequest, FinancialTransaction
 from app.departments.it.models import AccessRequest, Asset, HardwareRequest, ITIncident, SoftwareCatalog
@@ -51,5 +52,6 @@ __all__ = [
     "KnowledgeDocument",
     "RefreshToken",
     "User",
+    "Supplier",
     "WorkflowEvent",
 ]

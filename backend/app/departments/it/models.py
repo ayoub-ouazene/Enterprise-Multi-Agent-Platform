@@ -33,6 +33,7 @@ class Asset(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     status: Mapped[AssetStatus] = mapped_column(SAEnum(AssetStatus, name="asset_status", values_callable=enum_values), nullable=False, default=AssetStatus.AVAILABLE, server_default=AssetStatus.AVAILABLE.value)
     assigned_employee_id: Mapped[UUID | None] = mapped_column(ForeignKey("employees.id", ondelete="SET NULL"))
     location: Mapped[str | None] = mapped_column(String(255))
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default=text("1"))
     custom_data: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
 
 
@@ -47,6 +48,7 @@ class SoftwareCatalog(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     license_limited: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default=text("false"))
     available_license_count: Mapped[int | None] = mapped_column(Integer)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default=text("true"))
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default=text("1"))
     custom_data: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb"))
 
 

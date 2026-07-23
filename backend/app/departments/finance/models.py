@@ -11,6 +11,7 @@ from sqlalchemy import (
     Enum as SAEnum,
     ForeignKey,
     Index,
+    Integer,
     Numeric,
     String,
     Text,
@@ -94,6 +95,7 @@ class Budget(UUIDPrimaryKeyMixin, TimestampMixin, Base):
     approval_threshold: Mapped[Decimal | None] = mapped_column(
         Numeric(MONEY_PRECISION, MONEY_SCALE)
     )
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default=text("1"))
     custom_data: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
     )
