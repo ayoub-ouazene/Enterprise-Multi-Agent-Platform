@@ -20,6 +20,7 @@ from app.notifications.router import router as notifications_router
 from app.onboarding.router import router as onboarding_router
 from app.rag.router import router as rag_router
 from app.admin.router import router as admin_router
+from app.departments.router import router as departments_router
 from app.requests.router import router as requests_router
 from app.workflow.router import router as workflow_router
 from app.realtime import realtime_router
@@ -73,6 +74,7 @@ def create_app(settings_override: Settings | None = None) -> FastAPI:
     application.include_router(onboarding_router)
     application.include_router(rag_router)
     application.include_router(admin_router)
+    application.include_router(departments_router)
 
     @application.get("/health", response_model=HealthResponse)
     async def health(

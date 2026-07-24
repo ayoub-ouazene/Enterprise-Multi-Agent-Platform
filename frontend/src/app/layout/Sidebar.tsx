@@ -8,6 +8,8 @@ import {
   isExternalUser,
   canAccessAdmin,
 } from '../../auth/permissions';
+import { useDepartments } from '../../api/hooks/useDepartments';
+import { getDepartmentMeta } from '../../lib/departments';
 import {
   LayoutDashboard,
   ClipboardList,
@@ -16,6 +18,7 @@ import {
   Rocket,
   Shield,
   Plus,
+  Briefcase,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -28,7 +31,7 @@ export function Sidebar({ user, onNavigate }: SidebarProps) {
 
   if (!user) return null;
 
-  const items = getNavItems(user);
+  const items = useNavItems(user);
 
   return (
     <nav aria-label="Main navigation" className="space-y-1 px-3">
@@ -73,7 +76,9 @@ interface NavItem {
   icon: React.ReactNode;
 }
 
-function getNavItems(user: AuthenticatedUser): NavItem[] {
+function useNavItems(user: AuthenticatedUser): NavItem[] {
+  const { data: departments, isLoading } = useDepartments();
+
   const base: NavItem[] = [
     { label: 'Overview', href: '/app/overview', icon: <LayoutDashboard size={18} aria-hidden="true" /> },
   ];
@@ -92,6 +97,21 @@ function getNavItems(user: AuthenticatedUser): NavItem[] {
       { label: 'Human Actions', href: '/app/human-actions', icon: <Hand size={18} aria-hidden="true" /> },
       { label: 'Notifications', href: '/app/notifications', icon: <Bell size={18} aria-hidden="true" /> },
     );
+
+    // Dynamic department workspace link
+    if (!isLoading && departments && user.department_id) {
+      const myDept = departments.find((d) => d.id === user.department_id);
+      if (myDept) {
+        const meta = getDepartmentMeta(myDept.department_type);
+        const slug = meta?.slug ?? myDept.department_type;
+        base.push({
+          label: meta?.label ?? myDept.name,
+          href: `/app/departments/${slug}/overview`,
+          icon: <Briefcase size={18} aria-hidden="true" />,
+        });
+      }
+    }
+
     if (canAccessAdmin(user)) {
       base.push({ label: 'Administration', href: '/app/admin/overview', icon: <Shield size={18} aria-hidden="true" /> });
     }

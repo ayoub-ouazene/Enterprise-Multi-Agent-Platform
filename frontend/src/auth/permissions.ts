@@ -68,6 +68,20 @@ export function canAccessAdmin(user: AuthenticatedUser | null): boolean {
   return isCompanyAccount(user) || isDepartmentManager(user);
 }
 
+export function canAccessDepartmentWorkspace(user: AuthenticatedUser | null): boolean {
+  return isCompanyAccount(user) || isDepartmentManager(user);
+}
+
+export function isManagerOfDepartmentType(
+  user: AuthenticatedUser | null,
+  deptType: string,
+  userDepartmentType: string | null,
+): boolean {
+  if (!isDepartmentManager(user)) return false;
+  if (userDepartmentType === null) return false;
+  return userDepartmentType === deptType;
+}
+
 export function isManagerOfDepartment(
   user: AuthenticatedUser | null,
   departmentId: string

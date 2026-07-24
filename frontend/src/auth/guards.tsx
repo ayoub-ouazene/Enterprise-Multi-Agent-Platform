@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthContext } from './hooks/useAuthContext';
 import type { AuthenticatedUser } from '../api/types';
 import { ActorType } from '../api/types';
-import { canAccessAdmin } from './permissions';
+import { canAccessAdmin, canAccessDepartmentWorkspace } from './permissions';
 
 interface GuardProps {
   children: ReactNode;
@@ -110,6 +110,23 @@ export function AdminRoute({ children }: GuardProps) {
   const navigate = useNavigate();
 
   const allowed = canAccessAdmin(user);
+
+  useEffect(() => {
+    if (!isLoading && !allowed) {
+      navigate('/access-denied', { replace: true });
+    }
+  }, [isLoading, allowed, navigate]);
+
+  if (isLoading) return null;
+  if (!allowed) return null;
+  return <>{children}</>;
+}
+
+export function DepartmentRoute({ children }: GuardProps) {
+  const { user, isLoading } = useAuthContext();
+  const navigate = useNavigate();
+
+  const allowed = canAccessDepartmentWorkspace(user);
 
   useEffect(() => {
     if (!isLoading && !allowed) {

@@ -6,6 +6,7 @@ import {
   OnboardingRoute,
   RoleRoute,
   AdminRoute,
+  DepartmentRoute,
 } from '../auth/guards';
 import { ActorType } from '../api/types';
 import { AppShell } from './layout/AppShell';
@@ -34,6 +35,14 @@ import {
   StaffingRulesPage,
   PoliciesPage,
 } from './pages/admin';
+import { DepartmentShell } from './layout/DepartmentShell';
+import {
+  DepartmentOverviewPage,
+  DepartmentRequestsPage,
+  DepartmentActionsPage,
+  DepartmentActivityPage,
+  DepartmentSettingsPage,
+} from './pages/departments';
 import { AccessDenied } from '../components/feedback/AccessDenied';
 import { NotFound } from '../components/feedback/NotFound';
 
@@ -115,6 +124,22 @@ export const router = createBrowserRouter([
           { path: 'holidays', element: <HolidaysPage /> },
           { path: 'staffing-rules', element: <StaffingRulesPage /> },
           { path: 'policies', element: <PoliciesPage /> },
+        ],
+      },
+      {
+        path: 'departments/:deptSlug',
+        element: (
+          <DepartmentRoute>
+            <DepartmentShell />
+          </DepartmentRoute>
+        ),
+        children: [
+          { index: true, element: <Navigate to="overview" replace /> },
+          { path: 'overview', element: <DepartmentOverviewPage /> },
+          { path: 'requests', element: <DepartmentRequestsPage /> },
+          { path: 'actions', element: <DepartmentActionsPage /> },
+          { path: 'activity', element: <DepartmentActivityPage /> },
+          { path: 'settings', element: <DepartmentSettingsPage /> },
         ],
       },
       { path: '*', element: <NotFound /> },

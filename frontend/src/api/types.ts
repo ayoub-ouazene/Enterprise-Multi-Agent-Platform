@@ -451,3 +451,36 @@ export interface AdminSupplierResponse {
   created_at: string;
   updated_at: string;
 }
+
+// ---------------------------------------------------------------------------
+// Department workspace types (Step 30)
+// ---------------------------------------------------------------------------
+
+export interface DepartmentStatsResponse {
+  active_requests: number;
+  pending_human_actions: number;
+  collaborations_ongoing: number;
+  completed_today: number;
+}
+
+export interface DepartmentReadinessItem {
+  name: string;
+  ready: boolean;
+  detail: string | null;
+}
+
+export interface DepartmentReadinessResponse {
+  department_type: string;
+  overall_ready: boolean;
+  items: DepartmentReadinessItem[];
+}
+
+export interface DepartmentActivityResponse {
+  id: UUID;
+  request_id: UUID;
+  event_type: string;
+  title: string;
+  message: string;
+  actor_label: string;
+  created_at: string;
+}
