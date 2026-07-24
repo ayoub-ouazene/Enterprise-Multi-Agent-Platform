@@ -453,6 +453,35 @@ export interface AdminSupplierResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Assistant / Platform chat (Step 31)
+// ---------------------------------------------------------------------------
+
+export enum RouterMessageCategory {
+  PLATFORM_QUESTION = 'platform_question',
+  DEPARTMENT_QUESTION = 'department_question',
+  BUSINESS_REQUEST = 'business_request',
+  UNCLEAR = 'unclear',
+  UNSUPPORTED = 'unsupported',
+}
+
+export interface AssistantMessageRequest {
+  message: string;
+  request_id: UUID | null;
+}
+
+export interface AssistantMessageResponse {
+  message_category: RouterMessageCategory;
+  owner_department: string | null;
+  request_id: UUID | null;
+  request_status: RequestStatus | null;
+  needs_clarification: boolean;
+  clarification_question: string | null;
+  response: string;
+  request_type: string | null;
+  short_summary: string | null;
+}
+
+// ---------------------------------------------------------------------------
 // Department workspace types (Step 30)
 // ---------------------------------------------------------------------------
 

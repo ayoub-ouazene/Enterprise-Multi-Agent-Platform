@@ -16,6 +16,7 @@ import { OverviewPage } from './pages/OverviewPage';
 import { RequestsPage } from './pages/RequestsPage';
 import { RequestDetailPage } from './pages/RequestDetailPage';
 import { NewRequestPage } from './pages/NewRequestPage';
+import { AssistantPage } from './pages/AssistantPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { HumanActionsPage } from './pages/HumanActionsPage';
 import { HumanActionDetailPage } from './pages/HumanActionDetailPage';
@@ -95,6 +96,7 @@ export const router = createBrowserRouter([
       { path: 'human-actions', element: <HumanActionsPage /> },
       { path: 'human-actions/:actionId', element: <HumanActionDetailPage /> },
       { path: 'notifications', element: <NotificationsPage /> },
+      { path: 'assistant', element: <AssistantPage /> },
       {
         path: 'onboarding',
         element: (
