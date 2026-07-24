@@ -20,8 +20,13 @@ export function useRequestSse(requestId: string | undefined) {
           const data = JSON.parse(event.data);
           queryClient.invalidateQueries({ queryKey: ['workflow-events', requestId] });
           queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+          queryClient.invalidateQueries({ queryKey: ['request-human-actions', requestId] });
           if (data.event_type === 'waiting_for_human_action' || data.event_type === 'waiting_for_human_approval') {
             queryClient.invalidateQueries({ queryKey: ['human-actions'] });
+            // Also invalidate any specific action queries if the event may reference one
+            if (data?.action_id) {
+              queryClient.invalidateQueries({ queryKey: ['human-action', data.action_id] });
+            }
           }
         } catch {
           // ignore parse errors

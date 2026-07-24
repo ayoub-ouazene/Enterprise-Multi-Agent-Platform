@@ -4,6 +4,7 @@ import type { HumanActionSummary } from '../types';
 
 interface HumanActionsParams {
   status?: string;
+  request_id?: string;
   overdue_only?: boolean;
   limit?: number;
   offset?: number;
@@ -12,6 +13,7 @@ interface HumanActionsParams {
 export function useHumanActions(params?: HumanActionsParams) {
   const search = new URLSearchParams();
   if (params?.status) search.set('status', params.status);
+  if (params?.request_id) search.set('request_id', params.request_id);
   if (params?.overdue_only) search.set('overdue_only', String(params.overdue_only));
   if (params?.limit !== undefined) search.set('limit', String(params.limit));
   if (params?.offset !== undefined) search.set('offset', String(params.offset));

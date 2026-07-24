@@ -201,7 +201,14 @@ export interface HumanActionSummary {
   resolved_at: string | null;
   created_at: string;
   updated_at: string;
+  // Computed fields
+  allowed_decisions: string[];
+  can_respond: boolean;
+  request_title: string | null;
+  request_status: string | null;
 }
+
+export type HumanActionDetail = HumanActionSummary;
 
 export interface AdminSummary {
   totalEmployees: number;

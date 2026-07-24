@@ -56,6 +56,11 @@ class HumanActionResponse(BaseModel):
     resolved_at: datetime | None
     created_at: datetime
     updated_at: datetime
+    # Computed fields for frontend UX
+    allowed_decisions: list[str] = Field(default_factory=list)
+    can_respond: bool = False
+    request_title: str | None = None
+    request_status: str | None = None
 
 
 class HumanActionListFilters(BaseModel):

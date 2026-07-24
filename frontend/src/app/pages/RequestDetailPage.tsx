@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, AlertTriangle, Calendar, Clock, Tag, User, CheckCircle,
-  MessageSquare, RefreshCw, Power, Send, ChevronRight
+  MessageSquare, RefreshCw, Power, Send, ChevronRight, Hand
 } from 'lucide-react';
 import { PageContainer } from '../../components/layout/PageContainer';
 import { Section } from '../../components/layout/PageContainer';
 import { RequestStatusBadge } from '../../components/request/RequestStatusBadge';
 import { LoadingSpinner } from '../../components/feedback/LoadingSpinner';
+import { Skeleton } from '../../components/layout/Skeleton';
 import { Button } from '../../components/ui/Button';
 import { Alert } from '../../components/ui/Alert';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -15,6 +16,7 @@ import { useRequest, useCancelRequest } from '../../api/hooks/useRequests';
 import { useWorkflowEvents } from '../../api/hooks/useWorkflowEvents';
 import { useWorkflowControl } from '../../api/hooks/useWorkflowControl';
 import { useRequestSse } from '../../api/hooks/useRequestSse';
+import { useHumanActions } from '../../api/hooks/useHumanActions';
 import { useAuthContext } from '../../auth/hooks/useAuthContext';
 import { isCompanyAccount, isDepartmentManager } from '../../auth/permissions';
 import { formatDateTime, relativeTime } from '../../lib/formatters';
@@ -210,9 +212,12 @@ function OverviewTab({
       {/* Summary */}
       <Section title="Request Summary">
         <p className="leading-relaxed text-neutral-700 dark:text-neutral-300">
-          {request.summary || 'No summary provided.'}
+      {request.summary || 'No summary provided.'}
         </p>
       </Section>
+
+      {/* Related human actions */}
+      <RelatedHumanActions requestId={request.id} />
 
       {/* Decision */}
       {request.final_decision && isResolved && (
@@ -295,6 +300,62 @@ function MetaTile({ icon, label, value }: { icon: React.ReactNode; label: string
       </div>
       <div className="mt-2 text-sm font-medium text-neutral-900 dark:text-neutral-100">{value}</div>
     </div>
+  );
+}
+
+function RelatedHumanActions({ requestId }: { requestId: string }) {
+  const navigate = useNavigate();
+  const { data: actions, isLoading } = useHumanActions({ request_id: requestId, limit: 10 });
+
+  if (isLoading) {
+    return (
+      <Section title="Related Actions">
+        <div className="space-y-3">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <Skeleton key={i} variant="rect" className="h-16 w-full" />
+          ))}
+        </div>
+      </Section>
+    );
+  }
+
+  if (!actions || actions.length === 0) return null;
+
+  return (
+    <Section title="Related Actions">
+      <div className="space-y-3">
+        {actions.map((action) => {
+          const isPending = action.status === 'pending';
+          return (
+            <button
+              key={action.id}
+              onClick={() => navigate(`/app/human-actions/${action.id}`)}
+              className="flex w-full items-center justify-between rounded-lg border border-neutral-200 bg-white p-3 text-left transition-colors hover:border-neutral-300 dark:border-neutral-800 dark:bg-neutral-800 dark:hover:border-neutral-700"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <Hand size={14} className={isPending ? 'text-warning-500' : 'text-success-500'} aria-hidden="true" />
+                  <span className="text-sm font-medium text-neutral-900 dark:text-neutral-100 truncate">
+                    {action.title}
+                  </span>
+                  <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                    isPending
+                      ? 'bg-warning-100 text-warning-700 dark:bg-warning-900 dark:text-warning-300'
+                      : 'bg-success-100 text-success-700 dark:bg-success-900 dark:text-success-300'
+                  }`}>
+                    {isPending ? 'Pending' : 'Resolved'}
+                  </span>
+                </div>
+                <p className="mt-0.5 truncate text-xs text-neutral-500 dark:text-neutral-400">
+                  {action.description}
+                </p>
+              </div>
+              <ChevronRight size={14} className="shrink-0 text-neutral-400 dark:text-neutral-500" aria-hidden="true" />
+            </button>
+          );
+        })}
+      </div>
+    </Section>
   );
 }
 

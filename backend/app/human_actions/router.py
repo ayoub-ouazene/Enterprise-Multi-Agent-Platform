@@ -36,8 +36,7 @@ async def list_human_actions(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
 ) -> list[HumanActionResponse]:
-    actions = await _service(session, current_user).list(filters)
-    return [HumanActionResponse.model_validate(item) for item in actions]
+    return await _service(session, current_user).list(filters)
 
 
 @router.get("/{action_id}", response_model=HumanActionResponse)
@@ -47,13 +46,12 @@ async def get_human_action(
     current_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
 ) -> HumanActionResponse:
     try:
-        action = await _service(session, current_user).get(action_id)
+        return await _service(session, current_user).get(action_id)
     except NotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Human action not found",
         ) from None
-    return HumanActionResponse.model_validate(action)
 
 
 @router.post("", response_model=HumanActionResponse, status_code=status.HTTP_201_CREATED)

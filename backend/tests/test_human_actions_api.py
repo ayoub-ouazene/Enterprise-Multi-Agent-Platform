@@ -304,3 +304,56 @@ def test_submit_action_validates_empty_decision(monkeypatch) -> None:
         )
 
     assert response.status_code == 422
+
+
+# --- Computed fields in response ---
+
+
+def test_get_action_includes_computed_fields(monkeypatch) -> None:
+    """GET action should include allowed_decisions, can_respond, request_title, request_status."""
+    from app.human_actions.service import HumanActionService
+    from app.human_actions.schemas import HumanActionResponse
+
+    user = company_user()
+    request_obj = SimpleNamespace(
+        id=uuid4(),
+        title="Test Request",
+        status=RequestStatus.PROCESSING,
+    )
+    record = action_record(user, action_type="supplier_selection", request=request_obj)
+
+    service = HumanActionService(Mock(), user)
+    response = service._to_response(record)
+
+    assert isinstance(response, HumanActionResponse)
+    assert response.allowed_decisions == ["selected", "rejected"]
+    assert response.can_respond is True
+    assert response.request_title == "Test Request"
+    assert response.request_status == "processing"
+
+
+def test_allowed_decisions_mapping(monkeypatch) -> None:
+    from app.human_actions.service import HumanActionService
+
+    assert HumanActionService._allowed_decisions_for("supplier_selection") == ["selected", "rejected"]
+    assert HumanActionService._allowed_decisions_for("technician_action") == ["completed", "failed", "unable"]
+    assert HumanActionService._allowed_decisions_for("information_request") == ["submitted", "unable"]
+    assert HumanActionService._allowed_decisions_for("unknown_type") == ["approved", "rejected"]
+
+
+def test_can_respond_logic(monkeypatch) -> None:
+    from app.human_actions.service import HumanActionService
+
+    user = company_user()
+    service = HumanActionService(Mock(), user)
+
+    pending_assigned = action_record(user, status="pending")
+    assert service._can_respond(pending_assigned) is True
+
+    resolved = action_record(user, status="resolved")
+    assert service._can_respond(resolved) is False
+
+    employee = employee_user(user.company_id)
+    service_emp = HumanActionService(Mock(), employee)
+    action_not_assigned = action_record(user, status="pending", assigned_user_id=uuid4())
+    assert service_emp._can_respond(action_not_assigned) is False

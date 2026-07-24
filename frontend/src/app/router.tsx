@@ -17,6 +17,7 @@ import { RequestDetailPage } from './pages/RequestDetailPage';
 import { NewRequestPage } from './pages/NewRequestPage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { HumanActionsPage } from './pages/HumanActionsPage';
+import { HumanActionDetailPage } from './pages/HumanActionDetailPage';
 import { OnboardingPage } from './pages/OnboardingPage';
 import { AdminPage } from './pages/AdminPage';
 import { AccessDenied } from '../components/feedback/AccessDenied';
@@ -69,6 +70,7 @@ export const router = createBrowserRouter([
       { path: 'requests/new', element: <NewRequestPage /> },
       { path: 'requests/:requestId', element: <RequestDetailPage /> },
       { path: 'human-actions', element: <HumanActionsPage /> },
+      { path: 'human-actions/:actionId', element: <HumanActionDetailPage /> },
       { path: 'notifications', element: <NotificationsPage /> },
       {
         path: 'onboarding',

@@ -13,6 +13,7 @@ from app.human_actions.repository import HumanActionRepository
 from app.human_actions.schemas import (
     HumanActionCreate,
     HumanActionListFilters,
+    HumanActionResponse,
     HumanActionSubmitPayload,
     HumanActionSubmitResponse,
 )
@@ -55,13 +56,56 @@ class HumanActionService:
             return True
         return False
 
-    async def get(self, action_id: UUID) -> HumanAction:
+    def _can_respond(self, human_action: HumanAction) -> bool:
+        if human_action.status != "pending":
+            return False
+        if self.current_user.actor_type in {
+            ActorType.COMPANY,
+            ActorType.DEPARTMENT_MANAGER,
+        }:
+            return True
+        return human_action.assigned_user_id == self.current_user.user_id
+
+    @staticmethod
+    def _allowed_decisions_for(action_type: str) -> list[str]:
+        mapping: dict[str, list[str]] = {
+            "supplier_selection": ["selected", "rejected"],
+            "technician_action": ["completed", "failed", "unable"],
+            "onboarding_confirmation": ["completed", "failed", "unable"],
+            "information_request": ["submitted", "unable"],
+            "identity_verification": ["verified", "rejected", "unable"],
+        }
+        return mapping.get(action_type, ["approved", "rejected"])
+
+    def _to_response(self, human_action: HumanAction) -> HumanActionResponse:
+        request_title: str | None = None
+        request_status: str | None = None
+        if human_action.request is not None:
+            request_title = human_action.request.title
+            request_status = human_action.request.status.value if hasattr(
+                human_action.request.status, "value"
+            ) else str(human_action.request.status)
+        return HumanActionResponse.model_validate(
+            human_action,
+            from_attributes=True,
+        ).model_copy(update={
+            "allowed_decisions": self._allowed_decisions_for(human_action.action_type),
+            "can_respond": self._can_respond(human_action),
+            "request_title": request_title,
+            "request_status": request_status,
+        })
+
+    async def get(self, action_id: UUID) -> HumanActionResponse:
         human_action = await self.repository.get_by_id(action_id)
         if human_action is None or not self._can_view(human_action):
             raise NotFoundError("Human action not found")
-        return human_action
+        return self._to_response(human_action)
 
-    async def list(self, filters: HumanActionListFilters) -> list[HumanAction]:
+    async def list_for_user(self, filters: HumanActionListFilters) -> list[HumanActionResponse]:
+        items = await self.list(filters)
+        return [self._to_response(item) for item in items]
+
+    async def list_raw(self, filters: HumanActionListFilters) -> list[HumanAction]:
         assigned_user_id: UUID | None = None
         assigned_role: str | None = None
 
@@ -82,6 +126,10 @@ class HumanActionService:
             limit=filters.limit,
             offset=filters.offset,
         )
+
+    async def list(self, filters: HumanActionListFilters) -> list[HumanActionResponse]:
+        raw_items = await self.list_raw(filters)
+        return [self._to_response(item) for item in raw_items]
 
     async def create(self, payload: HumanActionCreate) -> HumanAction:
         business_request = await self.request_repository.get_by_id(payload.request_id)

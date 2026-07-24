@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../client';
-import type { HumanActionSummary, HumanActionSubmitResponse } from '../types';
+import type { HumanActionDetail, HumanActionSubmitResponse } from '../types';
 
 export function useHumanAction(actionId: string | undefined) {
-  return useQuery({
+  return useQuery<HumanActionDetail>({
     queryKey: ['human-action', actionId],
-    queryFn: () => api.get<HumanActionSummary>(`/human-actions/${actionId}`),
+    queryFn: () => api.get<HumanActionDetail>(`/human-actions/${actionId}`),
     enabled: !!actionId,
   });
 }
@@ -23,4 +23,16 @@ export function useSubmitHumanAction(actionId: string | undefined) {
       }
     },
   });
+}
+
+/** Structured submit: serializes `fields` to JSON in the `response` payload field. */
+export function useSubmitStructuredHumanAction(actionId: string | undefined) {
+  const base = useSubmitHumanAction(actionId);
+
+  return {
+    ...base,
+    submit(decision: string, fields: Record<string, unknown>, options?: Parameters<typeof base.mutate>[1]) {
+      base.mutate({ decision, response: JSON.stringify(fields) }, options);
+    },
+  };
 }
