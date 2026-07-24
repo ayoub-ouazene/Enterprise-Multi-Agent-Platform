@@ -20,6 +20,7 @@ import {
   Plus,
   Briefcase,
   Sparkles,
+  Backpack,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -121,6 +122,7 @@ function useNavItems(user: AuthenticatedUser): NavItem[] {
   } else if (isEmployee(user) || isExternalUser(user)) {
     base.push(
       { label: 'Assistant', href: '/app/assistant', icon: <Sparkles size={18} aria-hidden="true" /> },
+      { label: 'My Workspace', href: '/app/self-service', icon: <Backpack size={18} aria-hidden="true" /> },
       { label: 'My Requests', href: '/app/requests', icon: <ClipboardList size={18} aria-hidden="true" /> },
       { label: 'New Request', href: '/app/requests/new', icon: <Plus size={18} aria-hidden="true" /> },
       { label: 'Notifications', href: '/app/notifications', icon: <Bell size={18} aria-hidden="true" /> },

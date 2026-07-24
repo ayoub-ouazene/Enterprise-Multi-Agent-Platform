@@ -482,6 +482,44 @@ export interface AssistantMessageResponse {
 }
 
 // ---------------------------------------------------------------------------
+// Employee self-service types (Step 32)
+// ---------------------------------------------------------------------------
+
+export interface LeaveBalanceResponse {
+  id: UUID;
+  employee_id: UUID;
+  leave_type: string;
+  year: number;
+  allocated_days: string;
+  used_days: string;
+  reserved_days: string;
+  remaining_days: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LeaveRequestResponse {
+  request_id: UUID;
+  employee_id: UUID;
+  leave_type: string;
+  start_date: string;
+  end_date: string;
+  requested_days: string;
+  eligibility_status: string;
+  balance_status: string;
+  staffing_status: string;
+  approval_required: boolean;
+  approval_status: string;
+  decision: string;
+  decision_reason: string | null;
+  reserved_days: string;
+  created_at: string;
+  updated_at: string;
+  decided_at: string | null;
+  cancelled_at: string | null;
+}
+
+// ---------------------------------------------------------------------------
 // Department workspace types (Step 30)
 // ---------------------------------------------------------------------------
 

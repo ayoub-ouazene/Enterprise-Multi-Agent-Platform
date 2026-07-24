@@ -18,6 +18,7 @@ import { RequestDetailPage } from './pages/RequestDetailPage';
 import { NewRequestPage } from './pages/NewRequestPage';
 import { AssistantPage } from './pages/AssistantPage';
 import { NotificationsPage } from './pages/NotificationsPage';
+import { SelfServicePage } from './pages/SelfServicePage';
 import { HumanActionsPage } from './pages/HumanActionsPage';
 import { HumanActionDetailPage } from './pages/HumanActionDetailPage';
 import { OnboardingPage } from './pages/OnboardingPage';
@@ -97,6 +98,7 @@ export const router = createBrowserRouter([
       { path: 'human-actions/:actionId', element: <HumanActionDetailPage /> },
       { path: 'notifications', element: <NotificationsPage /> },
       { path: 'assistant', element: <AssistantPage /> },
+      { path: 'self-service', element: <SelfServicePage /> },
       {
         path: 'onboarding',
         element: (
