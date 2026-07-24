@@ -8,9 +8,9 @@ import {
 
 describe('status utilities', () => {
   it('maps request statuses with labels', () => {
-    expect(getRequestStatusMeta('in_progress').label).toBe('In Progress');
+    expect(getRequestStatusMeta('processing').label).toBe('Processing');
     expect(getRequestStatusMeta('completed').category).toBe('success');
-    expect(getRequestStatusMeta('pending_approval').category).toBe('pending');
+    expect(getRequestStatusMeta('waiting_for_human_approval').category).toBe('pending');
     expect(getRequestStatusMeta('failed').category).toBe('failed');
     expect(getRequestStatusMeta('unknown').label).toBe('unknown');
     expect(getRequestStatusMeta('unknown').category).toBe('neutral');
@@ -20,6 +20,7 @@ describe('status utilities', () => {
     expect(getHumanActionStatusMeta('pending').label).toBe('Pending');
     expect(getHumanActionStatusMeta('overdue').category).toBe('attention');
     expect(getHumanActionStatusMeta('resolved').category).toBe('success');
+    expect(getHumanActionStatusMeta('cancelled').category).toBe('cancelled');
   });
 
   it('maps notification severities', () => {

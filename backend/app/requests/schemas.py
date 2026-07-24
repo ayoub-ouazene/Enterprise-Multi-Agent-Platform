@@ -91,6 +91,7 @@ class BusinessRequestDetailResponse(BusinessRequestSummaryResponse):
     completed_at: datetime | None
     cancelled_at: datetime | None
     failed_at: datetime | None
+    workflow_state: dict[str, Any] = Field(default_factory=dict)
 
 
 class BusinessRequestCancellationResponse(BusinessRequestDetailResponse):

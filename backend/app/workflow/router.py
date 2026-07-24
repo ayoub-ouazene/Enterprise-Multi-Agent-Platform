@@ -16,7 +16,7 @@ from app.workflow.exceptions import (
     WorkflowPermissionError,
     WorkflowPersistenceError,
 )
-from app.workflow.schemas import WorkflowControlResponse
+from app.workflow.schemas import WorkflowClarifyPayload, WorkflowControlResponse
 from app.workflow.service import WorkflowService
 from app.llm.exceptions import (
     RouterConfigurationError,
@@ -105,3 +105,24 @@ async def resume_workflow(
 ) -> WorkflowControlResponse:
     service = _service(session, current_user, settings)
     return await _control_workflow(service.resume, request_id)
+
+
+@router.post(
+    "/{request_id}/workflow/clarify",
+    response_model=WorkflowControlResponse,
+)
+async def clarify_workflow(
+    request_id: UUID,
+    payload: WorkflowClarifyPayload,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    current_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
+    settings: Annotated[Settings, Depends(get_request_settings)],
+) -> WorkflowControlResponse:
+    service = _service(session, current_user, settings)
+    return await _control_workflow(
+        lambda rid: service.resume_for_requester(
+            rid,
+            clarification_answer=payload.answer,
+        ),
+        request_id,
+    )

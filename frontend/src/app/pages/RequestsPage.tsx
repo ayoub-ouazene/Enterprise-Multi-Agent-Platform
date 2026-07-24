@@ -14,9 +14,9 @@ const statusOptions: { label: string; value: string }[] = [
   { label: 'All', value: '' },
   { label: 'Active', value: 'active' },
   { label: 'Completed', value: RequestStatus.COMPLETED },
-  { label: 'Failed', value: 'failed,rejected' },
-  { label: 'Pending Action', value: RequestStatus.PENDING_ACTION },
-  { label: 'Pending Approval', value: RequestStatus.PENDING_APPROVAL },
+  { label: 'Failed', value: `${RequestStatus.FAILED},${RequestStatus.REJECTED}` },
+  { label: 'Pending Action', value: RequestStatus.WAITING_FOR_HUMAN_ACTION },
+  { label: 'Pending Approval', value: RequestStatus.WAITING_FOR_HUMAN_APPROVAL },
 ];
 
 export function RequestsPage() {
@@ -33,7 +33,15 @@ export function RequestsPage() {
 
   const { data: requests, isLoading, error, refetch } = useRequests(filters);
 
-  const activeStatuses = [RequestStatus.DRAFT, RequestStatus.SUBMITTED, RequestStatus.IN_PROGRESS, RequestStatus.PENDING_APPROVAL, RequestStatus.PENDING_ACTION];
+  const activeStatuses = [
+    RequestStatus.CREATED,
+    RequestStatus.ROUTING,
+    RequestStatus.PROCESSING,
+    RequestStatus.WAITING_FOR_DEPARTMENT,
+    RequestStatus.WAITING_FOR_HUMAN_APPROVAL,
+    RequestStatus.WAITING_FOR_HUMAN_ACTION,
+    RequestStatus.UNDER_REVIEW,
+  ];
 
   let filtered = requests ?? [];
   if (statusFilter === 'active') {

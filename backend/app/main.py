@@ -15,6 +15,7 @@ from app.failures.router import router as failures_router
 from app.departments.finance.router import router as finance_router
 from app.departments.procurement.router import router as procurement_router
 from app.departments.hr.router import router as hr_router
+from app.human_actions.router import router as human_actions_router
 from app.notifications.router import router as notifications_router
 from app.onboarding.router import router as onboarding_router
 from app.rag.router import router as rag_router
@@ -68,6 +69,7 @@ def create_app(settings_override: Settings | None = None) -> FastAPI:
     application.include_router(finance_router)
     application.include_router(procurement_router)
     application.include_router(hr_router)
+    application.include_router(human_actions_router)
     application.include_router(onboarding_router)
     application.include_router(rag_router)
     application.include_router(admin_router)
@@ -95,3 +97,4 @@ def create_app(settings_override: Settings | None = None) -> FastAPI:
 
 
 app = create_app()
+

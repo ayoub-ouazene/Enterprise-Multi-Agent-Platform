@@ -66,6 +66,20 @@ class WorkflowEventPublicResponse(BaseModel):
     created_at: datetime
 
 
+class WorkflowClarifyPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    answer: str = Field(min_length=1, max_length=10_000)
+
+    @field_validator("answer")
+    @classmethod
+    def strip_answer(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("must not be empty")
+        return stripped
+
+
 class WorkflowControlResponse(BaseModel):
     model_config = ConfigDict(extra="forbid")
 

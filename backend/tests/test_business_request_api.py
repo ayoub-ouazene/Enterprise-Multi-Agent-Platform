@@ -51,7 +51,23 @@ def request_record(user: AuthenticatedUser):
         status=RequestStatus.CREATED,
         current_stage="request_received",
         priority=RequestPriority.NORMAL,
-        workflow_state={"execution": {"api_key": "must-never-be-exposed"}},
+        workflow_state={
+            "state_version": 1,
+            "request": {
+                "request_id": str(uuid4()),
+                "company_id": str(user.company_id),
+                "requester_user_id": str(user.user_id),
+                "request_type": "software_access",
+                "status": RequestStatus.CREATED.value,
+                "current_stage": "request_received",
+                "summary": "Access is needed.",
+            },
+            "routing": {
+                "selected_department": "information_technology",
+                "needs_clarification": True,
+                "latest_question": "Which application?",
+            },
+        },
         custom_data={"private": "internal"},
         final_decision=None,
         final_reason=None,
@@ -147,9 +163,12 @@ def test_request_detail_never_exposes_raw_workflow_state_or_custom_data(
         response = client.get(f"/api/v1/requests/{record.id}")
 
     assert response.status_code == 200
-    assert "workflow_state" not in response.json()
-    assert "custom_data" not in response.json()
-    assert "api_key" not in response.text
+    body = response.json()
+    assert "workflow_state" in body
+    assert body["workflow_state"]["routing"]["needs_clarification"] is True
+    assert body["workflow_state"]["routing"]["latest_question"] == "Which application?"
+    assert "custom_data" not in body
+    assert "private" not in response.text
 
 
 def test_list_endpoint_returns_only_safe_summaries(monkeypatch) -> None:

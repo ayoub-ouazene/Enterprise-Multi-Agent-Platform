@@ -19,21 +19,24 @@ export interface StatusMeta {
 }
 
 const requestStatusMap: Record<string, StatusMeta> = {
-  draft:          { label: 'Draft',          category: 'neutral' },
-  submitted:      { label: 'Submitted',      category: 'info' },
-  in_progress:    { label: 'In Progress',    category: 'inProgress' },
-  pending_approval:{ label: 'Pending Approval', category: 'pending' },
-  pending_action: { label: 'Pending Action', category: 'attention' },
-  completed:      { label: 'Completed',      category: 'success' },
-  cancelled:      { label: 'Cancelled',      category: 'cancelled' },
-  failed:         { label: 'Failed',         category: 'failed' },
-  rejected:       { label: 'Rejected',       category: 'failed' },
+  created:                    { label: 'Created',                       category: 'neutral' },
+  routing:                    { label: 'Routing',                       category: 'info' },
+  processing:                 { label: 'Processing',                    category: 'inProgress' },
+  waiting_for_department:     { label: 'Waiting for Department',       category: 'pending' },
+  waiting_for_human_approval: { label: 'Waiting for Approval',         category: 'pending' },
+  waiting_for_human_action:   { label: 'Waiting for Action',           category: 'attention' },
+  under_review:               { label: 'Under Review',                 category: 'inProgress' },
+  completed:                  { label: 'Completed',                     category: 'success' },
+  rejected:                   { label: 'Rejected',                      category: 'failed' },
+  cancelled:                  { label: 'Cancelled',                     category: 'cancelled' },
+  failed:                     { label: 'Failed',                        category: 'failed' },
 };
 
 const humanActionStatusMap: Record<string, StatusMeta> = {
-  pending:  { label: 'Pending',  category: 'pending' },
-  resolved: { label: 'Resolved', category: 'success' },
-  overdue:  { label: 'Overdue',  category: 'attention' },
+  pending:   { label: 'Pending',   category: 'pending' },
+  resolved:  { label: 'Resolved',  category: 'success' },
+  cancelled: { label: 'Cancelled', category: 'cancelled' },
+  overdue:   { label: 'Overdue',   category: 'attention' },
 };
 
 const importJobStatusMap: Record<string, StatusMeta> = {

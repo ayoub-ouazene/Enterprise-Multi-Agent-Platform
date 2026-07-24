@@ -17,6 +17,7 @@ from app.departments.hr.models import (
 )
 from app.employees.models import Employee
 from app.failures.models import CapabilityGap, FailureLog
+from app.human_actions.models import HumanAction
 from app.notifications.models import Notification
 from app.rag.models import KnowledgeDocument
 from app.requests.models import BusinessRequest
@@ -48,6 +49,7 @@ __all__ = [
     "Employee",
     "FailureLog",
     "CapabilityGap",
+    "HumanAction",
     "Notification",
     "KnowledgeDocument",
     "RefreshToken",

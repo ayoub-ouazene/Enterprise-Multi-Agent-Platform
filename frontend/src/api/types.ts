@@ -35,15 +35,17 @@ export interface Department {
 }
 
 export enum RequestStatus {
-  DRAFT = 'draft',
-  SUBMITTED = 'submitted',
-  IN_PROGRESS = 'in_progress',
-  PENDING_APPROVAL = 'pending_approval',
-  PENDING_ACTION = 'pending_action',
+  CREATED = 'created',
+  ROUTING = 'routing',
+  PROCESSING = 'processing',
+  WAITING_FOR_DEPARTMENT = 'waiting_for_department',
+  WAITING_FOR_HUMAN_APPROVAL = 'waiting_for_human_approval',
+  WAITING_FOR_HUMAN_ACTION = 'waiting_for_human_action',
+  UNDER_REVIEW = 'under_review',
   COMPLETED = 'completed',
+  REJECTED = 'rejected',
   CANCELLED = 'cancelled',
   FAILED = 'failed',
-  REJECTED = 'rejected',
 }
 
 export enum RequestPriority {
@@ -75,6 +77,62 @@ export interface BusinessRequestDetail extends BusinessRequestSummary {
   completed_at: string | null;
   cancelled_at: string | null;
   failed_at: string | null;
+  workflow_state: Record<string, unknown>;
+}
+
+export enum WorkflowEventType {
+  REQUEST_CREATED = 'request_created',
+  ROUTING_STARTED = 'routing_started',
+  REQUEST_ROUTED = 'request_routed',
+  STAGE_STARTED = 'stage_started',
+  STAGE_COMPLETED = 'stage_completed',
+  DEPARTMENT_COLLABORATION_STARTED = 'department_collaboration_started',
+  DEPARTMENT_COLLABORATION_COMPLETED = 'department_collaboration_completed',
+  WAITING_FOR_HUMAN_APPROVAL = 'waiting_for_human_approval',
+  WAITING_FOR_HUMAN_ACTION = 'waiting_for_human_action',
+  REVIEW_STARTED = 'review_started',
+  REVIEW_COMPLETED = 'review_completed',
+  REQUEST_RESUMED = 'request_resumed',
+  REQUEST_COMPLETED = 'request_completed',
+  REQUEST_REJECTED = 'request_rejected',
+  REQUEST_CANCELLED = 'request_cancelled',
+  REQUEST_FAILED = 'request_failed',
+  FAILURE_RECORDED = 'failure_recorded',
+  CAPABILITY_GAP_DETECTED = 'capability_gap_detected',
+}
+
+export interface WorkflowEvent {
+  id: UUID;
+  request_id: UUID;
+  event_type: WorkflowEventType;
+  stage: string | null;
+  title: string;
+  message: string;
+  actor_label: string;
+  department_id: UUID | null;
+  event_data: Record<string, unknown>;
+  sequence_number: number;
+  created_at: string;
+}
+
+export interface WorkflowControlResponse {
+  request_id: UUID;
+  status: RequestStatus;
+  current_stage: string;
+  owner_department_id: UUID | null;
+  active_department_id: UUID | null;
+  state_version: number;
+  message_category: string | null;
+  owner_department: string | null;
+  needs_clarification: boolean;
+  clarification_question: string | null;
+  response: string | null;
+}
+
+export interface HumanActionSubmitResponse {
+  id: UUID;
+  status: string;
+  resolved_at: string | null;
 }
 
 export enum NotificationType {
@@ -135,8 +193,14 @@ export interface HumanActionSummary {
   title: string;
   description: string;
   status: string;
+  assigned_user_id: UUID | null;
+  assigned_role: string | null;
+  decision_package: Record<string, unknown>;
+  response: Record<string, unknown>;
   due_date: string | null;
+  resolved_at: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface AdminSummary {
