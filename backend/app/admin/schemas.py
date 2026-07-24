@@ -22,6 +22,35 @@ class AdminPagination(BaseModel):
 
 
 # =============================================================================
+# 0. Company Profile
+# =============================================================================
+
+class AdminCompanyResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    name: str
+    slug: str
+    is_active: bool
+    custom_data: dict[str, Any]
+    created_at: datetime
+    updated_at: datetime
+
+
+class AdminCompanyUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=255)
+    custom_data: dict[str, Any] | None = None
+
+
+class AdminSummaryResponse(BaseModel):
+    total_employees: int
+    total_departments: int
+    active_requests: int
+    pending_human_actions: int
+    policy_ready: bool
+
+
+# =============================================================================
 # 1. Employee Directory
 # =============================================================================
 

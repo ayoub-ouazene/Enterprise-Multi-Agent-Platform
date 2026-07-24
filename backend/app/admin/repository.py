@@ -139,6 +139,7 @@ class EmployeeAdminRepository:
         *,
         department_id: UUID | None = None,
         status: EmploymentStatus | None = None,
+        q: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[Employee]:
@@ -147,6 +148,15 @@ class EmployeeAdminRepository:
             statement = statement.where(Employee.department_id == department_id)
         if status is not None:
             statement = statement.where(Employee.employment_status == status)
+        if q:
+            term = f"%{q.strip()}%"
+            from app.users.models import User
+            statement = statement.outerjoin(User, Employee.user_id == User.id)
+            statement = statement.where(
+                (Employee.employee_code.ilike(term))
+                | (Employee.job_title.ilike(term))
+                | (User.email.ilike(term))
+            )
         result = await self.session.scalars(
             statement.order_by(Employee.employee_code).limit(limit).offset(offset)
         )

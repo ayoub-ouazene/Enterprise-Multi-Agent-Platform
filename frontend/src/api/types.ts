@@ -344,3 +344,110 @@ export interface AdminSummary {
   policyReadiness: boolean;
   capabilityGaps: number;
 }
+
+// ---------------------------------------------------------------------------
+// Admin dashboard types (Step 29)
+// ---------------------------------------------------------------------------
+
+export interface AdminSummaryResponse {
+  total_employees: number;
+  total_departments: number;
+  active_requests: number;
+  pending_human_actions: number;
+  policy_ready: boolean;
+}
+
+export interface AdminCompanyProfile {
+  id: UUID;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  custom_data: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminAssetResponse {
+  id: UUID;
+  asset_code: string;
+  asset_type: string;
+  brand: string;
+  model: string;
+  serial_number: string | null;
+  status: string;
+  location: string | null;
+  custom_data: Record<string, unknown>;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminSoftwareCatalogResponse {
+  id: UUID;
+  name: string;
+  access_type: string;
+  requires_manager_approval: boolean;
+  requires_it_approval: boolean;
+  license_limited: boolean;
+  available_license_count: number | null;
+  is_active: boolean;
+  custom_data: Record<string, unknown>;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminBudgetResponse {
+  id: UUID;
+  department_id: UUID | null;
+  name: string;
+  budget_type: string;
+  currency: string;
+  period_start: string;
+  period_end: string;
+  allocated_amount: string;
+  reserved_amount: string;
+  committed_amount: string;
+  spent_amount: string;
+  available_amount: string;
+  status: string;
+  approval_threshold: string | null;
+  custom_data: Record<string, unknown>;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminHolidayResponse {
+  id: UUID;
+  holiday_date: string;
+  name: string;
+  is_paid: boolean;
+  custom_data: Record<string, unknown>;
+}
+
+export interface AdminStaffingRuleResponse {
+  id: UUID;
+  department_id: UUID;
+  minimum_active_employees: number;
+  effective_from: string;
+  effective_to: string | null;
+  is_active: boolean;
+  custom_data: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminSupplierResponse {
+  id: UUID;
+  name: string;
+  contact_person: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  website: string | null;
+  is_active: boolean;
+  custom_data: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}

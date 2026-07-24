@@ -19,7 +19,21 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { HumanActionsPage } from './pages/HumanActionsPage';
 import { HumanActionDetailPage } from './pages/HumanActionDetailPage';
 import { OnboardingPage } from './pages/OnboardingPage';
-import { AdminPage } from './pages/AdminPage';
+import { AdminShell } from './layout/AdminShell';
+import {
+  AdminOverviewPage,
+  CompanyProfilePage,
+  EmployeeDirectoryPage,
+  ManagersPage,
+  DepartmentsPage,
+  AssetsPage,
+  SoftwareCatalogPage,
+  BudgetsPage,
+  SuppliersPage,
+  HolidaysPage,
+  StaffingRulesPage,
+  PoliciesPage,
+} from './pages/admin';
 import { AccessDenied } from '../components/feedback/AccessDenied';
 import { NotFound } from '../components/feedback/NotFound';
 
@@ -84,9 +98,24 @@ export const router = createBrowserRouter([
         path: 'admin',
         element: (
           <AdminRoute>
-            <AdminPage />
+            <AdminShell />
           </AdminRoute>
         ),
+        children: [
+          { index: true, element: <Navigate to="overview" replace /> },
+          { path: 'overview', element: <AdminOverviewPage /> },
+          { path: 'company', element: <CompanyProfilePage /> },
+          { path: 'employees', element: <EmployeeDirectoryPage /> },
+          { path: 'managers', element: <ManagersPage /> },
+          { path: 'departments', element: <DepartmentsPage /> },
+          { path: 'assets', element: <AssetsPage /> },
+          { path: 'software', element: <SoftwareCatalogPage /> },
+          { path: 'budgets', element: <BudgetsPage /> },
+          { path: 'suppliers', element: <SuppliersPage /> },
+          { path: 'holidays', element: <HolidaysPage /> },
+          { path: 'staffing-rules', element: <StaffingRulesPage /> },
+          { path: 'policies', element: <PoliciesPage /> },
+        ],
       },
       { path: '*', element: <NotFound /> },
     ],

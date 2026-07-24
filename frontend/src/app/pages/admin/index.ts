@@ -1,0 +1,12 @@
+export { AdminOverviewPage } from './AdminOverviewPage';
+export { CompanyProfilePage } from './CompanyProfilePage';
+export { EmployeeDirectoryPage } from './EmployeeDirectoryPage';
+export { ManagersPage } from './ManagersPage';
+export { DepartmentsPage } from './DepartmentsPage';
+export { AssetsPage } from './AssetsPage';
+export { SoftwareCatalogPage } from './SoftwareCatalogPage';
+export { BudgetsPage } from './BudgetsPage';
+export { SuppliersPage } from './SuppliersPage';
+export { HolidaysPage } from './HolidaysPage';
+export { StaffingRulesPage } from './StaffingRulesPage';
+export { PoliciesPage } from './PoliciesPage';

@@ -21,6 +21,8 @@ from app.admin.schemas import (
     AdminBudgetCreate,
     AdminBudgetResponse,
     AdminBudgetUpdate,
+    AdminCompanyResponse,
+    AdminCompanyUpdate,
     AdminDepartmentResponse,
     AdminDepartmentUpdate,
     AdminEmployeeCreate,
@@ -40,6 +42,7 @@ from app.admin.schemas import (
     AdminStaffingRuleCreate,
     AdminStaffingRuleResponse,
     AdminStaffingRuleUpdate,
+    AdminSummaryResponse,
     AdminSupplierCreate,
     AdminSupplierResponse,
     AdminSupplierUpdate,
@@ -93,6 +96,123 @@ def _handle_admin_exceptions(exc: Exception) -> None:
 
 
 # =========================================================================
+# 0. Company Profile & Summary
+# =========================================================================
+
+@router.get('/company', response_model=AdminCompanyResponse)
+async def get_company_profile(
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    current_user: Annotated[
+        AuthenticatedUser, Depends(require_company_or_any_manager)
+    ],
+) -> AdminCompanyResponse:
+    from app.companies.models import Company
+    company = await session.scalar(
+        select(Company).where(Company.id == current_user.company_id)
+    )
+    if company is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail='Company not found'
+        )
+    return AdminCompanyResponse.model_validate(company)
+
+
+@router.patch('/company', response_model=AdminCompanyResponse)
+async def update_company_profile(
+    payload: AdminCompanyUpdate,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    current_user: Annotated[
+        AuthenticatedUser, Depends(require_company_account)
+    ],
+) -> AdminCompanyResponse:
+    from app.companies.models import Company
+    company = await session.scalar(
+        select(Company).where(Company.id == current_user.company_id)
+    )
+    if company is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail='Company not found'
+        )
+    values = payload.model_dump(exclude_unset=True)
+    if values.get('name') is not None:
+        values['name'] = str(values['name']).strip()
+    values = {k: v for k, v in values.items() if v is not None}
+    if values:
+        stmt = (
+            update(Company)
+            .where(Company.id == current_user.company_id)
+            .values(**values)
+            .returning(Company)
+        )
+        company = await session.scalar(stmt)
+        await session.commit()
+        await session.refresh(company)
+    return AdminCompanyResponse.model_validate(company)
+
+
+@router.get('/summary', response_model=AdminSummaryResponse)
+async def get_admin_summary(
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    current_user: Annotated[
+        AuthenticatedUser, Depends(require_company_or_any_manager)
+    ],
+) -> AdminSummaryResponse:
+    from app.companies.models import Company
+    from app.employees.models import Employee
+    from app.departments.models import Department
+    from app.requests.models import BusinessRequest
+    from app.human_actions.models import HumanAction
+    from app.requests.enums import RequestStatus
+
+    total_employees = await session.scalar(
+        select(func.count(Employee.id)).where(
+            Employee.company_id == current_user.company_id
+        )
+    )
+    total_departments = await session.scalar(
+        select(func.count(Department.id)).where(
+            Department.company_id == current_user.company_id
+        )
+    )
+    active_requests = await session.scalar(
+        select(func.count(BusinessRequest.id)).where(
+            BusinessRequest.company_id == current_user.company_id,
+            BusinessRequest.status.in_(
+                [RequestStatus.CREATED, RequestStatus.ROUTING,
+                 RequestStatus.PROCESSING, RequestStatus.WAITING_FOR_DEPARTMENT,
+                 RequestStatus.WAITING_FOR_HUMAN_APPROVAL,
+                 RequestStatus.WAITING_FOR_HUMAN_ACTION,
+                 RequestStatus.UNDER_REVIEW]
+            ),
+        )
+    )
+    pending_human_actions = await session.scalar(
+        select(func.count(HumanAction.id)).where(
+            HumanAction.company_id == current_user.company_id,
+            HumanAction.status == 'pending',
+        )
+    )
+
+    ingested = await session.scalar(
+        select(func.count(KnowledgeDocument.id)).where(
+            KnowledgeDocument.company_id == current_user.company_id,
+            KnowledgeDocument.is_active.is_(True),
+            KnowledgeDocument.ingestion_status == KnowledgeIngestionStatus.COMPLETED,
+            KnowledgeDocument.document_type == KnowledgeDocumentType.POLICY,
+        )
+    )
+    policy_ready = bool(ingested and ingested > 0)
+
+    return AdminSummaryResponse(
+        total_employees=total_employees or 0,
+        total_departments=total_departments or 0,
+        active_requests=active_requests or 0,
+        pending_human_actions=pending_human_actions or 0,
+        policy_ready=policy_ready,
+    )
+
+
+# =========================================================================
 # 1. Employee Directory
 # =========================================================================
 
@@ -104,12 +224,13 @@ async def list_employees(
         AuthenticatedUser, Depends(require_company_or_any_manager)
     ],
     department_id: Annotated[UUID | None, Query()] = None,
+    q: Annotated[str | None, Query(max_length=120)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[AdminEmployeeResponse]:
     service = AdminEmployeeService(session, current_user.company_id)
     records = await service.list(
-        department_id=department_id, limit=limit, offset=offset
+        department_id=department_id, q=q, limit=limit, offset=offset
     )
     return [AdminEmployeeResponse.model_validate(r) for r in records]
 

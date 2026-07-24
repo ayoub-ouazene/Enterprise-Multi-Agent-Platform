@@ -67,11 +67,12 @@ class AdminEmployeeService:
         *,
         department_id: UUID | None = None,
         status: EmploymentStatus | None = None,
+        q: str | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[Employee]:
         return await self.repo.list(
-            department_id=department_id, status=status, limit=limit, offset=offset
+            department_id=department_id, status=status, q=q, limit=limit, offset=offset
         )
 
     async def get(self, employee_id: UUID) -> Employee | None:

@@ -84,7 +84,7 @@ function getNavItems(user: AuthenticatedUser): NavItem[] {
       { label: 'Human Actions', href: '/app/human-actions', icon: <Hand size={18} aria-hidden="true" /> },
       { label: 'Notifications', href: '/app/notifications', icon: <Bell size={18} aria-hidden="true" /> },
       { label: 'Onboarding', href: '/app/onboarding', icon: <Rocket size={18} aria-hidden="true" /> },
-      { label: 'Administration', href: '/app/admin', icon: <Shield size={18} aria-hidden="true" /> },
+      { label: 'Administration', href: '/app/admin/overview', icon: <Shield size={18} aria-hidden="true" /> },
     );
   } else if (isDepartmentManager(user)) {
     base.push(
@@ -93,7 +93,7 @@ function getNavItems(user: AuthenticatedUser): NavItem[] {
       { label: 'Notifications', href: '/app/notifications', icon: <Bell size={18} aria-hidden="true" /> },
     );
     if (canAccessAdmin(user)) {
-      base.push({ label: 'Administration', href: '/app/admin', icon: <Shield size={18} aria-hidden="true" /> });
+      base.push({ label: 'Administration', href: '/app/admin/overview', icon: <Shield size={18} aria-hidden="true" /> });
     }
   } else if (isEmployee(user) || isExternalUser(user)) {
     base.push(
