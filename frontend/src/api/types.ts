@@ -176,6 +176,132 @@ export interface OnboardingStatus {
   last_import_at: string | null;
 }
 
+// ---------------------------------------------------------------------------
+// Onboarding wizard extensions (mirrors backend schemas)
+// ---------------------------------------------------------------------------
+
+export interface OnboardingStatusItem {
+  requirement: string;
+  satisfied: boolean;
+  details: string | null;
+}
+
+export interface OnboardingStatusDetailed {
+  company_id: UUID;
+  can_activate: boolean;
+  is_active: boolean;
+  items: OnboardingStatusItem[];
+}
+
+export interface RowValidationResult {
+  row_number: number;
+  status: string; // "valid" | "invalid"
+  errors: string[];
+  preview: Record<string, unknown> | null;
+}
+
+export interface ImportValidateResponse {
+  import_job_id: UUID;
+  import_type: string;
+  total_rows: number;
+  valid_rows: number;
+  invalid_rows: number;
+  can_confirm: boolean;
+  rows: RowValidationResult[];
+}
+
+export interface ImportConfirmResponse {
+  import_job_id: UUID;
+  status: string;
+  processed_rows: number;
+  errors: string[] | null;
+}
+
+export interface TemplateColumn {
+  name: string;
+  required: boolean;
+  description: string | null;
+}
+
+export interface ImportTemplateResponse {
+  import_type: string;
+  columns: TemplateColumn[];
+  csv_header: string;
+}
+
+export interface ImportJobDetailed {
+  id: UUID;
+  company_id: UUID;
+  import_type: string;
+  status: string;
+  original_filename: string;
+  uploaded_by_user_id: UUID;
+  total_rows: number;
+  valid_rows: number;
+  invalid_rows: number;
+  processed_rows: number;
+  error_summary: string | null;
+  checksum: string;
+  idempotency_key: string | null;
+  created_at: string;
+  updated_at: string;
+  started_at: string | null;
+  completed_at: string | null;
+  failed_at: string | null;
+}
+
+export interface DocumentUploadPayload {
+  file: File;
+  title: string;
+  document_type: string;
+  department_scope: string[];
+  access_scope: string;
+  effective_date?: string | null;
+  custom_metadata?: Record<string, unknown>;
+}
+
+export interface DocumentListResponse {
+  id: UUID;
+  title: string;
+  document_type: string;
+  ingestion_status: string;
+  is_active: boolean;
+  department_scope: string[];
+  tags: string[];
+  created_at: string;
+}
+
+export interface PolicyReadinessResponse {
+  total_documents: number;
+  ingested_active_policies: number;
+  department_coverage: Record<string, boolean>;
+  ready: boolean;
+}
+
+export interface AdminDepartmentResponse {
+  id: UUID;
+  name: string;
+  department_type: string;
+  is_active: boolean;
+  custom_data: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminEmployeeResponse {
+  id: UUID;
+  user_id: UUID | null;
+  employee_code: string;
+  job_title: string | null;
+  department_id: UUID | null;
+  hire_date: string | null;
+  manager_employee_id: UUID | null;
+  employment_status: string;
+  custom_data: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ImportJob {
   id: UUID;
   import_type: string;

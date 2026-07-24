@@ -142,6 +142,79 @@ async function request<T>(
 
 export { ApiErrorException };
 
+async function uploadRequest<T>(
+  path: string,
+  formData: FormData,
+  options: { signal?: AbortSignal; skipAuth?: boolean } = {}
+): Promise<T> {
+  const url = `${API_BASE}${path}`;
+  const headers: Record<string, string> = {
+    Accept: 'application/json',
+  };
+
+  if (!options.skipAuth) {
+    const tokens = getTokens();
+    if (tokens?.access_token) {
+      headers['Authorization'] = `Bearer ${tokens.access_token}`;
+    }
+  }
+
+  let response: Response;
+  try {
+    response = await fetchWithTimeout(url, {
+      method: 'POST',
+      headers,
+      body: formData,
+      signal: options.signal,
+    });
+  } catch {
+    const error = normalizeError(null, null);
+    throw new ApiErrorException(error);
+  }
+
+  // Handle 401 by attempting refresh once
+  if (response.status === 401 && !options.skipAuth) {
+    const refreshed = await refreshTokens();
+    if (refreshed) {
+      headers['Authorization'] = `Bearer ${refreshed.access_token}`;
+      try {
+        response = await fetchWithTimeout(url, {
+          method: 'POST',
+          headers,
+          body: formData,
+          signal: options.signal,
+        });
+      } catch {
+        const error = normalizeError(null, null);
+        throw new ApiErrorException(error);
+      }
+    } else {
+      clearAuth();
+      window.location.href = '/login';
+      const error = normalizeError(response, null);
+      throw new ApiErrorException(error);
+    }
+  }
+
+  if (!response.ok) {
+    let bodyData: unknown = null;
+    try {
+      bodyData = await response.json();
+    } catch {
+      // ignore
+    }
+    const error = normalizeError(response, bodyData);
+    throw new ApiErrorException(error);
+  }
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
+  const data = (await response.json()) as T;
+  return data;
+}
+
 export const api = {
   get<T>(path: string, options?: { signal?: AbortSignal }): Promise<T> {
     return request<T>('GET', path, undefined, options);
@@ -157,6 +230,10 @@ export const api = {
 
   del<T>(path: string, options?: { signal?: AbortSignal }): Promise<T> {
     return request<T>('DELETE', path, undefined, options);
+  },
+
+  upload<T>(path: string, formData: FormData, options?: { signal?: AbortSignal }): Promise<T> {
+    return uploadRequest<T>(path, formData, options);
   },
 };
 

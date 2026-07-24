@@ -50,6 +50,9 @@ function CompanyDashboard() {
   ) ?? [];
   const failedRequests = requests?.filter((r) => r.status === RequestStatus.FAILED || r.status === RequestStatus.REJECTED) ?? [];
   const overdueActions = actions?.filter((a) => a.due_date && new Date(a.due_date) < new Date()) ?? [];
+  const onboardingItems = onboarding?.items ?? [];
+  const onboardingComplete = onboarding?.can_activate ?? false;
+  const missingSteps = onboardingItems.filter((i) => !i.satisfied).map((i) => i.requirement);
 
   const metrics = (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -71,10 +74,10 @@ function CompanyDashboard() {
       />
       <MetricCard
         title="Onboarding"
-        value={onboarding?.onboarding_complete ? 'Complete' : 'Pending'}
-        subtitle={onboarding?.missing_steps.length ? `${onboarding.missing_steps.length} steps missing` : undefined}
+        value={onboardingComplete ? 'Complete' : 'Pending'}
+        subtitle={missingSteps.length ? `${missingSteps.length} steps missing` : undefined}
         icon={<CheckCircle size={20} />}
-        category={onboarding?.onboarding_complete ? 'success' : 'pending'}
+        category={onboardingComplete ? 'success' : 'pending'}
         onClick={() => navigate('/app/onboarding')}
       />
       <MetricCard
