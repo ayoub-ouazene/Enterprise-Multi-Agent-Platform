@@ -36,6 +36,8 @@ import {
   HolidaysPage,
   StaffingRulesPage,
   PoliciesPage,
+  FailuresPage,
+  CapabilityGapsPage,
 } from './pages/admin';
 import { DepartmentShell } from './layout/DepartmentShell';
 import {
@@ -128,6 +130,8 @@ export const router = createBrowserRouter([
           { path: 'holidays', element: <HolidaysPage /> },
           { path: 'staffing-rules', element: <StaffingRulesPage /> },
           { path: 'policies', element: <PoliciesPage /> },
+          { path: 'failures', element: <FailuresPage /> },
+          { path: 'capability-gaps', element: <CapabilityGapsPage /> },
         ],
       },
       {

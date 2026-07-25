@@ -551,3 +551,99 @@ export interface DepartmentActivityResponse {
   actor_label: string;
   created_at: string;
 }
+
+// ---------------------------------------------------------------------------
+// Failure management (Step 33)
+// ---------------------------------------------------------------------------
+
+export enum FailureType {
+  TOOL_FAILURE = 'tool_failure',
+  DATABASE_FAILURE = 'database_failure',
+  RETRIEVAL_FAILURE = 'retrieval_failure',
+  EXTERNAL_SERVICE_FAILURE = 'external_service_failure',
+  VALIDATION_FAILURE = 'validation_failure',
+  AUTHORIZATION_FAILURE = 'authorization_failure',
+  WORKFLOW_FAILURE = 'workflow_failure',
+  CONFIGURATION_FAILURE = 'configuration_failure',
+  UNEXPECTED_FAILURE = 'unexpected_failure',
+}
+
+export enum FailureSource {
+  API = 'api',
+  SERVICE = 'service',
+  REPOSITORY = 'repository',
+  TOOL = 'tool',
+  WORKFLOW = 'workflow',
+  RAG = 'rag',
+  LLM = 'llm',
+  EXTERNAL_SERVICE = 'external_service',
+  SYSTEM = 'system',
+}
+
+export interface FailureDetailResponse {
+  id: UUID;
+  request_id: UUID | null;
+  department_id: UUID | null;
+  failure_type: FailureType;
+  failure_source: FailureSource;
+  failed_operation: string;
+  internal_message: string;
+  safe_message: string;
+  error_code: string | null;
+  technical_data: Record<string, unknown>;
+  alternative_attempted: boolean;
+  alternative_description: string | null;
+  is_terminal: boolean;
+  resolved: boolean;
+  resolved_at: string | null;
+  resolved_by_user_id: UUID | null;
+  created_at: string;
+}
+
+export interface FailureListFilters {
+  failure_type?: FailureType;
+  failure_source?: FailureSource;
+  resolved?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+export enum CapabilityGapStatus {
+  OPEN = 'open',
+  ACKNOWLEDGED = 'acknowledged',
+  PLANNED = 'planned',
+  RESOLVED = 'resolved',
+  REJECTED = 'rejected',
+}
+
+export interface CapabilityGapSummaryResponse {
+  id: UUID;
+  request_id: UUID | null;
+  department_id: UUID | null;
+  requested_operation: string;
+  status: CapabilityGapStatus;
+  occurrence_count: number;
+  first_seen_at: string;
+  last_seen_at: string;
+}
+
+export interface CapabilityGapDetailResponse extends CapabilityGapSummaryResponse {
+  description: string;
+  safe_user_message: string;
+  resolved_at: string | null;
+  resolved_by_user_id: UUID | null;
+  resolution_notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CapabilityGapStatusUpdate {
+  status: CapabilityGapStatus;
+  resolution_notes?: string | null;
+}
+
+export interface CapabilityGapListFilters {
+  status?: CapabilityGapStatus;
+  limit?: number;
+  offset?: number;
+}
