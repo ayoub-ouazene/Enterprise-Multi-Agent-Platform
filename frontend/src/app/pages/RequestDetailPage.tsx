@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, AlertTriangle, Calendar, Clock, Tag, User, CheckCircle,
-  MessageSquare, RefreshCw, Power, Send, ChevronRight, Hand
+  MessageSquare, RefreshCw, Power, Send, ChevronRight, Hand,
+  Plus, Route, GitBranch, Play, ShieldCheck, MessageCircle,
+  Eye, Check, XCircle, RotateCcw, Ban, FileX, HelpCircle
 } from 'lucide-react';
 import { PageContainer } from '../../components/layout/PageContainer';
 import { Section } from '../../components/layout/PageContainer';
@@ -359,21 +361,23 @@ function RelatedHumanActions({ requestId }: { requestId: string }) {
   );
 }
 
-function eventIcon(eventType: string): string {
+function eventIcon(eventType: string): React.ReactNode {
+  const iconClass = "h-3.5 w-3.5";
   switch (eventType) {
-    case 'request_created': return 'RC';
-    case 'routing_started': return 'RT';
-    case 'request_routed': return 'RD';
-    case 'stage_started': return 'ST';
-    case 'stage_completed': return 'SC';
-    case 'waiting_for_human_approval': return 'WA';
-    case 'waiting_for_human_action': return 'WH';
-    case 'review_started': return 'RS';
-    case 'review_completed': return 'RC';
-    case 'request_completed': return 'CP';
-    case 'request_failed': return 'FL';
-    case 'request_cancelled': return 'CN';
-    case 'request_rejected': return 'RJ';
-    default: return 'EV';
+    case 'request_created': return <Plus className={iconClass} aria-hidden="true" />;
+    case 'routing_started': return <Route className={iconClass} aria-hidden="true" />;
+    case 'request_routed': return <GitBranch className={iconClass} aria-hidden="true" />;
+    case 'stage_started': return <Play className={iconClass} aria-hidden="true" />;
+    case 'stage_completed': return <Check className={iconClass} aria-hidden="true" />;
+    case 'waiting_for_human_approval': return <ShieldCheck className={iconClass} aria-hidden="true" />;
+    case 'waiting_for_human_action': return <MessageCircle className={iconClass} aria-hidden="true" />;
+    case 'review_started': return <Eye className={iconClass} aria-hidden="true" />;
+    case 'review_completed': return <CheckCircle className={iconClass} aria-hidden="true" />;
+    case 'request_completed': return <CheckCircle className={iconClass} aria-hidden="true" />;
+    case 'request_failed': return <FileX className={iconClass} aria-hidden="true" />;
+    case 'request_cancelled': return <Ban className={iconClass} aria-hidden="true" />;
+    case 'request_rejected': return <XCircle className={iconClass} aria-hidden="true" />;
+    case 'request_resumed': return <RotateCcw className={iconClass} aria-hidden="true" />;
+    default: return <HelpCircle className={iconClass} aria-hidden="true" />;
   }
 }

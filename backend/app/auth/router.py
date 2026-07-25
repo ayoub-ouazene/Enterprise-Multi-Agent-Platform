@@ -7,6 +7,8 @@ from app.auth.context import AuthenticatedUser
 from app.auth.dependencies import get_request_settings, require_authenticated_user
 from app.auth.schemas import (
     AuthenticatedUserResponse,
+    ChangePasswordRequest,
+    ChangePasswordResponse,
     LoginRequest,
     RefreshRequest,
     TokenResponse,
@@ -73,3 +75,27 @@ async def me(
     current_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
 ) -> AuthenticatedUserResponse:
     return AuthenticatedUserResponse.from_context(current_user)
+
+
+@router.post("/change-password", response_model=ChangePasswordResponse)
+async def change_password(
+    payload: ChangePasswordRequest,
+    current_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_request_settings)],
+) -> ChangePasswordResponse:
+    try:
+        await AuthenticationService(session, settings).change_password(
+            user_id=current_user.user_id,
+            company_id=current_user.company_id,
+            current_password=payload.current_password.get_secret_value(),
+            new_password=payload.new_password.get_secret_value(),
+        )
+    except AuthenticationError:
+        raise _authentication_error() from None
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+    return ChangePasswordResponse()

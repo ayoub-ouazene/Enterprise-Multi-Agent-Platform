@@ -6,6 +6,8 @@ import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
 import { Alert } from '../../components/ui/Alert';
 import { useAuthContext } from '../../auth/hooks/useAuthContext';
+import { useChangePassword } from '../../api/hooks/useAuth';
+import { ApiErrorException } from '../../api/client';
 
 interface ChangePasswordForm {
   current_password: string;
@@ -18,6 +20,7 @@ export function ChangePasswordPage() {
   const { setMustChangePassword } = useAuthContext();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const changePassword = useChangePassword();
 
   const {
     register,
@@ -26,15 +29,25 @@ export function ChangePasswordPage() {
     formState: { errors, isSubmitting },
   } = useForm<ChangePasswordForm>();
 
-  const onSubmit = async (_data: ChangePasswordForm) => {
+  const onSubmit = async (data: ChangePasswordForm) => {
     setError(null);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await changePassword.mutateAsync({
+        current_password: data.current_password,
+        new_password: data.new_password,
+      });
       setSuccess(true);
       setMustChangePassword(false);
       setTimeout(() => navigate('/app', { replace: true }), 1500);
-    } catch {
-      setError('Failed to change password. Please try again.');
+    } catch (err) {
+      let msg = 'Failed to change password. Please try again.';
+      if (err instanceof ApiErrorException) {
+        msg = err.error.message || msg;
+        if (err.error.status === 401) {
+          msg = 'Current password is incorrect.';
+        }
+      }
+      setError(msg);
     }
   };
 

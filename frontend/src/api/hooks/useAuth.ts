@@ -41,6 +41,23 @@ export function useRefreshToken() {
   });
 }
 
+export interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+}
+
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: async (payload: ChangePasswordPayload) => {
+      const response = await api.post<{ success: boolean; message: string }>(
+        '/auth/change-password',
+        payload
+      );
+      return response;
+    },
+  });
+}
+
 export function useMe(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: ['me'],

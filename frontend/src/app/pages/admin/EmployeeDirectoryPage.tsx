@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, AlertTriangle } from 'lucide-react';
+import { Search } from 'lucide-react';
 import {
   useAdminEmployees,
   useDeactivateEmployee,
@@ -8,6 +8,7 @@ import {
 import { ErrorState } from './components/ErrorState';
 import { TableSkeleton } from './components/TableSkeleton';
 import { StatusBadge } from './components/StatusBadge';
+import { ConfirmDialog } from '../../../components/ui/ConfirmDialog';
 import { useAuthContext } from '../../../auth/hooks/useAuthContext';
 import { isCompanyAccount, isDepartmentManager } from '../../../auth/permissions';
 
@@ -106,72 +107,20 @@ export function EmployeeDirectoryPage() {
       )}
 
       {/* Deactivate confirmation */}
-      {confirmDeactivate && (
-        <ConfirmDialog
-          title="Deactivate Employee"
-          message="This will set the employee status to TERMINATED. Are you sure?"
-          confirmLabel="Deactivate"
-          confirmVariant="danger"
-          onConfirm={() => {
+      <ConfirmDialog
+        title="Deactivate Employee"
+        message="This will set the employee status to TERMINATED. Are you sure?"
+        confirmLabel="Deactivate"
+        confirmVariant="danger"
+        isOpen={!!confirmDeactivate}
+        isPending={deactivate.isPending}
+        onConfirm={() => {
+          if (confirmDeactivate) {
             deactivate.mutate(confirmDeactivate, { onSuccess: () => setConfirmDeactivate(null) });
-          }}
-          onCancel={() => setConfirmDeactivate(null)}
-          isPending={deactivate.isPending}
-        />
-      )}
-    </div>
-  );
-}
-
-function ConfirmDialog({
-  title,
-  message,
-  confirmLabel,
-  confirmVariant,
-  onConfirm,
-  onCancel,
-  isPending,
-}: {
-  title: string;
-  message: string;
-  confirmLabel: string;
-  confirmVariant?: 'danger' | 'primary';
-  onConfirm: () => void;
-  onCancel: () => void;
-  isPending: boolean;
-}) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-sm rounded-xl bg-white p-5 shadow-lg dark:bg-neutral-800">
-        <div className="flex items-start gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-900/30">
-            <AlertTriangle size={16} />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{title}</h3>
-            <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">{message}</p>
-          </div>
-        </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <button
-            onClick={onCancel}
-            className="rounded-md border border-neutral-300 px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:text-neutral-300"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={isPending}
-            className={`rounded-md px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50 ${
-              confirmVariant === 'danger'
-                ? 'bg-rose-600 hover:bg-rose-700'
-                : 'bg-primary-600 hover:bg-primary-700'
-            }`}
-          >
-            {isPending ? 'Processing...' : confirmLabel}
-          </button>
-        </div>
-      </div>
+          }
+        }}
+        onCancel={() => setConfirmDeactivate(null)}
+      />
     </div>
   );
 }

@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.context import AuthenticatedUser
-from app.auth.passwords import verify_password
+from app.auth.passwords import verify_password, validate_new_password, hash_password
 from app.auth.repository import RefreshTokenRepository, hash_token_identifier
 from app.auth.tokens import (
     EncodedToken,
@@ -177,6 +177,36 @@ class AuthenticationService:
 
             await self.session.commit()
             return self._token_pair(access, replacement, now)
+        except AuthenticationError:
+            await self.session.rollback()
+            raise
+        except Exception:
+            await self.session.rollback()
+            raise
+
+    async def change_password(
+        self,
+        user_id: UUID,
+        company_id: UUID,
+        current_password: str,
+        new_password: str,
+    ) -> None:
+        try:
+            user_repository = self.user_repository_factory(company_id)
+            user = await user_repository.get_by_id(user_id)
+            if user is None or not user.is_active:
+                raise self._reject()
+
+            if not verify_password(current_password, user.password_hash):
+                raise self._reject()
+
+            validate_new_password(new_password)
+            new_hash = hash_password(new_password)
+            updated = await user_repository.update(user_id, {"password_hash": new_hash})
+            if updated is None:
+                raise self._reject()
+
+            await self.session.commit()
         except AuthenticationError:
             await self.session.rollback()
             raise

@@ -1,4 +1,4 @@
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { clsx } from 'clsx';
 import type { AuthenticatedUser } from '../../api/types';
 import {
@@ -30,6 +30,7 @@ interface SidebarProps {
 
 export function Sidebar({ user, onNavigate }: SidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
 
   if (!user) return null;
 
@@ -45,8 +46,7 @@ export function Sidebar({ user, onNavigate }: SidebarProps) {
             href={item.href}
             onClick={(e) => {
               e.preventDefault();
-              window.history.pushState(null, '', item.href);
-              window.dispatchEvent(new PopStateEvent('popstate'));
+              navigate(item.href);
               onNavigate?.();
             }}
             className={clsx(
