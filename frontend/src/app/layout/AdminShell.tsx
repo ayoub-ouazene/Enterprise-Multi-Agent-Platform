@@ -19,6 +19,7 @@ import {
   X,
   TriangleAlert,
   Zap,
+  BookOpen,
 } from 'lucide-react';
 
 
@@ -41,6 +42,7 @@ const navItems: NavItem[] = [
   { label: 'Holidays', href: '/app/admin/holidays', icon: <Calendar size={16} /> },
   { label: 'Staffing', href: '/app/admin/staffing-rules', icon: <ClipboardList size={16} /> },
   { label: 'Policies', href: '/app/admin/policies', icon: <ShieldCheck size={16} /> },
+  { label: 'Documents', href: '/app/admin/documents', icon: <BookOpen size={16} /> },
   { label: 'Failures', href: '/app/admin/failures', icon: <TriangleAlert size={16} /> },
   { label: 'Gaps', href: '/app/admin/capability-gaps', icon: <Zap size={16} /> },
 ];

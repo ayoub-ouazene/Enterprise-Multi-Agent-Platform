@@ -10,5 +10,6 @@ export { SuppliersPage } from './SuppliersPage';
 export { HolidaysPage } from './HolidaysPage';
 export { StaffingRulesPage } from './StaffingRulesPage';
 export { PoliciesPage } from './PoliciesPage';
+export { DocumentsPage } from './DocumentsPage';
 export { FailuresPage } from './FailuresPage';
 export { CapabilityGapsPage } from './CapabilityGapsPage';

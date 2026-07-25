@@ -647,3 +647,107 @@ export interface CapabilityGapListFilters {
   limit?: number;
   offset?: number;
 }
+
+// ---------------------------------------------------------------------------
+// RAG Knowledge Document types (Step 34)
+// ---------------------------------------------------------------------------
+
+export enum KnowledgeDocumentType {
+  POLICY = 'policy',
+  PROCEDURE = 'procedure',
+  MANUAL = 'manual',
+  FAQ = 'faq',
+  PRODUCT_DOCUMENTATION = 'product_documentation',
+  TROUBLESHOOTING_GUIDE = 'troubleshooting_guide',
+  BENEFITS_DOCUMENT = 'benefits_document',
+  INTERNAL_RULE = 'internal_rule',
+  OTHER = 'other',
+}
+
+export enum KnowledgeDepartmentScope {
+  SHARED = 'shared',
+  CUSTOMER_SUPPORT = 'customer_support',
+  HR = 'hr',
+  IT = 'it',
+  FINANCE = 'finance',
+  PROCUREMENT = 'procurement',
+}
+
+export enum KnowledgeAccessScope {
+  ALL_AUTHENTICATED = 'all_authenticated',
+  EMPLOYEES = 'employees',
+  DEPARTMENT_MANAGERS = 'department_managers',
+  COMPANY_ACCOUNT = 'company_account',
+  INTERNAL_SYSTEM = 'internal_system',
+}
+
+export enum KnowledgeDocumentStatus {
+  DRAFT = 'draft',
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+  SUPERSEDED = 'superseded',
+  DELETED = 'deleted',
+}
+
+export enum KnowledgeIngestionStatus {
+  PENDING = 'pending',
+  PROCESSING = 'processing',
+  COMPLETED = 'completed',
+  FAILED = 'failed',
+}
+
+export interface KnowledgeDocumentResponse {
+  id: UUID;
+  title: string;
+  original_filename: string;
+  document_type: KnowledgeDocumentType;
+  department_scope: KnowledgeDepartmentScope[];
+  access_scope: KnowledgeAccessScope;
+  version: number;
+  status: KnowledgeDocumentStatus;
+  is_active: boolean;
+  effective_date: string | null;
+  supersedes_document_id: UUID | null;
+  mime_type: string;
+  file_size_bytes: number;
+  chunk_count: number;
+  ingestion_status: KnowledgeIngestionStatus;
+  ingestion_error_safe: string | null;
+  custom_metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
+  ingested_at: string | null;
+  deleted_at: string | null;
+}
+
+export interface KnowledgeDocumentListFilters {
+  document_type?: KnowledgeDocumentType;
+  status?: KnowledgeDocumentStatus;
+  ingestion_status?: KnowledgeIngestionStatus;
+  department?: KnowledgeDepartmentScope;
+  limit?: number;
+  offset?: number;
+}
+
+export interface KnowledgeSearchRequest {
+  query_text: string;
+  department?: KnowledgeDepartmentScope | null;
+  document_types?: KnowledgeDocumentType[] | null;
+  top_k?: number | null;
+  effective_at?: string | null;
+}
+
+export interface KnowledgeChunkResult {
+  record_id: string;
+  document_id: UUID;
+  title: string;
+  document_type: KnowledgeDocumentType;
+  department_scope: KnowledgeDepartmentScope[];
+  access_scope: KnowledgeAccessScope;
+  version: number;
+  chunk_index: number;
+  chunk_text: string;
+  similarity_score: number;
+  source_filename: string;
+  effective_date: string | null;
+}
