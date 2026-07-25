@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { Outlet } from 'react-router-dom';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { MobileNav } from './MobileNav';
 import { useAuthContext } from '../../auth/hooks/useAuthContext';
-import { fadeInUp } from '../../motion/tokens';
 
 export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -33,9 +31,7 @@ export function AppShell() {
 
         {/* Main content */}
         <main id="main-content" className="scroll-mt-16 flex-1 overflow-y-auto">
-          <PageContentTransition>
-            <Outlet />
-          </PageContentTransition>
+          <Outlet />
         </main>
       </div>
     </div>
@@ -50,22 +46,5 @@ function SkipToContent() {
     >
       Skip to main content
     </a>
-  );
-}
-
-function PageContentTransition({ children }: { children: React.ReactNode }) {
-  const location = useLocation();
-  return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={location.pathname}
-        initial={fadeInUp.initial}
-        animate={fadeInUp.animate}
-        exit={fadeInUp.exit}
-        transition={fadeInUp.transition}
-      >
-        {children}
-      </motion.div>
-    </AnimatePresence>
   );
 }
