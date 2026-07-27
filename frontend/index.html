@@ -4,11 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#f8fafc" />
-    <title>TellUS AI</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>Orchestra — Enterprise Multi-Agent Platform</title>
     <script>
       (function () {
         try {
-          var theme = localStorage.getItem('tellus.theme') || localStorage.getItem('theme') || 'system';
+          var theme = localStorage.getItem('orchestra.theme') || localStorage.getItem('theme') || 'system';
           var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
           var dark = theme === 'dark' || (theme === 'system' && systemDark);
           document.documentElement.classList.toggle('dark', dark);

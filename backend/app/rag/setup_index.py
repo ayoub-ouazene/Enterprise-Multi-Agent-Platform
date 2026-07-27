@@ -21,10 +21,14 @@ def _validate_description(
     text_field = _value(field_map, "text", "")
     if actual_model != model:
         raise RuntimeError("Existing index uses an incompatible embedding model")
-    if text_field != "chunk_text":
+    if text_field != "text":
         raise RuntimeError("Existing index uses an incompatible embedding field map")
-    if configured_host and host.rstrip("/") != configured_host.rstrip("/"):
-        raise RuntimeError("Configured index host does not match the existing index")
+    if configured_host:
+        import re as _re
+        host_norm = _re.sub(r'^https?://', '', host).rstrip("/")
+        cfg_norm = _re.sub(r'^https?://', '', configured_host).rstrip("/")
+        if host_norm != cfg_norm:
+            raise RuntimeError("Configured index host does not match the existing index")
     return host
 
 
@@ -50,7 +54,7 @@ async def run(command: str, cloud: str | None, region: str | None) -> None:
                 region=region,
                 embed={
                     "model": settings.pinecone_embedding_model,
-                    "field_map": {"text": "chunk_text"},
+                    "field_map": {"text": "text"},
                     "read_parameters": {"input_type": "query", "truncate": "NONE"},
                     "write_parameters": {"input_type": "passage", "truncate": "NONE"},
                 },

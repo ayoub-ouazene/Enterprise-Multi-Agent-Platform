@@ -22,13 +22,13 @@ def test_provider_batches_integrated_text_upserts_without_network() -> None:
     provider = PineconeProvider(settings(), max_retries=0)
     provider._validated = True
     provider._index = SimpleNamespace(upsert_records=AsyncMock())
-    records = [{"_id": str(index), "chunk_text": "content"} for index in range(100)]
+    records = [{"_id": str(index), "text": "content"} for index in range(100)]
     asyncio.run(provider.upsert("company_test", records))
     assert provider._index.upsert_records.await_count == 2
 
 
 def test_provider_normalizes_search_results() -> None:
-    response = {"result": {"hits": [{"_id": "one", "_score": 0.8, "fields": {"chunk_text": "safe"}}]}}
+    response = {"result": {"hits": [{"_id": "one", "_score": 0.8, "fields": {"text": "safe"}}]}}
     provider = PineconeProvider(settings(), max_retries=0)
     provider._validated = True
     provider._index = SimpleNamespace(search=AsyncMock(return_value=response))
@@ -40,7 +40,7 @@ def test_provider_normalizes_search_results() -> None:
             metadata_filter={"$and": [{"is_active": {"$eq": True}}]},
         )
     )
-    assert result == [{"_id": "one", "_score": 0.8, "chunk_text": "safe"}]
+    assert result == [{"_id": "one", "_score": 0.8, "text": "safe"}]
 
 
 def test_missing_index_configuration_is_a_safe_provider_error() -> None:

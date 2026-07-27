@@ -154,7 +154,7 @@ class KnowledgeRetrievalService:
                     access_scope=hit["access_scope"],
                     version=int(hit["version"]),
                     chunk_index=int(hit["chunk_index"]),
-                    chunk_text=str(hit["chunk_text"]),
+                    chunk_text=str(hit.get("text", "")),
                     similarity_score=float(hit["_score"]),
                     source_filename=str(hit["source_filename"]),
                     effective_date=hit.get("effective_date"),

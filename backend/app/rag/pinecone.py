@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import re
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from typing import Any, TypeVar
 
@@ -78,7 +79,9 @@ class PineconeProvider:
             )
             configured_host = str(self.settings.pinecone_index_host).rstrip("/")
             actual_host = str(_value(description, "host", "")).rstrip("/")
-            if actual_host and actual_host != configured_host:
+            configured_host_normalized = re.sub(r'^https?://', '', configured_host)
+            actual_host_normalized = re.sub(r'^https?://', '', actual_host)
+            if actual_host and actual_host_normalized != configured_host_normalized:
                 await self.close()
                 raise KnowledgeProviderError("Configured Pinecone index host is incompatible")
             embed = _value(description, "embed", {}) or {}
@@ -88,7 +91,7 @@ class PineconeProvider:
             if model != self.settings.pinecone_embedding_model:
                 await self.close()
                 raise KnowledgeProviderError("Configured Pinecone embedding model is incompatible")
-            if mapped_text != "chunk_text":
+            if mapped_text != "text":
                 await self.close()
                 raise KnowledgeProviderError("Configured Pinecone text field is incompatible")
             self._index = self._client.IndexAsyncio(host=configured_host)
@@ -124,7 +127,7 @@ class PineconeProvider:
                     "filter": metadata_filter,
                 },
                 fields=[
-                    "chunk_text",
+                    "text",
                     "company_id",
                     "document_id",
                     "document_title",

@@ -171,7 +171,7 @@ class KnowledgeIngestionService:
         for chunk in chunks:
             record = {
                 "_id": build_chunk_id(document.id, document.version, chunk.index),
-                "chunk_text": chunk.text,
+                "text": chunk.text,
                 "company_id": str(document.company_id),
                 "document_id": str(document.id),
                 "document_title": document.title,

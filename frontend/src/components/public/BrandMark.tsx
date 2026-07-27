@@ -1,18 +1,16 @@
 import { Link } from 'react-router-dom';
-import { Network } from 'lucide-react';
+import logo from '../../assets/logo.svg';
 
 export function BrandMark({ inverted = false }: { inverted?: boolean }) {
   return (
     <Link
       to="/"
       className="inline-flex items-center gap-2.5 rounded-lg"
-      aria-label="TellUS AI home"
+      aria-label="Orchestra home"
     >
-      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-600 text-white shadow-lg shadow-primary-600/20">
-        <Network size={19} aria-hidden="true" />
-      </span>
+      <img src={logo} alt="" className="h-9 w-9" aria-hidden="true" />
       <span className={`text-[17px] font-bold tracking-tight ${inverted ? 'text-white' : 'text-neutral-950 dark:text-white'}`}>
-        TellUS <span className="text-primary-500">AI</span>
+        Orchestra
       </span>
     </Link>
   );

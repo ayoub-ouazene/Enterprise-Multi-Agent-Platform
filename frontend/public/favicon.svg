@@ -1,0 +1,26 @@
+<svg width="32" height="32" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="fav-hub" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4f46e5"/>
+      <stop offset="1" stop-color="#7c3aed"/>
+    </linearGradient>
+    <linearGradient id="fav-orbit" x1="0" y1="0" x2="120" y2="120" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#a855f7"/>
+    </linearGradient>
+  </defs>
+  <ellipse cx="60" cy="60" rx="48" ry="20" transform="rotate(-30 60 60)" stroke="url(#fav-orbit)" stroke-width="3" opacity="0.5" fill="none"/>
+  <ellipse cx="60" cy="60" rx="48" ry="20" transform="rotate(30 60 60)" stroke="url(#fav-orbit)" stroke-width="3" opacity="0.5" fill="none"/>
+  <circle cx="60" cy="12" r="8" fill="url(#fav-orbit)"/>
+  <circle cx="101.4" cy="45" r="8" fill="url(#fav-orbit)"/>
+  <circle cx="85.8" cy="101" r="8" fill="url(#fav-orbit)"/>
+  <circle cx="34.2" cy="101" r="8" fill="url(#fav-orbit)"/>
+  <circle cx="18.6" cy="45" r="8" fill="url(#fav-orbit)"/>
+  <line x1="60" y1="60" x2="60" y2="12" stroke="url(#fav-orbit)" stroke-width="2" opacity="0.4"/>
+  <line x1="60" y1="60" x2="101.4" y2="45" stroke="url(#fav-orbit)" stroke-width="2" opacity="0.4"/>
+  <line x1="60" y1="60" x2="85.8" y2="101" stroke="url(#fav-orbit)" stroke-width="2" opacity="0.4"/>
+  <line x1="60" y1="60" x2="34.2" y2="101" stroke="url(#fav-orbit)" stroke-width="2" opacity="0.4"/>
+  <line x1="60" y1="60" x2="18.6" y2="45" stroke="url(#fav-orbit)" stroke-width="2" opacity="0.4"/>
+  <circle cx="60" cy="60" r="24" fill="url(#fav-hub)"/>
+  <circle cx="60" cy="60" r="8" fill="white" opacity="0.95"/>
+</svg>

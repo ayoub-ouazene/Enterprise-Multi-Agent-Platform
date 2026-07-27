@@ -58,7 +58,7 @@ def hit(company_id, document_id, **changes):
     value = {
         "_id": f"{document_id}:1:0000",
         "_score": 0.91,
-        "chunk_text": "Approved policy text",
+        "text": "Approved policy text",
         "company_id": str(company_id),
         "document_id": str(document_id),
         "document_title": "Policy",
