@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.context import AuthenticatedUser
@@ -30,6 +30,8 @@ from app.onboarding.schemas import (
     OnboardingStatusItem,
     OnboardingStatusResponse,
     RowValidationResult,
+    ManagerCandidateResponse,
+    ManagerCoverageResponse,
 )
 from app.onboarding.security import validate_password_strength
 from app.rag.enums import KnowledgeDocumentType, KnowledgeIngestionStatus
@@ -116,10 +118,14 @@ class CompanyOnboardingService:
         dept_types_with_managers: set[DepartmentType] = set()
         for dept in departments:
             mgr = await self.session.scalar(
-                select(Employee).where(
+                select(User)
+                .join(Employee, Employee.user_id == User.id)
+                .where(
                     Employee.company_id == self.company_id,
                     Employee.department_id == dept.id,
-                    Employee.manager_employee_id.isnot(None),
+                    User.company_id == self.company_id,
+                    User.actor_type == ActorType.DEPARTMENT_MANAGER,
+                    User.is_active.is_(True),
                 )
             )
             if mgr is not None:
@@ -189,9 +195,149 @@ class CompanyOnboardingService:
             raise NotFoundError("Company not found")
 
         company.is_active = True
-        await self.session.flush()
+        await self.session.commit()
         logger.info(
             "Company %s activated by user %s", self.company_id, current_user.user_id
+        )
+
+    async def manager_coverage(self) -> list[ManagerCoverageResponse]:
+        departments = await self.session.scalars(
+            select(Department).where(
+                Department.company_id == self.company_id,
+                Department.is_active.is_(True),
+            ).order_by(Department.name)
+        )
+        result: list[ManagerCoverageResponse] = []
+        for department in departments.all():
+            manager = await self.session.scalar(
+                select(Employee)
+                .join(User, User.id == Employee.user_id)
+                .where(
+                    Employee.company_id == self.company_id,
+                    Employee.department_id == department.id,
+                    Employee.employment_status == EmploymentStatus.ACTIVE,
+                    User.company_id == self.company_id,
+                    User.actor_type == ActorType.DEPARTMENT_MANAGER,
+                    User.is_active.is_(True),
+                )
+            )
+            result.append(
+                ManagerCoverageResponse(
+                    department_id=department.id,
+                    department_name=department.name,
+                    department_type=department.department_type.value,
+                    manager=(
+                        ManagerCandidateResponse(
+                            id=manager.id,
+                            department_id=department.id,
+                            employee_code=manager.employee_code,
+                            job_title=manager.job_title,
+                            is_current_manager=True,
+                        )
+                        if manager is not None
+                        else None
+                    ),
+                )
+            )
+        return result
+
+    async def manager_candidates(
+        self, department_id: UUID, query: str | None, limit: int
+    ) -> list[ManagerCandidateResponse]:
+        department = await self.session.scalar(
+            select(Department).where(
+                Department.id == department_id,
+                Department.company_id == self.company_id,
+                Department.is_active.is_(True),
+            )
+        )
+        if department is None:
+            raise NotFoundError("Department not found")
+        statement = (
+            select(Employee, User.actor_type)
+            .join(User, User.id == Employee.user_id)
+            .where(
+                Employee.company_id == self.company_id,
+                Employee.department_id == department_id,
+                Employee.employment_status == EmploymentStatus.ACTIVE,
+                User.company_id == self.company_id,
+                User.is_active.is_(True),
+            )
+            .order_by(Employee.employee_code)
+            .limit(limit)
+        )
+        if query and query.strip():
+            value = f"%{query.strip()}%"
+            statement = statement.where(
+                Employee.employee_code.ilike(value) | Employee.job_title.ilike(value)
+            )
+        rows = (await self.session.execute(statement)).all()
+        return [
+            ManagerCandidateResponse(
+                id=employee.id,
+                department_id=department_id,
+                employee_code=employee.employee_code,
+                job_title=employee.job_title,
+                is_current_manager=actor_type == ActorType.DEPARTMENT_MANAGER,
+            )
+            for employee, actor_type in rows
+        ]
+
+    async def assign_department_manager(
+        self, department_id: UUID, employee_id: UUID
+    ) -> ManagerCandidateResponse:
+        department = await self.session.scalar(
+            select(Department).where(
+                Department.id == department_id,
+                Department.company_id == self.company_id,
+                Department.is_active.is_(True),
+            )
+        )
+        employee = await self.session.scalar(
+            select(Employee).where(
+                Employee.id == employee_id,
+                Employee.company_id == self.company_id,
+                Employee.department_id == department_id,
+                Employee.employment_status == EmploymentStatus.ACTIVE,
+            )
+        )
+        if department is None or employee is None or employee.user_id is None:
+            raise BusinessValidationError(
+                "Select an active employee from the enabled department"
+            )
+        await self.session.execute(
+            update(User)
+            .where(
+                User.company_id == self.company_id,
+                User.actor_type == ActorType.DEPARTMENT_MANAGER,
+                User.id.in_(
+                    select(Employee.user_id).where(
+                        Employee.company_id == self.company_id,
+                        Employee.department_id == department_id,
+                        Employee.user_id.isnot(None),
+                    )
+                ),
+            )
+            .values(actor_type=ActorType.EMPLOYEE)
+        )
+        updated = await self.session.execute(
+            update(User)
+            .where(
+                User.id == employee.user_id,
+                User.company_id == self.company_id,
+                User.is_active.is_(True),
+            )
+            .values(actor_type=ActorType.DEPARTMENT_MANAGER)
+        )
+        if updated.rowcount != 1:
+            raise BusinessValidationError("Selected employee is not available")
+        await self.session.commit()
+        return ManagerCandidateResponse(
+            id=employee.id,
+            department_id=department_id,
+            employee_code=employee.employee_code,
+            job_title=employee.job_title,
+            is_current_manager=True,
         )
 
 
@@ -263,14 +409,35 @@ class OnboardingImportService:
 
         can_confirm = import_type not in MANDATORY_IMPORT_TYPES or invalid_count == 0
 
+        public_rows = [
+            row.model_copy(
+                update={
+                    "preview": {
+                        key: value
+                        for key, value in (row.preview or {}).items()
+                        if key in {"password_provided", "password_valid"}
+                        or (
+                            not key.startswith("_")
+                            and not any(
+                                part in key.casefold()
+                                for part in ("password", "secret", "token", "hash")
+                            )
+                        )
+                    }
+                }
+            )
+            for row in rows[:100]
+        ]
         return ImportValidateResponse(
             import_job_id=job.id,
             import_type=import_type,
+            original_filename=parsed.original_filename,
+            atomic=import_type in MANDATORY_IMPORT_TYPES,
             total_rows=len(parsed.rows),
             valid_rows=valid_count,
             invalid_rows=invalid_count,
             can_confirm=can_confirm,
-            rows=rows,
+            rows=public_rows,
         )
 
     async def confirm_import(
@@ -429,6 +596,8 @@ class OnboardingImportService:
                     "job_title": row.get("job_title", "").strip() or None,
                     "employment_status": row.get("employment_status", "").strip().lower() or "active",
                     "manager_email": _normalize_email(mgr_email_raw) if mgr_email_raw else None,
+                    "password_provided": bool(password),
+                    "password_valid": bool(password and not pw_errors),
                     "_password_hash": password_hash,
                 },
             )
@@ -544,6 +713,7 @@ class OnboardingImportService:
                 password_hash=password_hash,
                 actor_type=ActorType.EMPLOYEE,
                 is_active=True,
+                must_change_password=True,
             )
             self.session.add(user)
             await self.session.flush()
@@ -567,6 +737,7 @@ class OnboardingImportService:
             processed += 1
 
         # Second pass: resolve manager references
+        manager_ids: set[UUID] = set()
         for row_data in valid_rows:
             preview = row_data.get("preview", row_data)
             email = preview.get("email", "")
@@ -580,12 +751,31 @@ class OnboardingImportService:
                         if mgr_emp is not None:
                             mgr_id = mgr_emp.id
                 if mgr_id is not None and mgr_id != created_employees[email]:
-                    from sqlalchemy import update
                     await self.session.execute(
                         update(Employee)
                         .where(Employee.id == created_employees[email])
                         .values(manager_employee_id=mgr_id)
                     )
+                    manager_ids.add(mgr_id)
+
+        if manager_ids:
+            manager_user_ids = await self.session.scalars(
+                select(Employee.user_id).where(
+                    Employee.company_id == self.company_id,
+                    Employee.id.in_(manager_ids),
+                    Employee.user_id.isnot(None),
+                )
+            )
+            user_ids = [user_id for user_id in manager_user_ids.all() if user_id]
+            if user_ids:
+                await self.session.execute(
+                    update(User)
+                    .where(
+                        User.company_id == self.company_id,
+                        User.id.in_(user_ids),
+                    )
+                    .values(actor_type=ActorType.DEPARTMENT_MANAGER)
+                )
 
         return processed
 

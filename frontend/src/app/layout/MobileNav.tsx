@@ -1,10 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { X } from 'lucide-react';
 import type { AuthenticatedUser } from '../../api/types';
 import { Sidebar } from './Sidebar';
-import { fadeIn } from '../../motion/tokens';
+import { roleLabel } from './shell-utils';
+import { duration, easing } from '../../motion/tokens';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface MobileNavProps {
   isOpen: boolean;
@@ -13,60 +15,62 @@ interface MobileNavProps {
 }
 
 export function MobileNav({ isOpen, onClose, user }: MobileNavProps) {
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const reducedMotion = useReducedMotion();
+  useFocusTrap(drawerRef, isOpen, onClose);
+
   useEffect(() => {
-    function handleEscape(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
-    }
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
-    }
-    return () => {
-      document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = '';
-    };
-  }, [isOpen, onClose]);
+    if (!isOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previous; };
+  }, [isOpen]);
 
   return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          {/* Backdrop */}
+        <div className="fixed inset-0 z-overlay md:hidden" aria-hidden={false}>
           <motion.div
-            className="fixed inset-0 bg-black/50"
+            className="fixed inset-0 cursor-default bg-neutral-950/55 backdrop-blur-[1px]"
             onClick={onClose}
             aria-hidden="true"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: fadeIn.transition.duration, ease: fadeIn.transition.ease }}
+            transition={{ duration: reducedMotion ? 0 : duration.fast }}
           />
-
-          {/* Drawer */}
           <motion.div
-            className="fixed inset-y-0 left-0 w-64 bg-white shadow-xl dark:bg-neutral-900"
-            initial={{ x: '-100%' }}
+            ref={drawerRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation menu"
+            tabIndex={-1}
+            className="fixed inset-y-0 left-0 flex w-[min(20rem,calc(100vw-2rem))] flex-col overflow-hidden bg-white shadow-overlay dark:bg-neutral-900"
+            initial={reducedMotion ? false : { x: '-100%' }}
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
-            transition={{ duration: 0.3, ease: [0, 0, 0.2, 1] }}
+            transition={{ duration: reducedMotion ? 0 : duration.panel, ease: easing.easeOut }}
           >
-            <div className="flex h-16 items-center justify-between border-b border-neutral-200 px-4 dark:border-neutral-800">
-              <span className="text-lg font-semibold text-neutral-900 dark:text-neutral-100">Menu</span>
+            <div className="flex h-16 shrink-0 items-center justify-between border-b border-neutral-200 px-4 dark:border-neutral-800">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-neutral-950 dark:text-white">TellUS AI</p>
+                <p className="truncate text-xs text-neutral-500">{user ? roleLabel(user) : 'Workspace'}</p>
+              </div>
               <button
                 onClick={onClose}
-                className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800"
                 aria-label="Close navigation"
               >
                 <X size={20} aria-hidden="true" />
               </button>
             </div>
-            <div className="py-4">
+            <div className="min-h-0 flex-1 overflow-y-auto py-4">
               <Sidebar user={user} onNavigate={onClose} />
             </div>
           </motion.div>
         </div>
       )}
     </AnimatePresence>,
-    document.body
+    document.body,
   );
 }

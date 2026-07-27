@@ -4,19 +4,19 @@ import { getActionTypeConfig, isRegisteredActionType } from './registry';
 describe('human action registry', () => {
   it('returns registered config for known action types', () => {
     const cfg = getActionTypeConfig('supplier_selection');
-    expect(cfg.label).toBe('Supplier Selection');
-    expect(cfg.description).toContain('vendor');
+    expect(cfg.label).toBe('Supplier selection');
+    expect(cfg.description).toContain('eligible supplier');
   });
 
   it('returns fallback config for unknown action types', () => {
     const cfg = getActionTypeConfig('unknown_action_type');
-    expect(cfg.label).toBe('Unknown Action Type');
-    expect(cfg.description).toContain('Review');
+    expect(cfg.label).toBe('Authorized action');
+    expect(cfg.description).toContain('safe context');
   });
 
   it('capitalizes snake_case unknown types', () => {
     const cfg = getActionTypeConfig('urgent_bug_fix');
-    expect(cfg.label).toBe('Urgent Bug Fix');
+    expect(cfg.label).toBe('Authorized action');
   });
 
   it('correctly identifies registered vs unregistered types', () => {

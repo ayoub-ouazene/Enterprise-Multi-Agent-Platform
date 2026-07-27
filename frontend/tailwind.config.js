@@ -86,6 +86,25 @@ export default {
       boxShadow: {
         'xs': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
         'sm': '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
+        'card': '0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px rgb(15 23 42 / 0.04)',
+        'overlay': '0 24px 64px -16px rgb(15 23 42 / 0.28)',
+      },
+      borderRadius: {
+        'card': '0.875rem',
+      },
+      zIndex: {
+        'header': '30',
+        'dropdown': '40',
+        'overlay': '50',
+        'toast': '60',
+        'skip': '100',
+      },
+      transitionDuration: {
+        'ui': '180ms',
+        'panel': '260ms',
+      },
+      transitionTimingFunction: {
+        'productive': 'cubic-bezier(0.2, 0, 0, 1)',
       },
     },
   },

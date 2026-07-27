@@ -11,6 +11,8 @@ import {
 import { ActorType } from '../api/types';
 import { AppShell } from './layout/AppShell';
 import { LoginPage } from './pages/LoginPage';
+import { LandingPage } from './pages/LandingPage';
+import { SignupPage } from './pages/SignupPage';
 import { ChangePasswordPage } from './pages/ChangePasswordPage';
 import { OverviewPage } from './pages/OverviewPage';
 import { RequestsPage } from './pages/RequestsPage';
@@ -27,9 +29,12 @@ import {
   AdminOverviewPage,
   CompanyProfilePage,
   EmployeeDirectoryPage,
+  EmployeeDetailPage,
   ManagersPage,
   DepartmentsPage,
+  DepartmentDetailPage,
   AssetsPage,
+  AssetDetailPage,
   SoftwareCatalogPage,
   BudgetsPage,
   SuppliersPage,
@@ -42,8 +47,10 @@ import {
 } from './pages/admin';
 import { DepartmentShell } from './layout/DepartmentShell';
 import {
+  DepartmentsLandingPage,
   DepartmentOverviewPage,
   DepartmentRequestsPage,
+  DepartmentOperationsPage,
   DepartmentActionsPage,
   DepartmentActivityPage,
   DepartmentSettingsPage,
@@ -65,10 +72,22 @@ function AuthenticatedLayout() {
 
 export const router = createBrowserRouter([
   {
+    path: '/',
+    element: <LandingPage />,
+  },
+  {
     path: '/login',
     element: (
       <UnauthenticatedOnlyRoute>
         <LoginPage />
+      </UnauthenticatedOnlyRoute>
+    ),
+  },
+  {
+    path: '/signup',
+    element: (
+      <UnauthenticatedOnlyRoute>
+        <SignupPage />
       </UnauthenticatedOnlyRoute>
     ),
   },
@@ -85,15 +104,24 @@ export const router = createBrowserRouter([
     element: <AccessDenied />,
   },
   {
-    path: '/',
-    element: <Navigate to="/app" replace />,
+    path: '/app/onboarding/:stepId?',
+    element: (
+      <ProtectedRoute>
+        <PasswordChangeRoute>
+          <RoleRoute allowed={[ActorType.COMPANY]}>
+            <OnboardingPage />
+          </RoleRoute>
+        </PasswordChangeRoute>
+      </ProtectedRoute>
+    ),
   },
   {
     path: '/app',
     element: <AuthenticatedLayout />,
     children: [
-      { index: true, element: <Navigate to="overview" replace /> },
-      { path: 'overview', element: <OverviewPage /> },
+      { index: true, element: <Navigate to="dashboard" replace /> },
+      { path: 'dashboard', element: <OverviewPage /> },
+      { path: 'overview', element: <Navigate to="/app/dashboard" replace /> },
       { path: 'requests', element: <RequestsPage /> },
       { path: 'requests/new', element: <NewRequestPage /> },
       { path: 'requests/:requestId', element: <RequestDetailPage /> },
@@ -102,14 +130,6 @@ export const router = createBrowserRouter([
       { path: 'notifications', element: <NotificationsPage /> },
       { path: 'assistant', element: <AssistantPage /> },
       { path: 'self-service', element: <SelfServicePage /> },
-      {
-        path: 'onboarding',
-        element: (
-          <RoleRoute allowed={[ActorType.COMPANY]}>
-            <OnboardingPage />
-          </RoleRoute>
-        ),
-      },
       {
         path: 'admin',
         element: (
@@ -122,9 +142,12 @@ export const router = createBrowserRouter([
           { path: 'overview', element: <AdminOverviewPage /> },
           { path: 'company', element: <CompanyProfilePage /> },
           { path: 'employees', element: <EmployeeDirectoryPage /> },
+          { path: 'employees/:employeeId', element: <EmployeeDetailPage /> },
           { path: 'managers', element: <ManagersPage /> },
           { path: 'departments', element: <DepartmentsPage /> },
+          { path: 'departments/:departmentId', element: <DepartmentDetailPage /> },
           { path: 'assets', element: <AssetsPage /> },
+          { path: 'assets/:assetId', element: <AssetDetailPage /> },
           { path: 'software', element: <SoftwareCatalogPage /> },
           { path: 'budgets', element: <BudgetsPage /> },
           { path: 'suppliers', element: <SuppliersPage /> },
@@ -137,6 +160,14 @@ export const router = createBrowserRouter([
         ],
       },
       {
+        path: 'departments',
+        element: (
+          <DepartmentRoute>
+            <DepartmentsLandingPage />
+          </DepartmentRoute>
+        ),
+      },
+      {
         path: 'departments/:deptSlug',
         element: (
           <DepartmentRoute>
@@ -147,6 +178,7 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="overview" replace /> },
           { path: 'overview', element: <DepartmentOverviewPage /> },
           { path: 'requests', element: <DepartmentRequestsPage /> },
+          { path: 'operations', element: <DepartmentOperationsPage /> },
           { path: 'actions', element: <DepartmentActionsPage /> },
           { path: 'activity', element: <DepartmentActivityPage /> },
           { path: 'settings', element: <DepartmentSettingsPage /> },

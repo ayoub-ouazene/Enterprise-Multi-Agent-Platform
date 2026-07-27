@@ -36,40 +36,43 @@ Each department has its own prompt, boundaries, tool access, permissions, and co
 - Failure handling, notifications, and capability-gap reporting
 - Company onboarding and structured data import flows
 
-## Architecture overview
+## What's included (v1)
 
 ### Frontend
 
-- React + TypeScript
-- Vite-based client application
-- Feature-based page and API organization
-- Typed API layer and SSE-based live updates
+- React + TypeScript with Vite, Tailwind CSS, and Framer Motion
+- Comprehensive design system with CSS variable theming and reduced-motion support
+- Public entry: landing page, company registration, login, password change, password-force-change guard, logout
+- Role-based dashboards (Company account, Employee, Department Manager, External user)
+- Business request creation, list, detail, status filtering, workflow timeline, and cancellation
+- Human-in-the-Loop Actions: history, decision packaging, structured response forms
+- Onboarding wizard with validation summaries, import flows, and activation
+- Department workspaces (5 departments) with workload metrics, request relations, human actions, operations, and collaboration activity
+- Company administration (18 CRUD pages): company profile, employee directory, departments, assets, software catalog, budgets, leave balances, holidays, staffing rules, suppliers, policies, manager assignment, onboarding status
+- Notifications page with grouped unread/read view, explicit read controls (no toast library)
+- Real-time updates via Server-Sent Events with deduplication and targeted query invalidation
+- Accessibility: skip-link navigation, focus trapping in modals, aria-live regions, programmatic label/error linkages, keyboard-navigable tables
+- Safe error handling: normalized errors with human-friendly messages, no backend exception leakage
 
 ### Backend
 
-- Python + FastAPI
-- Pydantic schemas and typed API contracts
-- SQLAlchemy 2.0 with Alembic migrations
-- Modular monolith structure organized by domain
-
-### Workflow and AI orchestration
-
-- LangGraph for request orchestration and workflow state
-- LangChain where useful for LLM integration and orchestration helpers
-- Department-specific agents with structured outputs and tool constraints
-- Reviewer and collaboration flow support
-
-### Data and knowledge layer
-
-- PostgreSQL for relational business data
-- Pinecone for vector-based company knowledge retrieval
-- Tenant-scoped repositories and service-layer business rules
+- Python + FastAPI modular monolith with Pydantic v2 schemas and SQLAlchemy 2.0
+- Full auth system: company registration, login, token refresh, password change
+- Workflow engine: centralized LangGraph graph with router, department execution, collaboration (start/receiver/return), reviewer, human action, completion, and terminal failure nodes
+- State persistence using versioned Pydantic checkpoints with tenant-scoped rollback
+- 5 department agents with structured contracts, tool constraints, safe output validation, and capability-gap routing
+- Reviewer node with one independent feedback cycle and revision tracking
+- Human action node with manager/company-account authorization and decision packaging
+- RAG: document upload, replace, retry ingestion, search; Pinecone vector store with tenant-scoped namespaces
+- Admin API (18 resources), department workspace API, onboarding API, notifications API
+- SSE streams for request events and notifications with heartbeat and last-event-id replay
+- 590+ passing tests across all domains
 
 ## Repository structure
 
-- backend/: FastAPI application, Alembic migrations, domain modules, and tests
-- frontend/: React + TypeScript UI and API hooks
-- docs/: the authoritative product specification and architecture documents
+- `backend/`: FastAPI application, Alembic migrations, domain modules, and tests
+- `frontend/`: React + TypeScript UI and API hooks
+- `docs/`: the authoritative product specification and architecture documents
 
 ## Documentation
 
@@ -97,3 +100,35 @@ Recommended reading order:
 18. docs/18-codex-implementation-instructions.md
 
 The architecture decisions are summarized in docs/decisions/architecture-decisions.md.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for the version history.
+
+## Local development entry flow
+
+Use the existing Conda environment for the backend:
+
+```powershell
+cd backend
+conda run -n dev python -m alembic upgrade head
+conda run -n dev python -m uvicorn app.main:app --reload
+```
+
+In a second terminal, use the committed frontend lock file:
+
+```powershell
+cd frontend
+npm run dev
+```
+
+Open `http://localhost:5173/`. A Company account can register publicly and is then directed through onboarding before activation. Employees and department managers are provisioned by a Company account, while external users use the approved provisioning flow; those roles do not have unrestricted public signup.
+
+The frontend reads `VITE_API_BASE_URL` (default `http://127.0.0.1:8000/api/v1`) from `frontend/.env`. The backend reads allowed origins from `CORS_ORIGINS` in `backend/.env`; keep this list restricted to the actual frontend origins.
+
+For local development data, the interactive seed command creates no fixed password and is blocked outside development/test environments:
+
+```powershell
+cd backend
+conda run -n dev python scripts/seed_demo.py
+```

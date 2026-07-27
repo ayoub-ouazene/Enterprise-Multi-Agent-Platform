@@ -68,6 +68,14 @@ Examples:
 - provide requested information;
 - list manager department requests.
 
+The list and detail responses are safe frontend projections. They expose user-facing
+state summaries, authorized department identity, attention indicators, connected
+HumanAction summaries, allowed actions, and sanitized final results where applicable.
+They do not expose workflow JSONB, collaboration payloads, Reviewer packages, decision
+packages, provider details, or other internal execution state. Request filtering
+(including search, status, owner department, request type, attention, date range, and
+authorized requester scope) is performed by the backend.
+
 ### Request Actions
 
 ```text
@@ -81,6 +89,20 @@ Examples:
 - confirm human action;
 - provide missing information.
 
+### HumanActions
+
+```text
+/api/v1/human-actions
+/api/v1/human-actions/{action_id}
+/api/v1/human-actions/{action_id}/submit
+```
+
+Inbox responses are bounded summaries and never include decision-package or response JSONB.
+Authorized detail responses contain only an action-type allowlisted context, safe related-request
+summary, allowed decisions, and bounded history. Submission validates the decision against the
+action type and may include the last observed update timestamp so stale or concurrently resolved
+actions fail without overwriting the authoritative decision.
+
 ### Live Events
 
 ```text
@@ -88,6 +110,12 @@ Examples:
 ```
 
 SSE endpoint for live updates.
+
+The REST timeline returns only persisted events visible to the authenticated actor,
+with a safe title, message, actor label, optional department reference, sequence
+number, and timestamp. Internal stage names and event payloads are not part of the
+public timeline response. SSE is a change signal; clients reload the relevant REST
+projection and do not treat streamed payloads as authoritative state.
 
 ### Notifications
 
@@ -203,3 +231,51 @@ There is no public collaboration mutation endpoint. Clients cannot submit a comp
 receiver, action, owner, active department, depth, or return target. Collaboration runs only from a
 trusted department result inside the existing assistant and request-workflow APIs. Authorized
 timeline APIs expose sanitized meaningful events rather than temporary collaboration payloads.
+
+## 10.12 Company Onboarding API Surface
+
+An authenticated, inactive Company account may use the restricted onboarding surface without
+receiving access to the normal operational application. The backend checklist at
+`GET /api/v1/onboarding/status` is authoritative for readiness and activation.
+
+The wizard uses the tenant-scoped Company profile and fixed-department administration endpoints,
+the controlled employee import validate/confirm flow, and the existing knowledge-document
+ingestion API. Manager assignment uses:
+
+- `GET /api/v1/onboarding/manager-coverage`;
+- `GET /api/v1/onboarding/manager-candidates`, bounded and filtered to active same-company
+  employees in the selected department;
+- `POST /api/v1/onboarding/departments/{department_id}/manager`.
+
+Import validation responses expose only allowlisted preview fields and password-state indicators.
+They never return submitted passwords, password hashes, complete source rows, or unrestricted
+validation JSON. `POST /api/v1/onboarding/activate` revalidates every blocking requirement before
+activating the Company.
+
+## 10.13 Company Administration API Surface
+
+The authenticated administration workspace uses explicit tenant-scoped resources under
+`/api/v1/admin`. Company accounts receive the approved full administration surface. Department
+managers receive only the resource and department scope explicitly allowed for their department;
+employees and external users are rejected by backend dependencies even if they navigate directly
+to an administration URL.
+
+The surface covers Company profile, employees, fixed departments, IT assets and software,
+Finance budgets, Procurement suppliers, HR holidays and staffing rules. Employee responses expose
+safe account-state fields but never password hashes or credentials. Selectors use bounded
+same-company employee searches rather than loading an unrestricted directory.
+
+High-impact mutations are server-authoritative:
+
+- employee termination uses the deactivation operation, which checks manager coverage, assigned
+  assets, and pending HumanActions;
+- department disabling is rejected while active members remain;
+- asset assignment requires an active same-company employee, and retirement requires prior
+  unassignment;
+- software capacity and budget changes preserve backend concurrency and balance validation;
+- duplicate holiday dates and overlapping active staffing periods return conflicts.
+
+Budget amounts remain decimal strings in the API. The frontend does not calculate authoritative
+balances, grant software access, perform physical asset delivery, select suppliers, or rewrite
+historical leave outcomes. Administration SSE messages are change signals that invalidate only
+the affected query families; REST responses remain authoritative.

@@ -16,6 +16,7 @@ from app.auth.context import AuthenticatedUser
 from app.auth.dependencies import (
     require_authenticated_user,
     require_company_account,
+    require_setup_authenticated_user,
 )
 from app.core.enums import ActorType, DepartmentType
 from app.database.session import get_db_session
@@ -125,6 +126,32 @@ async def require_company_or_any_manager(
     if _is_company(current_user):
         return current_user
     if current_user.actor_type == ActorType.DEPARTMENT_MANAGER:
+        return current_user
+    raise _scoped_forbidden()
+
+
+async def require_onboarding_company_or_any_manager(
+    current_user: Annotated[
+        AuthenticatedUser,
+        Depends(require_setup_authenticated_user),
+    ],
+) -> AuthenticatedUser:
+    """Allow inactive Company setup while preserving normal manager checks."""
+    if current_user.actor_type in {
+        ActorType.COMPANY,
+        ActorType.DEPARTMENT_MANAGER,
+    }:
+        return current_user
+    raise _scoped_forbidden()
+
+
+async def require_onboarding_company(
+    current_user: Annotated[
+        AuthenticatedUser,
+        Depends(require_setup_authenticated_user),
+    ],
+) -> AuthenticatedUser:
+    if current_user.actor_type == ActorType.COMPANY:
         return current_user
     raise _scoped_forbidden()
 

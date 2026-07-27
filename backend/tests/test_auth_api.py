@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 import app.auth.router as auth_router_module
 import app.main as main_module
 from app.auth.context import AuthenticatedUser
-from app.auth.dependencies import require_authenticated_user
+from app.auth.dependencies import require_setup_authenticated_user
 from app.auth.service import AuthenticationError, TokenPair
 from app.auth.tokens import (
     TokenValidationError,
@@ -151,7 +151,7 @@ def test_access_token_is_rejected_by_refresh_endpoint(monkeypatch) -> None:
 def test_auth_me_returns_safe_authenticated_user(monkeypatch) -> None:
     context = build_context()
     application = build_application(monkeypatch)
-    application.dependency_overrides[require_authenticated_user] = lambda: context
+    application.dependency_overrides[require_setup_authenticated_user] = lambda: context
 
     with TestClient(application) as client:
         response = client.get("/api/v1/auth/me")
@@ -166,6 +166,9 @@ def test_auth_me_returns_safe_authenticated_user(monkeypatch) -> None:
         "department_id": None,
         "is_manager": False,
         "permissions": [],
+        "company_active": True,
+        "onboarding_complete": True,
+        "must_change_password": False,
     }
     assert "password_hash" not in response.text
 

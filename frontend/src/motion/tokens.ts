@@ -2,16 +2,18 @@
 // Used by shared motion components and AnimatePresence wrappers.
 // Respects prefers-reduced-motion via CSS media query.
 
+import { designTokens } from '../design/tokens';
+
 export const duration = {
-  fast: 0.15,
-  normal: 0.25,
-  emphasis: 0.35,
-  panel: 0.3,
-  page: 0.2,
+  fast: designTokens.motion.fast,
+  normal: designTokens.motion.standard,
+  emphasis: 0.32,
+  panel: designTokens.motion.panel,
+  page: designTokens.motion.standard,
 } as const;
 
 export const easing = {
-  easeOut: [0, 0, 0.2, 1],
+  easeOut: designTokens.motion.easing,
   easeInOut: [0.4, 0, 0.2, 1],
   springy: { type: "spring" as const, stiffness: 300, damping: 30 },
 } as const;

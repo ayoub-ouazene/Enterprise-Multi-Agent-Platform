@@ -16,3 +16,6 @@ class AuthenticatedUser:
     department_id: UUID | None = None
     is_manager: bool = False
     permissions: tuple[str, ...] = ()
+    company_active: bool = True
+    onboarding_complete: bool = True
+    must_change_password: bool = False

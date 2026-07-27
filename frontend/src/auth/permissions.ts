@@ -69,7 +69,9 @@ export function canAccessAdmin(user: AuthenticatedUser | null): boolean {
 }
 
 export function canAccessDepartmentWorkspace(user: AuthenticatedUser | null): boolean {
-  return isCompanyAccount(user) || isDepartmentManager(user);
+  return isCompanyAccount(user) || isDepartmentManager(user) || (
+    isEmployee(user) && user?.department_id !== null
+  );
 }
 
 export function isManagerOfDepartmentType(

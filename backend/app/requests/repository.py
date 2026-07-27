@@ -1,7 +1,9 @@
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import or_, select, update
+from datetime import datetime
+
+from sqlalchemy import exists, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.requests.enums import RequestPriority, RequestStatus
@@ -40,6 +42,12 @@ class BusinessRequestRepository:
         status: RequestStatus | None = None,
         priority: RequestPriority | None = None,
         request_type: str | None = None,
+        search: str | None = None,
+        owner_department_id: UUID | None = None,
+        requester_filter_id: UUID | None = None,
+        attention_required: bool | None = None,
+        created_from: datetime | None = None,
+        created_to: datetime | None = None,
         requester_user_id: UUID | None = None,
         department_id: UUID | None = None,
         limit: int = 50,
@@ -54,6 +62,50 @@ class BusinessRequestRepository:
             statement = statement.where(BusinessRequest.priority == priority)
         if request_type is not None:
             statement = statement.where(BusinessRequest.request_type == request_type)
+        if search is not None:
+            pattern = f"%{search.strip()}%"
+            statement = statement.where(
+                or_(
+                    BusinessRequest.title.ilike(pattern),
+                    BusinessRequest.summary.ilike(pattern),
+                    BusinessRequest.request_type.ilike(pattern),
+                )
+            )
+        if owner_department_id is not None:
+            statement = statement.where(
+                BusinessRequest.owner_department_id == owner_department_id
+            )
+        if requester_filter_id is not None:
+            statement = statement.where(
+                BusinessRequest.requester_user_id == requester_filter_id
+            )
+        if created_from is not None:
+            statement = statement.where(BusinessRequest.created_at >= created_from)
+        if created_to is not None:
+            statement = statement.where(BusinessRequest.created_at <= created_to)
+        if attention_required is True:
+            from app.human_actions.models import HumanAction
+
+            pending_action = exists(
+                select(HumanAction.id).where(
+                    HumanAction.company_id == self.company_id,
+                    HumanAction.request_id == BusinessRequest.id,
+                    HumanAction.status == "pending",
+                )
+            )
+            statement = statement.where(
+                or_(
+                    pending_action,
+                    BusinessRequest.status.in_(
+                        (
+                            RequestStatus.WAITING_FOR_HUMAN_APPROVAL,
+                            RequestStatus.WAITING_FOR_HUMAN_ACTION,
+                            RequestStatus.FAILED,
+                            RequestStatus.REJECTED,
+                        )
+                    ),
+                )
+            )
 
         if requester_user_id is not None and department_id is not None:
             statement = statement.where(

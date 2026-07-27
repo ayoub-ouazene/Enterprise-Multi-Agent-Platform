@@ -183,6 +183,42 @@ def test_validate_import_creates_job_and_returns_response() -> None:
     assert result.can_confirm is True
 
 
+def test_employee_validation_response_never_exposes_password_hash() -> None:
+    svc = import_service(uuid4())
+    job = Mock(spec=ImportJob)
+    job.id = uuid4()
+    svc.job_repo = Mock()
+    svc.job_repo.find_existing_completed = AsyncMock(return_value=None)
+    svc.job_repo.create = AsyncMock(return_value=job)
+    svc.job_repo.update_status = AsyncMock(return_value=job)
+    svc.session.scalars = AsyncMock(return_value=Mock(all=Mock(return_value=[])))
+    svc.session.commit = AsyncMock()
+    svc.session.refresh = AsyncMock()
+    parsed = ParsedUpload(
+        headers=[
+            "email", "first_name", "last_name", "temporary_password",
+            "employee_code", "department", "job_title", "employment_status",
+        ],
+        rows=[{
+            "email": "safe@example.com", "first_name": "Safe", "last_name": "User",
+            "temporary_password": "Valid-Temporary-Password-42!",
+            "employee_code": "SAFE-1", "department": "", "job_title": "Analyst",
+            "employment_status": "active",
+        }],
+        checksum="safe-preview",
+        original_filename="employees.csv",
+    )
+
+    result = asyncio.run(
+        svc.validate_import(ImportType.EMPLOYEES, parsed, uuid4())
+    )
+
+    preview = result.rows[0].preview or {}
+    assert "_password_hash" not in preview
+    assert "temporary_password" not in preview
+    assert preview["password_provided"] is True
+
+
 def test_confirm_import_rejects_non_company() -> None:
     svc = import_service(uuid4())
     user = AuthenticatedUser(

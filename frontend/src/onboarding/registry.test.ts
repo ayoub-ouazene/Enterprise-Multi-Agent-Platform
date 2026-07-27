@@ -1,46 +1,47 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { ActorType, type OnboardingStatusDetailed } from '../api/types';
 import {
   ONBOARDING_STEPS,
-  getStepById,
-  getStepByRequirement,
+  firstIncompleteRoute,
   getNextStepId,
   getPreviousStepId,
+  getStepByRequirement,
   isValidStepId,
+  stepBlocked,
 } from './registry';
 
+const status: OnboardingStatusDetailed = {
+  company_id: 'company',
+  can_activate: false,
+  is_active: false,
+  items: [
+    { requirement: 'company_profile', satisfied: true, details: null },
+    { requirement: 'enabled_departments', satisfied: false, details: 'Required' },
+    { requirement: 'employees', satisfied: false, details: 'Required' },
+    { requirement: 'managers', satisfied: false, details: 'Required' },
+    { requirement: 'policies', satisfied: false, details: 'Required' },
+  ],
+};
+
 describe('onboarding registry', () => {
-  it('has unique step orders', () => {
-    const orders = ONBOARDING_STEPS.map((s) => s.order);
-    expect(new Set(orders).size).toBe(orders.length);
+  it('defines unique direct routes permitted only to Company accounts', () => {
+    expect(new Set(ONBOARDING_STEPS.map((step) => step.route)).size).toBe(ONBOARDING_STEPS.length);
+    expect(ONBOARDING_STEPS.every((step) => step.permittedRoles.includes(ActorType.COMPANY))).toBe(true);
   });
-
-  it('maps requirement keys to correct steps', () => {
+  it('maps authoritative readiness keys', () => {
     expect(getStepByRequirement('employees')?.id).toBe('employees');
-    expect(getStepByRequirement('policies')?.id).toBe('policies');
-    expect(getStepByRequirement('nonexistent')).toBeUndefined();
+    expect(firstIncompleteRoute(status)).toBe('/app/onboarding/departments');
   });
-
-  it('validates step IDs', () => {
-    expect(isValidStepId('overview')).toBe(true);
-    expect(isValidStepId('employees')).toBe(true);
-    expect(isValidStepId('review')).toBe(true);
-    expect(isValidStepId('not_a_step')).toBe(false);
-  });
-
-  it('navigates next and previous', () => {
-    expect(getNextStepId('overview')).toBe('profile');
+  it('validates and navigates nested steps', () => {
+    expect(isValidStepId('welcome')).toBe(true);
+    expect(isValidStepId('not-a-step')).toBe(false);
+    expect(getNextStepId('welcome')).toBe('company');
     expect(getPreviousStepId('employees')).toBe('departments');
-    expect(getNextStepId('review')).toBeNull();
-    expect(getPreviousStepId('overview')).toBeNull();
   });
-
-  it('optional-data step is marked optional', () => {
-    const step = getStepById('optional-data');
-    expect(step?.optional).toBe(true);
-  });
-
-  it('review and overview have no requirement key', () => {
-    expect(getStepById('review')?.requirementKey).toBeNull();
-    expect(getStepById('overview')?.requirementKey).toBeNull();
+  it('blocks dependent future steps using backend completion', () => {
+    const managers = ONBOARDING_STEPS.find((step) => step.id === 'managers')!;
+    const optional = ONBOARDING_STEPS.find((step) => step.id === 'optional-data')!;
+    expect(stepBlocked(managers, status)).toBe(true);
+    expect(stepBlocked(optional, status)).toBe(false);
   });
 });

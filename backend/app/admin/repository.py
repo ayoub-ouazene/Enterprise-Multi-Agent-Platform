@@ -4,6 +4,7 @@ from uuid import UUID
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.admin.models import Supplier
 from app.core.enums import EmploymentStatus
@@ -108,7 +109,9 @@ class EmployeeAdminRepository:
 
     async def get(self, employee_id: UUID) -> Employee | None:
         return await self.session.scalar(
-            select(Employee).where(
+            select(Employee)
+            .options(selectinload(Employee.user))
+            .where(
                 Employee.id == employee_id,
                 Employee.company_id == self.company_id,
             )
@@ -143,7 +146,11 @@ class EmployeeAdminRepository:
         limit: int = 50,
         offset: int = 0,
     ) -> list[Employee]:
-        statement = select(Employee).where(Employee.company_id == self.company_id)
+        statement = (
+            select(Employee)
+            .options(selectinload(Employee.user))
+            .where(Employee.company_id == self.company_id)
+        )
         if department_id is not None:
             statement = statement.where(Employee.department_id == department_id)
         if status is not None:

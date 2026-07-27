@@ -1,60 +1,56 @@
-import { useAdminEmployees, useAdminDepartments } from '../../../api/hooks/useAdmin';
-import { SectionCard } from './components/SectionCard';
-import { ErrorState } from './components/ErrorState';
+import { useState } from 'react';
+import { Search, ShieldCheck } from 'lucide-react';
+import { useAssignDepartmentManager, useManagerCandidates, useManagerCoverage } from '../../../api/hooks/useOnboarding';
+import { AdminPageHeader } from '../../../admin/components/AdminPageHeader';
+import { Button } from '../../../components/ui/Button';
+import { Input } from '../../../components/ui/Input';
+import { Modal } from '../../../components/ui/Modal';
+import { Alert } from '../../../components/ui/Alert';
+import { StatusBadge } from './components/StatusBadge';
 import { TableSkeleton } from './components/TableSkeleton';
-import { Star } from 'lucide-react';
 
 export function ManagersPage() {
-  const { data: employees, isLoading, error } = useAdminEmployees({ limit: 500 });
-  const { data: departments } = useAdminDepartments();
+  const coverage = useManagerCoverage();
+  const [departmentId, setDepartmentId] = useState('');
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState('');
+  const candidates = useManagerCandidates(departmentId, search);
+  const assign = useAssignDepartmentManager();
+  const selectedDepartment = coverage.data?.find((item) => item.department_id === departmentId);
 
-  const managers = employees?.filter((e) => e.manager_employee_id !== null) ?? [];
-  const employeesById = new Map(employees?.map((e) => [e.id, e]) ?? []);
+  async function confirm() {
+    if (!selected || !departmentId) return;
+    await assign.mutateAsync({ departmentId, employeeId: selected });
+    await coverage.refetch();
+    setDepartmentId('');
+    setSelected('');
+    setSearch('');
+  }
 
-  if (isLoading) return <TableSkeleton rows={4} />;
-  if (error) return <ErrorState message="Failed to load managers." />;
-
-  return (
-    <div className="space-y-4">
-      <SectionCard title="Managers" description={`${managers.length} employee${managers.length !== 1 ? 's' : ''} with an assigned manager`}>
-        <div className="overflow-x-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900/50">
-                <th className="px-4 py-2.5 text-left font-medium text-neutral-600 dark:text-neutral-400">Employee</th>
-                <th className="px-4 py-2.5 text-left font-medium text-neutral-600 dark:text-neutral-400">Manager</th>
-                <th className="px-4 py-2.5 text-left font-medium text-neutral-600 dark:text-neutral-400">Department</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-100 dark:divide-neutral-800">
-              {managers.map((emp) => {
-                const manager = emp.manager_employee_id ? employeesById.get(emp.manager_employee_id) : null;
-                const dept = departments?.find((d) => d.id === emp.department_id);
-                return (
-                  <tr key={emp.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50">
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-2">
-                        <Star size={12} className="text-amber-500" />
-                        <span className="font-medium text-neutral-900 dark:text-neutral-100">{emp.employee_code}</span>
-                      </div>
-                      <p className="mt-0.5 text-xs text-neutral-500 dark:text-neutral-400">{emp.job_title || '—'}</p>
-                    </td>
-                    <td className="px-4 py-2.5 text-neutral-700 dark:text-neutral-300">
-                      {manager ? `${manager.employee_code} (${manager.job_title || '—'})` : '—'}
-                    </td>
-                    <td className="px-4 py-2.5 text-neutral-600 dark:text-neutral-400">{dept?.name || '—'}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          {managers.length === 0 && (
-            <div className="px-4 py-8 text-center text-sm text-neutral-500 dark:text-neutral-400">
-              No managers assigned yet.
-            </div>
-          )}
+  return <div className="space-y-6">
+    <AdminPageHeader title="Department managers" description="Assign one eligible, active employee to each enabled department. Manager authority changes only after backend confirmation." />
+    {coverage.isLoading && <TableSkeleton rows={4} />}
+    {coverage.isError && <Alert variant="error">Manager coverage could not be loaded.</Alert>}
+    <div className="grid gap-4 lg:grid-cols-2">
+      {coverage.data?.map((item) => <article key={item.department_id} className="rounded-card border border-neutral-200 bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex min-w-0 gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-primary-50 text-primary-700 dark:bg-primary-950"><ShieldCheck size={18} /></span><div><h2 className="font-semibold text-neutral-950 dark:text-white">{item.department_name}</h2><p className="mt-1 text-sm text-neutral-500">{item.manager ? `${item.manager.employee_code} · ${item.manager.job_title ?? 'Manager'}` : 'No manager assigned'}</p></div></div>
+          <StatusBadge status={item.manager ? 'success' : 'warning'}>{item.manager ? 'Covered' : 'Required'}</StatusBadge>
         </div>
-      </SectionCard>
+        <Button variant="secondary" className="mt-5 w-full" onClick={() => { setDepartmentId(item.department_id); setSelected(item.manager?.id ?? ''); }}>{item.manager ? 'Replace manager' : 'Assign manager'}</Button>
+      </article>)}
     </div>
-  );
+    <Modal title={`${selectedDepartment?.manager ? 'Replace' : 'Assign'} ${selectedDepartment?.department_name ?? ''} manager`} isOpen={Boolean(departmentId)} onClose={() => !assign.isPending && setDepartmentId('')}>
+      <div className="grid gap-4">
+        {selectedDepartment?.manager && <Alert variant="warning" title="Authority will change">The selected employee will receive department-manager access after confirmation. The current manager will be returned to employee access.</Alert>}
+        <Input label="Search eligible employees" value={search} onChange={(event) => setSearch(event.target.value)} icon={<Search size={16} />} placeholder="Employee code or title" />
+        <fieldset><legend className="text-sm font-medium">Eligible employees</legend><div className="mt-2 grid max-h-64 gap-2 overflow-y-auto">
+          {candidates.data?.map((candidate) => <label key={candidate.id} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-lg border border-neutral-200 px-3 dark:border-neutral-700"><input type="radio" name="admin-manager" value={candidate.id} checked={selected === candidate.id} onChange={() => setSelected(candidate.id)} /><span className="text-sm"><strong>{candidate.employee_code}</strong><br /><span className="text-neutral-500">{candidate.job_title ?? 'Employee'}</span></span></label>)}
+          {!candidates.isLoading && candidates.data?.length === 0 && <p className="py-4 text-sm text-neutral-500">No eligible employees match.</p>}
+        </div></fieldset>
+        {assign.isError && <Alert variant="error">The assignment conflicted with current data. Coverage has been refreshed.</Alert>}
+        <div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setDepartmentId('')}>Cancel</Button><Button onClick={confirm} disabled={!selected} isLoading={assign.isPending}>Confirm authority change</Button></div>
+      </div>
+    </Modal>
+  </div>;
 }

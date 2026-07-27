@@ -1,6 +1,8 @@
 from datetime import UTC, datetime
+import json
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.context import AuthenticatedUser
@@ -14,9 +16,14 @@ from app.human_actions.schemas import (
     HumanActionCreate,
     HumanActionListFilters,
     HumanActionResponse,
+    HumanActionDetailResponse,
+    HumanActionSummaryResponse,
+    RelatedRequestSummary,
+    SafeActionHistoryItem,
     HumanActionSubmitPayload,
     HumanActionSubmitResponse,
 )
+from app.departments.models import Department
 
 
 class HumanActionPermissionError(BusinessValidationError):
@@ -77,6 +84,149 @@ class HumanActionService:
         }
         return mapping.get(action_type, ["approved", "rejected"])
 
+    _COMMON_SAFE_KEYS = {
+        "summary", "reason", "impact", "recommendation", "risks",
+        "risk_flags", "policy_reference", "policy_summary", "business_reason",
+        "requested_action", "expected_result", "safety_note", "diagnostic_steps",
+        "subject_reference", "verification_method", "expected_outcome",
+        "employee", "employee_name", "leave_type", "start_date", "end_date",
+        "workday_count", "current_balance", "projected_balance", "staffing_validation",
+        "safe_conflicts", "amount", "currency", "budget", "available_amount",
+        "reserved_amount", "committed_amount", "requesting_department",
+        "policy_threshold", "finance_recommendation", "supplier", "candidates",
+        "shortlist", "rank", "score", "total_cost", "eligible", "eligibility",
+        "compliance", "availability", "finance_validation", "score_components",
+        "incident", "asset", "system", "issue_summary", "onboarding_step",
+        "responsible_department", "requested_resource", "requested_exception",
+        "proposed_conditions", "quality_check_summary", "customer_issue",
+        "completed_support_steps", "escalation_reason", "requested_fields",
+        "options", "deadline", "due_date",
+    }
+    _NESTED_SAFE_KEYS = {
+        "id", "label", "name", "supplier", "rank", "score", "total_cost",
+        "currency", "eligible", "eligibility", "reason", "compliance",
+        "availability", "finance_validation", "risk_flags", "score_components",
+        "value", "title", "description", "required", "helper_text", "field_type",
+    }
+
+    @classmethod
+    def _safe_context(cls, package: dict) -> dict:
+        return {
+            key: cls._sanitize_context_value(value)
+            for key, value in package.items()
+            if key in cls._COMMON_SAFE_KEYS
+        }
+
+    @classmethod
+    def _sanitize_context_value(cls, value):
+        if value is None or isinstance(value, (str, int, float, bool)):
+            return value
+        if isinstance(value, list):
+            return [cls._sanitize_context_value(item) for item in value[:50]]
+        if isinstance(value, dict):
+            return {
+                key: cls._sanitize_context_value(item)
+                for key, item in value.items()
+                if key in cls._NESTED_SAFE_KEYS
+            }
+        return None
+
+    @staticmethod
+    def _safe_resolution(action: HumanAction) -> tuple[str | None, str | None]:
+        decision = action.response.get("decision")
+        raw = action.response.get("response")
+        comment = None
+        if isinstance(raw, str):
+            try:
+                parsed = json.loads(raw)
+                if isinstance(parsed, dict) and isinstance(parsed.get("notes"), str):
+                    comment = parsed["notes"].strip() or None
+            except (TypeError, ValueError):
+                comment = raw.strip() or None
+        return (
+            decision if isinstance(decision, str) else None,
+            comment,
+        )
+
+    async def _department_name(self, action: HumanAction) -> str | None:
+        request = action.request
+        department_id = request.active_department_id or request.owner_department_id
+        if department_id is None:
+            return None
+        return await self.session.scalar(
+            select(Department.name).where(
+                Department.company_id == self.current_user.company_id,
+                Department.id == department_id,
+            )
+        )
+
+    async def _to_summary(self, action: HumanAction) -> HumanActionSummaryResponse:
+        request = action.request
+        return HumanActionSummaryResponse(
+            id=action.id,
+            request_id=action.request_id,
+            action_type=action.action_type,
+            title=action.title,
+            status=action.status,
+            assigned_role=action.assigned_role,
+            due_date=action.due_date,
+            resolved_at=action.resolved_at,
+            created_at=action.created_at,
+            updated_at=action.updated_at,
+            allowed_decisions=self._allowed_decisions_for(action.action_type),
+            can_respond=self._can_respond(action),
+            request_title=request.title if request else None,
+            request_status=request.status.value if request else None,
+            requesting_department=await self._department_name(action),
+        )
+
+    async def _to_detail(self, action: HumanAction) -> HumanActionDetailResponse:
+        summary = await self._to_summary(action)
+        request = action.request
+        decision, comment = self._safe_resolution(action)
+        history = [
+            SafeActionHistoryItem(
+                event="created",
+                title="Action created",
+                description="The action was assigned for an authorized response.",
+                occurred_at=action.created_at,
+            )
+        ]
+        if action.status in {"resolved", "cancelled"}:
+            history.append(
+                SafeActionHistoryItem(
+                    event=action.status,
+                    title="Response confirmed" if action.status == "resolved" else "Action cancelled",
+                    description="The authoritative action state was updated.",
+                    occurred_at=action.resolved_at or action.updated_at,
+                )
+            )
+        return HumanActionDetailResponse(
+            **summary.model_dump(),
+            description=action.description,
+            safe_context=self._safe_context(action.decision_package),
+            resolution_decision=decision,
+            resolution_comment=comment,
+            related_request=RelatedRequestSummary(
+                id=request.id,
+                title=request.title,
+                status=request.status.value,
+                owner_department=await self._department_name(action),
+            ),
+            history=history,
+        )
+
+    async def get_public(self, action_id: UUID) -> HumanActionDetailResponse:
+        action = await self.repository.get_by_id(action_id)
+        if action is None or not self._can_view(action):
+            raise NotFoundError("Human action not found")
+        return await self._to_detail(action)
+
+    async def list_public(
+        self, filters: HumanActionListFilters
+    ) -> list[HumanActionSummaryResponse]:
+        return [await self._to_summary(item) for item in await self.list_raw(filters)]
+
     def _to_response(self, human_action: HumanAction) -> HumanActionResponse:
         request_title: str | None = None
         request_status: str | None = None
@@ -123,6 +273,11 @@ class HumanActionService:
             request_id=filters.request_id,
             assigned_user_id=assigned_user_id,
             assigned_role=assigned_role,
+            action_type=filters.action_type,
+            department_id=filters.department_id,
+            due_before=filters.due_before,
+            due_after=filters.due_after,
+            overdue_only=filters.overdue_only,
             limit=filters.limit,
             offset=filters.offset,
         )
@@ -180,6 +335,8 @@ class HumanActionService:
             raise HumanActionPermissionError(
                 "You are not authorized to submit this action"
             )
+        if payload.decision not in self._allowed_decisions_for(human_action.action_type):
+            raise BusinessValidationError("Decision is not allowed for this action")
 
         try:
             updated = await self.repository.submit_response(
@@ -187,6 +344,7 @@ class HumanActionService:
                 decision=payload.decision,
                 response=payload.response,
                 responding_user_id=self.current_user.user_id,
+                expected_updated_at=payload.expected_updated_at,
             )
             if updated is None:
                 raise NotFoundError("Human action not found or already resolved")

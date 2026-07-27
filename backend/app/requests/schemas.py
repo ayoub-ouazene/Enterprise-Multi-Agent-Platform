@@ -63,12 +63,70 @@ class BusinessRequestListFilters(BaseModel):
     status: RequestStatus | None = None
     priority: RequestPriority | None = None
     request_type: str | None = Field(default=None, min_length=1, max_length=100)
+    search: str | None = Field(default=None, min_length=1, max_length=200)
+    owner_department_id: UUID | None = None
+    requester_user_id: UUID | None = None
+    attention_required: bool | None = None
+    created_from: datetime | None = None
+    created_to: datetime | None = None
     limit: int = Field(default=50, ge=1, le=100)
     offset: int = Field(default=0, ge=0)
 
 
+class RequestDepartmentResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: UUID
+    name: str
+    department_type: str
+
+
+class ConnectedHumanActionResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: UUID
+    title: str
+    action_type: str
+    status: str
+    due_at: datetime | None
+    assigned_role: str | None
+    can_respond: bool
+    action_url: str | None
+
+
+class RequestClarificationResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    question: str
+    number: int = Field(ge=1, le=3)
+    maximum: int = 3
+
+
+class RequestSourceReferenceResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    document_id: UUID | None = None
+    title: str
+    version: str | None = None
+    section: str | None = None
+    scope: str | None = None
+
+
+class RequestFinalResultResponse(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    title: str
+    summary: str
+    limitations: list[str] = Field(default_factory=list, max_length=20)
+    next_steps: list[str] = Field(default_factory=list, max_length=20)
+    sources: list[RequestSourceReferenceResponse] = Field(
+        default_factory=list,
+        max_length=20,
+    )
+
+
 class BusinessRequestSummaryResponse(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(extra="forbid")
 
     id: UUID
     request_type: str
@@ -76,22 +134,38 @@ class BusinessRequestSummaryResponse(BaseModel):
     summary: str
     status: RequestStatus
     current_stage: str
+    current_state_summary: str
     priority: RequestPriority
     owner_department_id: UUID | None
     active_department_id: UUID | None
+    owner_department: RequestDepartmentResponse | None = None
+    active_department: RequestDepartmentResponse | None = None
+    requester_user_id: UUID | None = None
+    requester_label: str | None = None
+    attention_required: bool = False
+    pending_action_count: int = 0
+    can_cancel: bool = False
     created_at: datetime
     updated_at: datetime
 
 
 class BusinessRequestDetailResponse(BusinessRequestSummaryResponse):
-    requester_user_id: UUID
     requester_employee_id: UUID | None
     final_decision: str | None
     final_reason: str | None
     completed_at: datetime | None
     cancelled_at: datetime | None
     failed_at: datetime | None
-    workflow_state: dict[str, Any] = Field(default_factory=dict)
+    clarification: RequestClarificationResponse | None = None
+    collaboration_summary: str | None = None
+    quality_check_summary: str | None = None
+    failure_summary: str | None = None
+    final_result: RequestFinalResultResponse | None = None
+    connected_actions: list[ConnectedHumanActionResponse] = Field(
+        default_factory=list,
+        max_length=50,
+    )
+    allowed_actions: list[str] = Field(default_factory=list)
 
 
 class BusinessRequestCancellationResponse(BusinessRequestDetailResponse):

@@ -63,6 +63,9 @@ class AuthenticatedUserResponse(BaseModel):
     department_id: UUID | None
     is_manager: bool
     permissions: tuple[str, ...]
+    company_active: bool
+    onboarding_complete: bool
+    must_change_password: bool
 
     @classmethod
     def from_context(cls, context: AuthenticatedUser) -> "AuthenticatedUserResponse":
@@ -75,4 +78,7 @@ class AuthenticatedUserResponse(BaseModel):
             department_id=context.department_id,
             is_manager=context.is_manager,
             permissions=context.permissions,
+            company_active=context.company_active,
+            onboarding_complete=context.onboarding_complete,
+            must_change_password=context.must_change_password,
         )

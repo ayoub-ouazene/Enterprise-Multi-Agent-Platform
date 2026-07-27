@@ -33,7 +33,10 @@ from app.admin.service import (
     AdminSupplierService,
 )
 from app.auth.context import AuthenticatedUser
-from app.auth.dependencies import require_authenticated_user
+from app.auth.dependencies import (
+    require_authenticated_user,
+    require_setup_authenticated_user,
+)
 from app.core.config import Settings
 from app.core.enums import ActorType, DepartmentType, EmploymentStatus
 from app.database.session import get_db_session
@@ -92,6 +95,7 @@ def build_app(monkeypatch, user) -> TestClient:
 
     app.dependency_overrides[get_db_session] = session_override
     app.dependency_overrides[require_authenticated_user] = lambda: user
+    app.dependency_overrides[require_setup_authenticated_user] = lambda: user
     return app
 
 

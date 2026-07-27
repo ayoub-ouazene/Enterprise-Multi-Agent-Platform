@@ -72,6 +72,7 @@ class WorkflowEventRepository:
         *,
         visibilities: frozenset[WorkflowEventVisibility],
         event_type: WorkflowEventType | None = None,
+        after_sequence: int | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> list[WorkflowEvent]:
@@ -82,6 +83,10 @@ class WorkflowEventRepository:
         )
         if event_type is not None:
             statement = statement.where(WorkflowEvent.event_type == event_type)
+        if after_sequence is not None:
+            statement = statement.where(
+                WorkflowEvent.sequence_number > after_sequence
+            )
         result = await self.session.scalars(
             statement.order_by(WorkflowEvent.sequence_number.asc())
             .offset(offset)

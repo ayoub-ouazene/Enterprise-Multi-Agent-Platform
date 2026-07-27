@@ -46,13 +46,18 @@ def company(*, active: bool = True):
     )
 
 
-def user(company_id, *, active: bool = True):
+def user(
+    company_id,
+    *,
+    active: bool = True,
+    actor_type: ActorType = ActorType.COMPANY,
+):
     return SimpleNamespace(
         id=uuid4(),
         company_id=company_id,
         email="owner@example.com",
         password_hash=hash_password(PASSWORD),
-        actor_type=ActorType.COMPANY,
+        actor_type=actor_type,
         is_active=active,
         employee=None,
     )
@@ -121,12 +126,23 @@ def test_inactive_user_is_rejected() -> None:
     session.rollback.assert_awaited_once()
 
 
-def test_inactive_company_is_rejected() -> None:
+def test_inactive_company_account_receives_onboarding_tokens() -> None:
     tenant = company(active=False)
     service, session, *_ = service_fixture(tenant, user(tenant.id))
 
+    pair = asyncio.run(service.login("acme", "owner@example.com", PASSWORD))
+
+    assert decode_access_token(pair.access_token, build_settings()).sub is not None
+    session.commit.assert_awaited_once()
+
+
+def test_inactive_company_rejects_non_company_actor() -> None:
+    tenant = company(active=False)
+    account = user(tenant.id, actor_type=ActorType.EMPLOYEE)
+    service, session, *_ = service_fixture(tenant, account)
+
     with pytest.raises(AuthenticationError):
-        asyncio.run(service.login("acme", "owner@example.com", PASSWORD))
+        asyncio.run(service.login("acme", account.email, PASSWORD))
 
     session.rollback.assert_awaited_once()
 

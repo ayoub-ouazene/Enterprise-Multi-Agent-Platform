@@ -18,7 +18,11 @@ from app.rag.enums import (
     KnowledgeDocumentType,
     KnowledgeIngestionStatus,
 )
-from app.rag.exceptions import KnowledgeConflictError, KnowledgeProviderError
+from app.rag.exceptions import (
+    KnowledgeConflictError,
+    KnowledgePermissionError,
+    KnowledgeProviderError,
+)
 from app.rag.ingestion import KnowledgeIngestionService
 from app.rag.schemas import KnowledgeDocumentMetadata
 
@@ -135,6 +139,35 @@ def service_parts(tmp_path):
         company_repository=company_repository,
     )
     return service, record, repository, provider, session
+
+
+def test_inactive_company_account_can_ingest_required_onboarding_policy(
+    tmp_path,
+) -> None:
+    service, _, _, _, _ = service_parts(tmp_path)
+    service.company_repository.get_by_id = AsyncMock(
+        return_value=SimpleNamespace(is_active=False)
+    )
+
+    result = asyncio.run(service.create(upload(), metadata()))
+
+    assert result.ingestion_status == KnowledgeIngestionStatus.COMPLETED
+
+
+def test_inactive_company_rejects_department_manager_ingestion(tmp_path) -> None:
+    service, _, _, _, _ = service_parts(tmp_path)
+    service.current_user = AuthenticatedUser(
+        user_id=uuid4(),
+        company_id=service.current_user.company_id,
+        email="manager@example.com",
+        actor_type=ActorType.DEPARTMENT_MANAGER,
+    )
+    service.company_repository.get_by_id = AsyncMock(
+        return_value=SimpleNamespace(is_active=False)
+    )
+
+    with pytest.raises(KnowledgePermissionError, match="active company"):
+        asyncio.run(service.create(upload(), metadata()))
 
 
 def test_successful_ingestion_uses_company_namespace_and_completes(tmp_path) -> None:

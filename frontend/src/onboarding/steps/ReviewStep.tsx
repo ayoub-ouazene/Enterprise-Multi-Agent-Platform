@@ -16,6 +16,7 @@ interface ReviewStepProps {
 
 export function ReviewStep({ status, onNavigate, onActivate, activating }: ReviewStepProps) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [activationError, setActivationError] = useState(false);
 
   return (
     <div className="space-y-6">
@@ -35,6 +36,7 @@ export function ReviewStep({ status, onNavigate, onActivate, activating }: Revie
           Fix the issues below before activating.
         </Alert>
       )}
+      {activationError && <Alert variant="error" title="Activation was blocked">The backend revalidated the checklist and did not activate the Company. The latest readiness state has been loaded.</Alert>}
 
       <div className="space-y-2">
         {status.items.map((item) => {
@@ -89,8 +91,14 @@ export function ReviewStep({ status, onNavigate, onActivate, activating }: Revie
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onConfirm={async () => {
-          await onActivate();
-          setModalOpen(false);
+          setActivationError(false);
+          try {
+            await onActivate();
+            setModalOpen(false);
+          } catch {
+            setActivationError(true);
+            setModalOpen(false);
+          }
         }}
         isActivating={activating}
       />

@@ -13,7 +13,7 @@ interface EmployeesStepProps {
 }
 
 export function EmployeesStep({ status }: EmployeesStepProps) {
-  const [_file, setFile] = useState<File | null>(null);
+  const [, setFile] = useState<File | null>(null);
   const [validationResult, setValidationResult] = useState<ImportValidateResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 

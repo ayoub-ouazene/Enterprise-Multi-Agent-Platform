@@ -1,174 +1,76 @@
-import { useState, useMemo } from 'react';
-import { AlertTriangle, CheckCircle } from 'lucide-react';
-import { Button } from '../../components/ui/Button';
+import { useRef, useState } from 'react';
 import { Alert } from '../../components/ui/Alert';
-import { getActionTypeConfig } from '../registry';
+import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 import type { HumanActionDetail } from '../../api/types';
+import { getActionTypeConfig } from '../registry';
 
-interface ResponseFormProps {
+export function ResponseForm({ action, onSubmit, isSubmitting }: {
   action: HumanActionDetail;
-  onSubmit: (decision: string, responseFields: Record<string, unknown>) => void;
+  onSubmit: (decision: string, fields: Record<string, unknown>) => void;
   isSubmitting: boolean;
-}
+}) {
+  const config = getActionTypeConfig(action.action_type);
+  const [decision, setDecision] = useState('');
+  const [comment, setComment] = useState(() => sessionStorage.getItem(`tellus.action-comment.${action.id}`) ?? '');
+  const [candidate, setCandidate] = useState('');
+  const [information, setInformation] = useState<Record<string, string>>({});
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState('');
+  const inFlight = useRef(false);
+  const negative = ['rejected', 'failed', 'unable'].includes(decision);
+  const candidates = candidateOptions(action.safe_context);
+  const requestedFields = informationFields(action.safe_context);
 
-export function ResponseForm({ action, onSubmit, isSubmitting }: ResponseFormProps) {
-  const [decision, setDecision] = useState<string>('');
-  const [notes, setNotes] = useState('');
-  const [selectedOption, setSelectedOption] = useState<string>('');
-  const [error, setError] = useState<string | null>(null);
+  if (!action.can_respond || action.status !== 'pending') return <Alert variant="info" title="Read-only action">This action no longer accepts responses.</Alert>;
 
-  const config = useMemo(() => getActionTypeConfig(action.action_type), [action.action_type]);
-
-  const options = action.decision_package?.options as Array<{id: string; label: string}> | undefined;
-  const hasOptions = Array.isArray(options) && options.length > 0;
-
-  const requiresReason = ['rejected', 'failed', 'unable'].some(r => decision.toLowerCase().includes(r));
-
-  const canSubmit = decision.trim() !== '' && (!requiresReason || notes.trim().length > 0) && !isSubmitting;
-
-  const handleSubmit = () => {
-    if (!decision.trim()) {
-      setError('Please select a decision.');
-      return;
-    }
-    if (requiresReason && !notes.trim()) {
-      setError(`A reason or notes are required when selecting "${decision}".`);
-      return;
-    }
-
-    const fields: Record<string, unknown> = { notes: notes.trim() };
-    if (hasOptions && selectedOption) {
-      fields.selected_option = selectedOption;
-    }
-
-    setError(null);
-    onSubmit(decision, fields);
+  const review = () => {
+    if (!decision) return setError('Select an allowed response.');
+    if (negative && !comment.trim()) return setError('Explain a rejection, failure, or inability to complete.');
+    if (decision === 'selected' && !candidate) return setError('Select one eligible supplier.');
+    if (decision === 'submitted' && requestedFields.some(field => field.required && !information[field.id]?.trim())) return setError('Complete every required information field.');
+    setError('');
+    setConfirming(true);
+  };
+  const submit = () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    onSubmit(decision, { notes: comment.trim(), ...(candidate ? { selected_option: candidate } : {}), ...(requestedFields.length ? { information } : {}) });
+    setConfirming(false);
+    window.setTimeout(() => { inFlight.current = false; }, 500);
   };
 
-  const isNotPending = action.status !== 'pending';
-
-  if (isNotPending) {
-    return (
-      <Alert variant="info" title="Action completed">
-        This action has already been {action.status}.
-      </Alert>
-    );
-  }
-
-  if (!action.can_respond) {
-    return (
-      <Alert variant="warning" title="Cannot respond">
-        You are not authorized to respond to this action, or the action window has expired.
-      </Alert>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-        Your Response
-      </h3>
-
-      {/* Decision selection */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-          Decision
-        </label>
-        <div className="flex flex-wrap gap-2">
-          {action.allowed_decisions.map((d) => {
-            const active = decision === d;
-            const isPositive = ['approved', 'completed', 'selected', 'verified', 'submitted'].some(
-              p => d.toLowerCase() === p
-            );
-            return (
-              <button
-                key={d}
-                type="button"
-                onClick={() => {
-                  setDecision(d);
-                  setError(null);
-                }}
-                className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 ${
-                  active
-                    ? isPositive
-                      ? 'border-success-500 bg-success-50 text-success-700 dark:border-success-500 dark:bg-success-900 dark:text-success-200'
-                      : 'border-danger-500 bg-danger-50 text-danger-700 dark:border-danger-500 dark:bg-danger-900 dark:text-danger-200'
-                    : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700'
-                }`}
-                aria-pressed={active}
-              >
-                {active && (isPositive ? <CheckCircle size={14} /> : <AlertTriangle size={14} />)}
-                {capitalize(d)}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Options from decision_package */}
-      {hasOptions && (
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-            {config.label} Options
-          </label>
-          <div className="space-y-2">
-            {options.map((opt) => (
-              <label
-                key={opt.id}
-                className={`flex cursor-pointer items-center gap-3 rounded-lg border p-3 transition-colors ${
-                  selectedOption === opt.id
-                    ? 'border-primary-500 bg-primary-50 dark:border-primary-500 dark:bg-primary-900'
-                    : 'border-neutral-200 bg-white hover:bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-800 dark:hover:bg-neutral-750'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="option"
-                  value={opt.id}
-                  checked={selectedOption === opt.id}
-                  onChange={() => setSelectedOption(opt.id)}
-                  className="h-4 w-4 text-primary-600 focus:ring-primary-500"
-                />
-                <span className="text-sm text-neutral-900 dark:text-neutral-100">{opt.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Notes / Reason */}
-      <div className="space-y-2">
-        <label htmlFor="action-notes" className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-          {requiresReason ? 'Reason / Explanation *' : 'Notes (optional)'}
-        </label>
-        <textarea
-          id="action-notes"
-          rows={4}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder={requiresReason ? 'Explain your decision...' : 'Add any relevant notes...'}
-          className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder-neutral-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
-        />
-      </div>
-
-      {error && (
-        <Alert variant="error" title="Validation error">
-          {error}
-        </Alert>
-      )}
-
-      <div className="flex items-center gap-2 pt-2">
-        <Button onClick={handleSubmit} isLoading={isSubmitting} disabled={!canSubmit}>
-          Submit Response
-        </Button>
-        {isSubmitting && (
-          <span className="text-sm text-neutral-500 dark:text-neutral-400">Submitting...</span>
-        )}
-      </div>
-    </div>
-  );
+  return <div className="space-y-5">
+    <fieldset><legend className="text-sm font-semibold">Choose your response</legend><div className="mt-2 grid gap-2">{action.allowed_decisions.map(item => <label key={item} className="flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border border-neutral-300 px-3 py-2 has-[:checked]:border-primary-600 has-[:checked]:bg-primary-50 dark:border-neutral-700 dark:has-[:checked]:bg-primary-950"><input type="radio" name="decision" value={item} checked={decision === item} onChange={() => { setDecision(item); setError(''); }} /><span className="font-medium capitalize">{item.replaceAll('_', ' ')}</span></label>)}</div></fieldset>
+    {decision === 'selected' && candidates.length > 0 && <fieldset><legend className="text-sm font-semibold">Eligible supplier</legend><div className="mt-2 space-y-2">{candidates.map(item => <label key={item.id} className="flex min-h-11 items-center gap-3 rounded-lg border p-3"><input type="radio" name="candidate" value={item.id} checked={candidate === item.id} onChange={() => setCandidate(item.id)} disabled={!item.eligible} /><span>{item.label}{!item.eligible ? ' — Ineligible' : ''}</span></label>)}</div></fieldset>}
+    {decision === 'submitted' && requestedFields.map(field => <label key={field.id} className="grid gap-2 text-sm font-medium">{field.label}{field.required ? ' *' : ''}<input value={information[field.id] ?? ''} onChange={event => setInformation(current => ({ ...current, [field.id]: event.target.value }))} className="h-11 rounded-lg border border-neutral-300 px-3 dark:border-neutral-700 dark:bg-neutral-950" /></label>)}
+    <label className="grid gap-2 text-sm font-medium">Comment{negative ? ' (required)' : ' (optional)'}<textarea rows={4} value={comment} onChange={event => { setComment(event.target.value); sessionStorage.setItem(`tellus.action-comment.${action.id}`, event.target.value); }} className="rounded-lg border border-neutral-300 bg-white p-3 dark:border-neutral-700 dark:bg-neutral-950" /></label>
+    {error && <Alert variant="error">{error}</Alert>}
+    <Button onClick={review} disabled={isSubmitting}>{decision ? `${decisionLabel(decision)}…` : 'Select a response'}</Button>
+    <Modal title={`Confirm ${decisionLabel(decision).toLowerCase()}`} isOpen={confirming} onClose={() => !isSubmitting && setConfirming(false)}><div className="space-y-4"><p className="text-sm">{config.consequence}</p><dl className="rounded-lg bg-neutral-50 p-4 text-sm dark:bg-neutral-800"><dt className="text-neutral-500">Selected response</dt><dd className="font-semibold capitalize">{decision.replaceAll('_', ' ')}</dd>{candidate && <><dt className="mt-2 text-neutral-500">Selected candidate</dt><dd className="font-semibold">{candidates.find(item => item.id === candidate)?.label}</dd></>}</dl>{comment && <p className="text-sm text-neutral-600">Comment: {comment}</p>}<div className="flex justify-end gap-2"><Button variant="secondary" onClick={() => setConfirming(false)}>Go back</Button><Button onClick={submit} isLoading={isSubmitting}>Confirm {decisionLabel(decision).toLowerCase()}</Button></div></div></Modal>
+  </div>;
 }
 
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, ' ');
+function candidateOptions(context: Record<string, unknown>) {
+  const value = context.candidates ?? context.shortlist;
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((candidate, index) => candidate && typeof candidate === 'object' && !Array.isArray(candidate) ? [{
+    id: String((candidate as Record<string, unknown>).id ?? index),
+    label: String((candidate as Record<string, unknown>).supplier ?? (candidate as Record<string, unknown>).name ?? `Candidate ${index + 1}`),
+    eligible: (candidate as Record<string, unknown>).eligible !== false,
+  }] : []);
+}
+function informationFields(context: Record<string, unknown>) {
+  if (!Array.isArray(context.requested_fields)) return [];
+  return context.requested_fields.flatMap(item => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
+    const field = item as Record<string, unknown>;
+    const id = String(field.id ?? '');
+    if (!id || /password|secret|token|key/i.test(id)) return [];
+    return [{ id, label: String(field.label ?? id), required: field.required === true }];
+  });
+}
+function decisionLabel(value: string) {
+  const labels: Record<string, string> = { approved: 'Approve action', rejected: 'Reject action', selected: 'Select supplier', completed: 'Confirm completion', failed: 'Report failure', unable: 'Report unable', submitted: 'Submit information', verified: 'Confirm verification' };
+  return labels[value] ?? 'Confirm response';
 }

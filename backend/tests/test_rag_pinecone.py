@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 from app.core.config import Settings
+from app.rag.exceptions import KnowledgeProviderError
 from app.rag.pinecone import PineconeProvider
 
 
@@ -40,3 +41,23 @@ def test_provider_normalizes_search_results() -> None:
         )
     )
     assert result == [{"_id": "one", "_score": 0.8, "chunk_text": "safe"}]
+
+
+def test_missing_index_configuration_is_a_safe_provider_error() -> None:
+    incomplete = Settings(
+        _env_file=None,
+        debug=False,
+        database_url="postgresql+asyncpg://test:test@localhost/test",
+        alembic_database_url="postgresql+asyncpg://test:test@localhost/test",
+        pinecone_api_key="test",
+        pinecone_index_name="test-index",
+        pinecone_index_host="",
+    )
+    provider = PineconeProvider(incomplete, max_retries=0)
+
+    try:
+        asyncio.run(provider._ensure_index())
+    except KnowledgeProviderError as exc:
+        assert str(exc) == "The company knowledge service is not configured"
+    else:
+        raise AssertionError("Missing Pinecone configuration was accepted")

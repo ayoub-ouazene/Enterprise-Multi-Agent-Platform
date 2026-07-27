@@ -2,10 +2,10 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, status
 
 from app.auth.context import AuthenticatedUser
-from app.auth.dependencies import require_authenticated_user
+from app.auth.dependencies import require_setup_authenticated_user
 from app.core.config import Settings, get_settings
 from app.core.exceptions import (
     BusinessValidationError,
@@ -27,6 +27,9 @@ from app.onboarding.schemas import (
     OnboardingStatusResponse,
     RowValidationResult,
     TemplateColumn,
+    ManagerAssignmentRequest,
+    ManagerCandidateResponse,
+    ManagerCoverageResponse,
 )
 from app.onboarding.service import OnboardingService
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -66,7 +69,7 @@ def _handle_app_exceptions(exc: Exception) -> None:
 @router.get("/status", response_model=OnboardingStatusResponse)
 async def get_onboarding_status(
     session: Annotated[AsyncSession, Depends(get_db_session)],
-    current_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
+    current_user: Annotated[AuthenticatedUser, Depends(require_setup_authenticated_user)],
 ) -> OnboardingStatusResponse:
     try:
         return await _service(session, current_user).status_service.get_status()
@@ -88,6 +91,50 @@ async def activate_company(
         activated=True,
         message="Company activated successfully",
     )
+
+
+@router.get("/manager-coverage", response_model=list[ManagerCoverageResponse])
+async def get_manager_coverage(
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    current_user: Annotated[AuthenticatedUser, Depends(require_company_account)],
+) -> list[ManagerCoverageResponse]:
+    return await _service(session, current_user).status_service.manager_coverage()
+
+
+@router.get("/manager-candidates", response_model=list[ManagerCandidateResponse])
+async def get_manager_candidates(
+    department_id: UUID,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    current_user: Annotated[AuthenticatedUser, Depends(require_company_account)],
+    q: str | None = None,
+    limit: int = Query(default=25, ge=1, le=50),
+) -> list[ManagerCandidateResponse]:
+    try:
+        return await _service(session, current_user).status_service.manager_candidates(
+            department_id, q, limit
+        )
+    except Exception as exc:
+        _handle_app_exceptions(exc)
+
+
+@router.post(
+    "/departments/{department_id}/manager",
+    response_model=ManagerCandidateResponse,
+)
+async def assign_department_manager(
+    department_id: UUID,
+    payload: ManagerAssignmentRequest,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    current_user: Annotated[AuthenticatedUser, Depends(require_company_account)],
+) -> ManagerCandidateResponse:
+    try:
+        return await _service(
+            session, current_user
+        ).status_service.assign_department_manager(
+            department_id, payload.employee_id
+        )
+    except Exception as exc:
+        _handle_app_exceptions(exc)
 
 
 @router.post("/imports/{import_type}/validate", response_model=ImportValidateResponse)
@@ -128,7 +175,7 @@ async def confirm_import(
 async def list_import_jobs(
     filters: Annotated[ImportJobListFilters, Depends()],
     session: Annotated[AsyncSession, Depends(get_db_session)],
-    current_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
+    current_user: Annotated[AuthenticatedUser, Depends(require_setup_authenticated_user)],
 ) -> list[ImportJobResponse]:
     try:
         jobs = await _service(session, current_user).import_service.job_repo.list_jobs(
@@ -146,7 +193,7 @@ async def list_import_jobs(
 async def get_import_job(
     job_id: UUID,
     session: Annotated[AsyncSession, Depends(get_db_session)],
-    current_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
+    current_user: Annotated[AuthenticatedUser, Depends(require_setup_authenticated_user)],
 ) -> ImportJobResponse:
     try:
         job = await _service(session, current_user).import_service.job_repo.get_by_id(

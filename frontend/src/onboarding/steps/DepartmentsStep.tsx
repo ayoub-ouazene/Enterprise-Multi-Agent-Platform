@@ -104,7 +104,7 @@ export function DepartmentsStep({ status }: DepartmentsStepProps) {
                   variant={dept.is_active ? 'secondary' : 'primary'}
                   size="sm"
                   isLoading={pending === dept.id}
-                  disabled={pending === dept.id}
+                  disabled={pending === dept.id || (dept.is_active && empCount > 0)}
                   onClick={() => toggleDepartment(dept)}
                 >
                   {dept.is_active ? (
@@ -116,6 +116,7 @@ export function DepartmentsStep({ status }: DepartmentsStepProps) {
                     'Enable'
                   )}
                 </Button>
+                {dept.is_active && empCount > 0 && <span className="sr-only">Cannot disable a department with provisioned employees.</span>}
               </div>
             );
           })}

@@ -8,6 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database.session import get_db_session
 
 
+EXPECTED_DATABASE_REVISION = "20260725_0016"
+
+
 async def check_database_health(session: AsyncSession) -> bool:
     try:
         result = await session.execute(text("SELECT 1"))
@@ -20,3 +23,17 @@ async def get_database_health(
     session: Annotated[AsyncSession, Depends(get_db_session)],
 ) -> bool:
     return await check_database_health(session)
+
+
+async def check_database_readiness(session: AsyncSession) -> bool:
+    try:
+        result = await session.execute(text("SELECT version_num FROM alembic_version"))
+        return result.scalar_one() == EXPECTED_DATABASE_REVISION
+    except (SQLAlchemyError, ValueError):
+        return False
+
+
+async def get_database_readiness(
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+) -> bool:
+    return await check_database_readiness(session)

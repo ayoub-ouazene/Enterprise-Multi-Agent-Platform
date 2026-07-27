@@ -200,12 +200,10 @@ class WorkflowEventService:
                 id=event.id,
                 request_id=event.request_id,
                 event_type=event.event_type,
-                stage=event.stage,
                 title=event.title,
                 message=event.message,
                 actor_label=ACTOR_LABELS[event.actor_type],
                 department_id=event.department_id,
-                event_data=event.event_data,
                 sequence_number=event.sequence_number,
                 created_at=event.created_at,
             )
@@ -355,7 +353,7 @@ class WorkflowService:
         raise exc
 
     async def start(self, request_id: UUID) -> WorkflowControlResponse:
-        return await self._start(request_id, allow_requester=False)
+        return await self._start(request_id, allow_requester=True)
 
     async def start_for_submission(
         self,

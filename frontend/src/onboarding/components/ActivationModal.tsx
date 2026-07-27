@@ -1,73 +1,16 @@
-import { useState } from 'react';
-import { Rocket, ShieldAlert, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ShieldCheck } from 'lucide-react';
 import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 
-interface ActivationModalProps {
-  open: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  isActivating: boolean;
-}
-
-export function ActivationModal({ open, onClose, onConfirm, isActivating }: ActivationModalProps) {
-  const [confirmText, setConfirmText] = useState('');
-  const confirmed = confirmText.trim().toLowerCase() === 'activate';
-
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true">
-      <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl dark:bg-neutral-800">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-            <Rocket size={20} className="text-primary-500" />
-            Activate Company
-          </h2>
-          <button
-            onClick={onClose}
-            className="rounded-md p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600 dark:hover:bg-neutral-700 dark:hover:text-neutral-200"
-            aria-label="Close"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="mt-4 space-y-3">
-          <div className="flex items-start gap-3 rounded-lg bg-warning-50 p-3 text-sm text-warning-800 dark:bg-warning-900/30 dark:text-warning-200">
-            <ShieldAlert size={18} className="mt-0.5 shrink-0" />
-            <p>
-              Activating your company enables all departments and makes the platform available to employees.
-              This action cannot be undone.
-            </p>
-          </div>
-
-          <p className="text-sm text-neutral-600 dark:text-neutral-400">
-            Type <strong>activate</strong> to confirm:
-          </p>
-          <input
-            type="text"
-            value={confirmText}
-            onChange={(e) => setConfirmText(e.target.value)}
-            className="w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 dark:border-neutral-600 dark:bg-neutral-700 dark:text-neutral-100"
-            placeholder="activate"
-            autoFocus
-          />
-        </div>
-
-        <div className="mt-6 flex items-center justify-end gap-3">
-          <Button variant="ghost" onClick={onClose} disabled={isActivating}>
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            onClick={onConfirm}
-            disabled={!confirmed || isActivating}
-            isLoading={isActivating}
-          >
-            Activate Company
-          </Button>
-        </div>
-      </div>
+export function ActivationModal({ open, onClose, onConfirm, isActivating }: { open: boolean; onClose: () => void; onConfirm: () => void; isActivating: boolean }) {
+  const [confirmed, setConfirmed] = useState(false);
+  useEffect(() => { if (!open) setConfirmed(false); }, [open]);
+  return <Modal title="Activate Company workspace" isOpen={open} onClose={() => !isActivating && onClose()}>
+    <div className="space-y-4">
+      <div className="flex gap-3 rounded-lg bg-warning-50 p-4 text-sm text-warning-900 dark:bg-warning-950 dark:text-warning-100"><ShieldCheck className="shrink-0" size={19} /><p>Activation makes enabled departments operational and allows provisioned users to sign in according to their account state. Missing optional data may limit some workflows.</p></div>
+      <label className="flex min-h-11 items-start gap-3 rounded-lg border border-neutral-200 p-3 dark:border-neutral-700"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} className="mt-1" /><span><strong className="block text-sm">I reviewed the authoritative readiness checklist</strong><span className="text-sm text-neutral-500">The backend will revalidate every required condition before activation.</span></span></label>
+      <div className="flex justify-end gap-2"><Button variant="secondary" onClick={onClose} disabled={isActivating}>Go back</Button><Button onClick={onConfirm} disabled={!confirmed} isLoading={isActivating}>Activate Company</Button></div>
     </div>
-  );
+  </Modal>;
 }

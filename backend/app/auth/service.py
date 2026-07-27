@@ -30,6 +30,18 @@ class AuthenticationError(ValueError):
     """A deliberately generic authentication failure safe for API responses."""
 
 
+class WorkspaceNotFoundError(AuthenticationError):
+    """Raised when a public workspace slug does not exist."""
+
+
+class InactiveUserError(AuthenticationError):
+    """Raised only after the supplied password has been verified."""
+
+
+class CompanyInactiveError(AuthenticationError):
+    """Raised when a non-Company actor tries to enter an inactive tenant."""
+
+
 @dataclass(frozen=True, slots=True)
 class TokenPair:
     access_token: str
@@ -60,7 +72,7 @@ class AuthenticationService:
         )
 
     @staticmethod
-    def _context_from_user(user: User) -> AuthenticatedUser:
+    def _context_from_user(user: User, *, company_active: bool = True) -> AuthenticatedUser:
         employee = user.employee
         if employee is not None and employee.company_id != user.company_id:
             raise AuthenticationError(GENERIC_AUTHENTICATION_ERROR)
@@ -79,6 +91,11 @@ class AuthenticationService:
             employee_id=employee_id,
             department_id=department_id,
             is_manager=is_manager,
+            company_active=company_active,
+            onboarding_complete=company_active,
+            must_change_password=bool(
+                getattr(user, "must_change_password", False)
+            ),
         )
 
     @staticmethod
@@ -92,7 +109,7 @@ class AuthenticationService:
             )
             if company is None:
                 verify_password(password, None)
-                raise self._reject()
+                raise WorkspaceNotFoundError("Company workspace was not found")
 
             user_repository = self.user_repository_factory(company.id)
             user = await user_repository.get_by_email_with_employee(
@@ -102,16 +119,17 @@ class AuthenticationService:
                 password,
                 user.password_hash if user is not None else None,
             )
-            if (
-                user is None
-                or not password_is_valid
-                or user.company_id != company.id
-                or not company.is_active
-                or not user.is_active
-            ):
+            if user is None or not password_is_valid or user.company_id != company.id:
                 raise self._reject()
+            if not user.is_active:
+                raise InactiveUserError("User account is inactive")
+            if not company.is_active and user.actor_type != ActorType.COMPANY:
+                raise CompanyInactiveError("Company workspace is not active")
 
-            context = self._context_from_user(user)
+            context = self._context_from_user(
+                user,
+                company_active=company.is_active,
+            )
             token_pair = await self._issue_token_pair(context)
             await self.session.commit()
             return token_pair
@@ -147,16 +165,17 @@ class AuthenticationService:
             user = await self.user_repository_factory(
                 claims.company_id
             ).get_by_id_with_employee(claims.sub)
-            if (
-                company is None
-                or user is None
-                or user.company_id != claims.company_id
-                or not company.is_active
-                or not user.is_active
-            ):
+            if company is None or user is None or user.company_id != claims.company_id:
                 raise self._reject()
+            if not user.is_active:
+                raise InactiveUserError("User account is inactive")
+            if not company.is_active and user.actor_type != ActorType.COMPANY:
+                raise CompanyInactiveError("Company workspace is not active")
 
-            context = self._context_from_user(user)
+            context = self._context_from_user(
+                user,
+                company_active=company.is_active,
+            )
             access = create_access_token(context, self.settings, now=now)
             replacement = create_refresh_token(context, self.settings, now=now)
             replacement_record = await self.refresh_repository.create(
@@ -202,7 +221,13 @@ class AuthenticationService:
 
             validate_new_password(new_password)
             new_hash = hash_password(new_password)
-            updated = await user_repository.update(user_id, {"password_hash": new_hash})
+            updated = await user_repository.update(
+                user_id,
+                {
+                    "password_hash": new_hash,
+                    "must_change_password": False,
+                },
+            )
             if updated is None:
                 raise self._reject()
 
@@ -214,7 +239,12 @@ class AuthenticationService:
             await self.session.rollback()
             raise
 
-    async def authenticate_access_token(self, token: str) -> AuthenticatedUser:
+    async def authenticate_access_token(
+        self,
+        token: str,
+        *,
+        allow_inactive_company: bool = False,
+    ) -> AuthenticatedUser:
         try:
             claims = decode_access_token(token, self.settings)
         except TokenValidationError:
@@ -224,15 +254,19 @@ class AuthenticationService:
         user = await self.user_repository_factory(
             claims.company_id
         ).get_by_id_with_employee(claims.sub)
-        if (
-            company is None
-            or user is None
-            or user.company_id != claims.company_id
-            or not company.is_active
-            or not user.is_active
-        ):
+        if company is None or user is None or user.company_id != claims.company_id:
             raise self._reject()
-        return self._context_from_user(user)
+        if not user.is_active:
+            raise InactiveUserError("User account is inactive")
+        if not company.is_active and (
+            user.actor_type != ActorType.COMPANY or not allow_inactive_company
+        ):
+            raise CompanyInactiveError("Company workspace is not active")
+        return self._context_from_user(user, company_active=company.is_active)
+
+    async def issue_token_pair(self, context: AuthenticatedUser) -> TokenPair:
+        """Issue tokens inside a caller-controlled transaction."""
+        return await self._issue_token_pair(context)
 
     async def _issue_token_pair(self, context: AuthenticatedUser) -> TokenPair:
         now = datetime.now(UTC)

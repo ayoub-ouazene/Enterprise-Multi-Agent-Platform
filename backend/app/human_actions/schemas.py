@@ -39,6 +39,55 @@ class HumanActionCreate(BaseModel):
         return stripped
 
 
+class RelatedRequestSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: UUID
+    title: str
+    status: str
+    owner_department: str | None = None
+
+
+class SafeActionHistoryItem(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    event: Literal["created", "resolved", "cancelled"]
+    title: str
+    description: str
+    occurred_at: datetime
+
+
+class HumanActionSummaryResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    request_id: UUID
+    action_type: str
+    title: str
+    status: str
+    assigned_role: str | None
+    due_date: datetime | None
+    resolved_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+    # Computed fields for frontend UX
+    allowed_decisions: list[str] = Field(default_factory=list)
+    can_respond: bool = False
+    request_title: str | None = None
+    request_status: str | None = None
+    requesting_department: str | None = None
+
+
+class HumanActionDetailResponse(HumanActionSummaryResponse):
+    description: str
+    safe_context: dict[str, Any] = Field(default_factory=dict)
+    resolution_decision: str | None = None
+    resolution_comment: str | None = None
+    related_request: RelatedRequestSummary
+    history: list[SafeActionHistoryItem] = Field(default_factory=list, max_length=10)
+
+
+# Internal create compatibility. Public list/detail routes use the safe schemas above.
 class HumanActionResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -56,7 +105,6 @@ class HumanActionResponse(BaseModel):
     resolved_at: datetime | None
     created_at: datetime
     updated_at: datetime
-    # Computed fields for frontend UX
     allowed_decisions: list[str] = Field(default_factory=list)
     can_respond: bool = False
     request_title: str | None = None
@@ -66,6 +114,12 @@ class HumanActionResponse(BaseModel):
 class HumanActionListFilters(BaseModel):
     status: HumanActionStatus | None = None
     request_id: UUID | None = None
+    action_type: str | None = Field(default=None, min_length=1, max_length=100)
+    department_id: UUID | None = None
+    assigned_role: str | None = Field(default=None, min_length=1, max_length=50)
+    due_before: datetime | None = None
+    due_after: datetime | None = None
+    overdue_only: bool = False
     limit: int = Field(default=50, ge=1, le=100)
     offset: int = Field(default=0, ge=0)
 
@@ -83,6 +137,7 @@ class HumanActionSubmitPayload(BaseModel):
 
     decision: str = Field(min_length=1, max_length=100)
     response: str = Field(min_length=1, max_length=10_000)
+    expected_updated_at: datetime | None = None
 
     @field_validator("decision", "response")
     @classmethod

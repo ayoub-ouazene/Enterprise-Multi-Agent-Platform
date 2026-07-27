@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 
 import app.main as main_module
 from app.auth.context import AuthenticatedUser
-from app.auth.dependencies import require_authenticated_user
+from app.auth.dependencies import require_setup_authenticated_user
 from app.core.config import Settings
 from app.core.enums import ActorType
 from app.database.session import get_db_session
@@ -71,7 +71,7 @@ def build_app(monkeypatch, user) -> TestClient:
         yield AsyncMock()
 
     app.dependency_overrides[get_db_session] = session_override
-    app.dependency_overrides[require_authenticated_user] = lambda: user
+    app.dependency_overrides[require_setup_authenticated_user] = lambda: user
     return app
 
 
@@ -157,6 +157,8 @@ def test_validate_import_returns_row_results(monkeypatch) -> None:
     fake_import = Mock()
     fake_import.validate_import = AsyncMock(
         return_value=ImportValidateResponse(
+            original_filename="departments.csv",
+            atomic=True,
             import_job_id=uuid4(),
             import_type=ImportType.DEPARTMENTS,
             total_rows=1,

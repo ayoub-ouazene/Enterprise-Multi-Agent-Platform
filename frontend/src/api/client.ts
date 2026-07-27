@@ -1,8 +1,10 @@
-import { getTokens, setTokens, clearAuth, type TokenPair } from '../auth/store';
+import { getTokens, setTokens, clearAuth, useAuthStore, type TokenPair } from '../auth/store';
 import { ApiErrorException, normalizeError } from './errors';
 import type { ApiError } from './errors';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1';
+export const API_BASE = (
+  import.meta.env.VITE_API_BASE_URL ?? `http://${window.location.hostname || 'localhost'}:8000/api/v1`
+).replace(/\/+$/, '');
 const REQUEST_TIMEOUT = 30_000;
 
 let isRefreshing = false;
@@ -43,6 +45,7 @@ async function doRefresh(): Promise<TokenPair | null> {
 
     const data = (await response.json()) as TokenPair;
     setTokens(data);
+    useAuthStore.getState().setTokens(data);
     return data;
   } catch {
     return null;
@@ -91,7 +94,7 @@ async function request<T>(
       body: body !== undefined ? JSON.stringify(body) : undefined,
       signal: options.signal,
     });
-  } catch (err) {
+  } catch {
     const error = normalizeError(null, null);
     throw new ApiErrorException(error);
   }
@@ -108,13 +111,12 @@ async function request<T>(
           body: body !== undefined ? JSON.stringify(body) : undefined,
           signal: options.signal,
         });
-      } catch (err) {
+      } catch {
         const error = normalizeError(null, null);
         throw new ApiErrorException(error);
       }
     } else {
       clearAuth();
-      window.location.href = '/login';
       const error = normalizeError(response, null);
       throw new ApiErrorException(error);
     }
@@ -190,7 +192,6 @@ async function uploadRequest<T>(
       }
     } else {
       clearAuth();
-      window.location.href = '/login';
       const error = normalizeError(response, null);
       throw new ApiErrorException(error);
     }
@@ -216,23 +217,23 @@ async function uploadRequest<T>(
 }
 
 export const api = {
-  get<T>(path: string, options?: { signal?: AbortSignal }): Promise<T> {
+  get<T>(path: string, options?: { signal?: AbortSignal; skipAuth?: boolean }): Promise<T> {
     return request<T>('GET', path, undefined, options);
   },
 
-  post<T>(path: string, body?: unknown, options?: { signal?: AbortSignal }): Promise<T> {
+  post<T>(path: string, body?: unknown, options?: { signal?: AbortSignal; skipAuth?: boolean }): Promise<T> {
     return request<T>('POST', path, body, options);
   },
 
-  patch<T>(path: string, body?: unknown, options?: { signal?: AbortSignal }): Promise<T> {
+  patch<T>(path: string, body?: unknown, options?: { signal?: AbortSignal; skipAuth?: boolean }): Promise<T> {
     return request<T>('PATCH', path, body, options);
   },
 
-  del<T>(path: string, options?: { signal?: AbortSignal }): Promise<T> {
+  del<T>(path: string, options?: { signal?: AbortSignal; skipAuth?: boolean }): Promise<T> {
     return request<T>('DELETE', path, undefined, options);
   },
 
-  upload<T>(path: string, formData: FormData, options?: { signal?: AbortSignal }): Promise<T> {
+  upload<T>(path: string, formData: FormData, options?: { signal?: AbortSignal; skipAuth?: boolean }): Promise<T> {
     return uploadRequest<T>(path, formData, options);
   },
 };

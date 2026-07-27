@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
 
 from app.auth.context import AuthenticatedUser
@@ -25,7 +25,14 @@ async def stream_request_events(
     request: Request,
     request_id: UUID,
     current_user: Annotated[AuthenticatedUser, Depends(get_current_user_for_sse)],
-    last_event_id: Annotated[str | None, Query()] = None,
+    last_event_id_query: Annotated[
+        str | None,
+        Query(alias="last_event_id"),
+    ] = None,
+    last_event_id_header: Annotated[
+        str | None,
+        Header(alias="Last-Event-ID"),
+    ] = None,
 ) -> StreamingResponse:
     """Stream workflow events for a business request via Server-Sent Events.
 
@@ -52,7 +59,7 @@ async def stream_request_events(
             current_user,
             request_id,
             heartbeat_seconds=settings.sse_heartbeat_seconds,
-            last_event_id=last_event_id,
+            last_event_id=last_event_id_header or last_event_id_query,
         ):
             yield line
 
@@ -66,7 +73,14 @@ async def stream_request_events(
 async def stream_notifications(
     request: Request,
     current_user: Annotated[AuthenticatedUser, Depends(get_current_user_for_sse)],
-    last_event_id: Annotated[str | None, Query()] = None,
+    last_event_id_query: Annotated[
+        str | None,
+        Query(alias="last_event_id"),
+    ] = None,
+    last_event_id_header: Annotated[
+        str | None,
+        Header(alias="Last-Event-ID"),
+    ] = None,
 ) -> StreamingResponse:
     """Stream new notifications for the authenticated user via Server-Sent Events.
 
@@ -82,7 +96,7 @@ async def stream_notifications(
             session_factory,
             current_user,
             heartbeat_seconds=settings.sse_heartbeat_seconds,
-            last_event_id=last_event_id,
+            last_event_id=last_event_id_header or last_event_id_query,
         ):
             yield line
 

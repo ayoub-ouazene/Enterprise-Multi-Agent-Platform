@@ -28,7 +28,7 @@ export function ValidationSummary({ result, onConfirm, onCancel, confirming }: V
               {import_type} — Validation Results
             </h3>
             <p className="text-xs text-neutral-500 dark:text-neutral-400">
-              {valid_rows} valid / {total_rows} total rows
+              {result.original_filename} · {valid_rows} valid / {total_rows} total rows
             </p>
           </div>
         </div>
@@ -95,7 +95,8 @@ export function ValidationSummary({ result, onConfirm, onCancel, confirming }: V
         <SafePreviewTable rows={result.rows.filter((r) => r.status === 'valid')} />
       )}
 
-      <div className="flex items-center justify-end gap-3 pt-2">
+      <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
+        <p className="mr-auto text-xs text-neutral-500">{result.atomic ? 'Atomic import: no rows are applied if confirmation fails.' : 'Only backend-approved valid rows are applied.'}</p>
         <Button variant="ghost" onClick={onCancel} disabled={confirming}>
           Cancel
         </Button>
@@ -110,9 +111,8 @@ export function ValidationSummary({ result, onConfirm, onCancel, confirming }: V
 function SafePreviewTable({ rows }: { rows: ImportValidateResponse['rows'] }) {
   if (rows.length === 0) return null;
 
-  const columns = Object.keys(rows[0]?.preview ?? {}).filter(
-    (c) => !isSensitiveField(c)
-  );
+  const allowed = new Set(['email', 'employee_code', 'department', 'job_title', 'employment_status', 'manager_email', 'password_provided', 'password_valid', 'department_type', 'name', 'is_active']);
+  const columns = Object.keys(rows[0]?.preview ?? {}).filter((column) => allowed.has(column));
 
   return (
     <div>
@@ -136,7 +136,7 @@ function SafePreviewTable({ rows }: { rows: ImportValidateResponse['rows'] }) {
               <tr key={row.row_number}>
                 {columns.map((c) => (
                   <td key={c} className="px-2 py-1.5 text-neutral-700 dark:text-neutral-300">
-                    {String((row.preview?.[c] ?? '') as string).slice(0, 40)}
+                    {typeof row.preview?.[c] === 'boolean' ? (row.preview[c] ? 'Yes' : 'No') : String((row.preview?.[c] ?? '') as string).slice(0, 40)}
                   </td>
                 ))}
               </tr>
@@ -145,15 +145,5 @@ function SafePreviewTable({ rows }: { rows: ImportValidateResponse['rows'] }) {
         </table>
       </div>
     </div>
-  );
-}
-
-function isSensitiveField(name: string): boolean {
-  const lower = name.toLowerCase();
-  return (
-    lower.includes('password') ||
-    lower.includes('secret') ||
-    lower.includes('token') ||
-    lower.includes('hash')
   );
 }

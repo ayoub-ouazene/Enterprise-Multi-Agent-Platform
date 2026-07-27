@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 import app.main as main_module
 import app.rag.router as router_module
 from app.auth.context import AuthenticatedUser
-from app.auth.dependencies import require_authenticated_user
+from app.auth.dependencies import require_setup_authenticated_user
 from app.core.config import Settings
 from app.core.enums import ActorType
 from app.database.session import get_db_session
@@ -20,6 +20,8 @@ from app.rag.enums import (
     KnowledgeDocumentType,
     KnowledgeIngestionStatus,
 )
+
+from .route_utils import flatten_routes
 
 
 def settings():
@@ -53,7 +55,7 @@ def application(monkeypatch, current):
         yield AsyncMock()
 
     app.dependency_overrides[get_db_session] = session_override
-    app.dependency_overrides[require_authenticated_user] = lambda: current
+    app.dependency_overrides[require_setup_authenticated_user] = lambda: current
     app.dependency_overrides[get_pinecone_provider] = lambda: SimpleNamespace(
         close=AsyncMock()
     )
@@ -116,7 +118,7 @@ def test_employee_document_management_is_rejected(monkeypatch) -> None:
 
 def test_all_step_12_routes_are_registered(monkeypatch) -> None:
     app = application(monkeypatch, user(ActorType.COMPANY))
-    routes = {(method, route.path) for route in app.routes for method in getattr(route, "methods", set())}
+    routes = {(method, route.path) for route in flatten_routes(app) for method in getattr(route, "methods", set())}
     expected = {
         ("POST", "/api/v1/documents"),
         ("GET", "/api/v1/documents"),

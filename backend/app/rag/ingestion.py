@@ -106,7 +106,9 @@ class KnowledgeIngestionService:
         }:
             raise KnowledgePermissionError("Knowledge management access is required")
         company = await self.company_repository.get_by_id(self.current_user.company_id)
-        if company is None or not company.is_active:
+        if company is None:
+            raise KnowledgePermissionError("Company not found")
+        if not company.is_active and self.current_user.actor_type != ActorType.COMPANY:
             raise KnowledgePermissionError("An active company is required")
 
     def _upload_directory(self) -> Path:

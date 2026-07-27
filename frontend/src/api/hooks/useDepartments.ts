@@ -6,6 +6,7 @@ import type {
   DepartmentActivityResponse,
   BusinessRequestSummary,
   HumanActionSummary,
+  DepartmentOperationalRecord,
 } from '../types';
 
 export function useDepartments() {
@@ -71,5 +72,22 @@ export function useDepartmentActivity(deptType: string, limit = 20) {
     queryFn: () =>
       api.get<DepartmentActivityResponse[]>(`/departments/${deptType}/activity?limit=${limit}`),
     enabled: !!deptType,
+  });
+}
+
+export function useDepartmentOperationalRecords(
+  deptType: string,
+  filters: { kind?: string; limit?: number } = {},
+) {
+  const params = new URLSearchParams();
+  if (filters.kind) params.set('kind', filters.kind);
+  params.set('limit', String(filters.limit ?? 30));
+  return useQuery({
+    queryKey: ['department-operational-records', deptType, filters],
+    queryFn: () =>
+      api.get<DepartmentOperationalRecord[]>(
+        `/departments/${deptType}/operational-records?${params.toString()}`,
+      ),
+    enabled: Boolean(deptType),
   });
 }

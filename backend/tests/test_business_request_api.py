@@ -13,6 +13,10 @@ from app.core.config import Settings
 from app.core.enums import ActorType
 from app.database.session import get_db_session
 from app.requests.enums import RequestPriority, RequestStatus
+from app.requests.schemas import (
+    BusinessRequestDetailResponse,
+    BusinessRequestSummaryResponse,
+)
 
 
 def build_settings() -> Settings:
@@ -79,6 +83,53 @@ def request_record(user: AuthenticatedUser):
     )
 
 
+def safe_detail(record) -> BusinessRequestDetailResponse:
+    return BusinessRequestDetailResponse(
+        id=record.id,
+        request_type=record.request_type,
+        title=record.title,
+        summary=record.summary,
+        status=record.status,
+        current_stage=record.current_stage,
+        priority=record.priority,
+        owner_department_id=record.owner_department_id,
+        active_department_id=record.active_department_id,
+        requester_user_id=record.requester_user_id,
+        requester_employee_id=record.requester_employee_id,
+        final_decision=record.final_decision,
+        final_reason=record.final_reason,
+        completed_at=record.completed_at,
+        cancelled_at=record.cancelled_at,
+        failed_at=record.failed_at,
+        current_state_summary="The request was received and is ready for routing.",
+        clarification={
+            "question": "Which application?",
+            "number": 1,
+            "maximum": 3,
+        },
+        created_at=record.created_at,
+        updated_at=record.updated_at,
+    )
+
+
+def safe_summary(record) -> BusinessRequestSummaryResponse:
+    return BusinessRequestSummaryResponse(
+        id=record.id,
+        request_type=record.request_type,
+        title=record.title,
+        summary=record.summary,
+        status=record.status,
+        current_stage=record.current_stage,
+        current_state_summary="The request was received and is ready for routing.",
+        priority=record.priority,
+        owner_department_id=record.owner_department_id,
+        active_department_id=record.active_department_id,
+        requester_user_id=None,
+        created_at=record.created_at,
+        updated_at=record.updated_at,
+    )
+
+
 def build_application(monkeypatch, user: AuthenticatedUser):
     engine = Mock()
     engine.dispose = AsyncMock()
@@ -101,6 +152,7 @@ def test_create_endpoint_persists_only_client_allowed_input(monkeypatch) -> None
     record = request_record(user)
     fake_service = Mock()
     fake_service.create = AsyncMock(return_value=record)
+    fake_service.get_detail = AsyncMock(return_value=safe_detail(record))
     monkeypatch.setattr(
         request_router_module,
         "_service",
@@ -151,7 +203,7 @@ def test_request_detail_never_exposes_raw_workflow_state_or_custom_data(
     user = current_user()
     record = request_record(user)
     fake_service = Mock()
-    fake_service.get = AsyncMock(return_value=record)
+    fake_service.get_detail = AsyncMock(return_value=safe_detail(record))
     monkeypatch.setattr(
         request_router_module,
         "_service",
@@ -164,9 +216,8 @@ def test_request_detail_never_exposes_raw_workflow_state_or_custom_data(
 
     assert response.status_code == 200
     body = response.json()
-    assert "workflow_state" in body
-    assert body["workflow_state"]["routing"]["needs_clarification"] is True
-    assert body["workflow_state"]["routing"]["latest_question"] == "Which application?"
+    assert "workflow_state" not in body
+    assert body["clarification"]["question"] == "Which application?"
     assert "custom_data" not in body
     assert "private" not in response.text
 
@@ -175,7 +226,7 @@ def test_list_endpoint_returns_only_safe_summaries(monkeypatch) -> None:
     user = current_user()
     record = request_record(user)
     fake_service = Mock()
-    fake_service.list = AsyncMock(return_value=[record])
+    fake_service.list_summaries = AsyncMock(return_value=[safe_summary(record)])
     monkeypatch.setattr(
         request_router_module,
         "_service",
@@ -201,6 +252,7 @@ def test_cancel_endpoint_returns_cancelled_request(monkeypatch) -> None:
     record.final_reason = "Cancelled by requester"
     fake_service = Mock()
     fake_service.cancel = AsyncMock(return_value=record)
+    fake_service.get_detail = AsyncMock(return_value=safe_detail(record))
     monkeypatch.setattr(
         request_router_module,
         "_service",

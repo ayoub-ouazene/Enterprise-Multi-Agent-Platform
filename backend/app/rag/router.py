@@ -8,7 +8,10 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.context import AuthenticatedUser
-from app.auth.dependencies import get_request_settings, require_actor_type
+from app.auth.dependencies import (
+    get_request_settings,
+    require_setup_authenticated_user,
+)
 from app.core.config import Settings
 from app.core.enums import ActorType
 from app.database.session import get_db_session
@@ -34,9 +37,21 @@ from app.rag.schemas import (
 
 
 router = APIRouter(prefix="/api/v1/documents", tags=["knowledge-documents"])
-require_knowledge_manager = require_actor_type(
-    ActorType.COMPANY, ActorType.DEPARTMENT_MANAGER
-)
+async def require_knowledge_manager(
+    current_user: Annotated[
+        AuthenticatedUser,
+        Depends(require_setup_authenticated_user),
+    ],
+) -> AuthenticatedUser:
+    if current_user.actor_type not in {
+        ActorType.COMPANY,
+        ActorType.DEPARTMENT_MANAGER,
+    }:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Knowledge management access required",
+        )
+    return current_user
 
 
 def _metadata(

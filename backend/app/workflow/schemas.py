@@ -56,12 +56,10 @@ class WorkflowEventPublicResponse(BaseModel):
     id: UUID
     request_id: UUID
     event_type: WorkflowEventType
-    stage: str | None
     title: str
     message: str
     actor_label: str
     department_id: UUID | None
-    event_data: dict[str, Any]
     sequence_number: int
     created_at: datetime
 

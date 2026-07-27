@@ -62,12 +62,10 @@ def public_event(request_id):
         id=uuid4(),
         request_id=request_id,
         event_type=WorkflowEventType.REQUEST_CREATED,
-        stage="request_received",
         title="Request created",
         message="The request has been created.",
         actor_label="Requester",
         department_id=None,
-        event_data={},
         sequence_number=1,
         created_at=datetime.now(UTC),
     )
@@ -94,6 +92,8 @@ def test_timeline_endpoint_returns_only_public_fields(monkeypatch) -> None:
     assert "company_id" not in response.text
     assert "actor_user_id" not in response.text
     assert "visibility" not in response.text
+    assert "stage" not in response.json()[0]
+    assert "event_data" not in response.json()[0]
     service.timeline.assert_awaited_once_with(
         request_id,
         event_type=None,

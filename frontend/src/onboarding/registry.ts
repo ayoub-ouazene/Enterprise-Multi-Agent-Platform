@@ -1,107 +1,36 @@
-/**
- * Onboarding step registry.
- * Maps backend requirement names to UI wizard steps.
- */
+import { ActorType, type OnboardingStatusDetailed } from '../api/types';
 
-export type StepId =
-  | 'overview'
-  | 'profile'
-  | 'departments'
-  | 'employees'
-  | 'managers'
-  | 'policies'
-  | 'optional-data'
-  | 'review';
+export type StepId = 'welcome' | 'company' | 'departments' | 'employees' | 'managers' | 'policies' | 'optional-data' | 'review';
 
-export interface StepDef {
+export interface OnboardingStep {
   id: StepId;
+  route: string;
   label: string;
   description: string;
-  requirementKey: string | null; // maps to backend OnboardingStatusItem.requirement; null for non-required
-  order: number;
-  optional?: boolean;
+  required: boolean;
+  readinessKey: string | null;
+  dependencies: StepId[];
+  permittedRoles: ActorType[];
 }
 
-export const ONBOARDING_STEPS: readonly StepDef[] = [
-  {
-    id: 'overview',
-    label: 'Overview',
-    description: 'Summary of setup status',
-    requirementKey: null,
-    order: 0,
-  },
-  {
-    id: 'profile',
-    label: 'Company Profile',
-    description: 'Name and slug',
-    requirementKey: 'company_profile',
-    order: 1,
-  },
-  {
-    id: 'departments',
-    label: 'Departments',
-    description: 'Activate department modules',
-    requirementKey: 'enabled_departments',
-    order: 2,
-  },
-  {
-    id: 'employees',
-    label: 'Employees',
-    description: 'Import your team',
-    requirementKey: 'employees',
-    order: 3,
-  },
-  {
-    id: 'managers',
-    label: 'Managers',
-    description: 'Assign department leads',
-    requirementKey: 'managers',
-    order: 4,
-  },
-  {
-    id: 'policies',
-    label: 'Policies',
-    description: 'Upload department policies',
-    requirementKey: 'policies',
-    order: 5,
-  },
-  {
-    id: 'optional-data',
-    label: 'Optional Data',
-    description: 'Assets, budgets, suppliers, etc.',
-    requirementKey: null,
-    order: 6,
-    optional: true,
-  },
-  {
-    id: 'review',
-    label: 'Review & Activate',
-    description: 'Final checklist and activation',
-    requirementKey: null,
-    order: 7,
-  },
+export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
+  { id: 'welcome', route: '/app/onboarding/welcome', label: 'Welcome', description: 'Understand the setup journey', required: false, readinessKey: null, dependencies: [], permittedRoles: [ActorType.COMPANY] },
+  { id: 'company', route: '/app/onboarding/company', label: 'Company profile', description: 'Confirm workspace identity', required: true, readinessKey: 'company_profile', dependencies: [], permittedRoles: [ActorType.COMPANY] },
+  { id: 'departments', route: '/app/onboarding/departments', label: 'Departments', description: 'Enable fixed department modules', required: true, readinessKey: 'enabled_departments', dependencies: ['company'], permittedRoles: [ActorType.COMPANY] },
+  { id: 'employees', route: '/app/onboarding/employees', label: 'Employees', description: 'Securely provision employees', required: true, readinessKey: 'employees', dependencies: ['departments'], permittedRoles: [ActorType.COMPANY] },
+  { id: 'managers', route: '/app/onboarding/managers', label: 'Managers', description: 'Assign department leadership', required: true, readinessKey: 'managers', dependencies: ['employees'], permittedRoles: [ActorType.COMPANY] },
+  { id: 'policies', route: '/app/onboarding/policies', label: 'Policies', description: 'Cover enabled departments', required: true, readinessKey: 'policies', dependencies: ['departments'], permittedRoles: [ActorType.COMPANY] },
+  { id: 'optional-data', route: '/app/onboarding/optional-data', label: 'Optional data', description: 'Review operational modules', required: false, readinessKey: null, dependencies: [], permittedRoles: [ActorType.COMPANY] },
+  { id: 'review', route: '/app/onboarding/review', label: 'Review & activate', description: 'Resolve blockers and activate', required: false, readinessKey: null, dependencies: ['company', 'departments', 'employees', 'managers', 'policies'], permittedRoles: [ActorType.COMPANY] },
 ];
 
-export function getStepById(id: StepId): StepDef | undefined {
-  return ONBOARDING_STEPS.find((s) => s.id === id);
+export function isValidStepId(value: string | undefined): value is StepId {
+  return ONBOARDING_STEPS.some((step) => step.id === value);
 }
-
-export function getStepByRequirement(key: string): StepDef | undefined {
-  return ONBOARDING_STEPS.find((s) => s.requirementKey === key);
-}
-
-export function getNextStepId(current: StepId): StepId | null {
-  const currentOrder = getStepById(current)?.order ?? -1;
-  const next = ONBOARDING_STEPS.find((s) => s.order > currentOrder);
-  return next?.id ?? null;
-}
-
-export function getPreviousStepId(current: StepId): StepId | null {
-  const currentOrder = getStepById(current)?.order ?? -1;
-  const prev = [...ONBOARDING_STEPS].reverse().find((s) => s.order < currentOrder);
-  return prev?.id ?? null;
-}
-
-export function isValidStepId(value: string): value is StepId {
-  return ONBOARDING_STEPS.some((s) => s.id === value);
-}
+export function getStepById(id: StepId) { return ONBOARDING_STEPS.find((step) => step.id === id); }
+export function getStepByRequirement(key: string) { return ONBOARDING_STEPS.find((step) => step.readinessKey === key); }
+export function getNextStepId(id: StepId): StepId | null { const index = ONBOARDING_STEPS.findIndex((step) => step.id === id); return ONBOARDING_STEPS[index + 1]?.id ?? null; }
+export function getPreviousStepId(id: StepId): StepId | null { const index = ONBOARDING_STEPS.findIndex((step) => step.id === id); return ONBOARDING_STEPS[index - 1]?.id ?? null; }
+export function stepComplete(step: OnboardingStep, status: OnboardingStatusDetailed) { return step.readinessKey ? status.items.find((item) => item.requirement === step.readinessKey)?.satisfied === true : false; }
+export function stepBlocked(step: OnboardingStep, status: OnboardingStatusDetailed) { return step.dependencies.some((id) => { const dependency = getStepById(id); return dependency ? !stepComplete(dependency, status) : false; }); }
+export function firstIncompleteRoute(status: OnboardingStatusDetailed) { return ONBOARDING_STEPS.find((step) => step.required && !stepComplete(step, status))?.route ?? '/app/onboarding/review'; }

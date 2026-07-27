@@ -47,6 +47,8 @@ async def get_db_session(request: Request) -> AsyncIterator[AsyncSession]:
     async with session_factory() as session:
         try:
             yield session
+            if session.in_transaction():
+                await session.commit()
         except Exception:
             await session.rollback()
             raise

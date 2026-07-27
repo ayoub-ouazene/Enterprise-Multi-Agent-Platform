@@ -32,7 +32,7 @@ export function normalizeError(response: Response | null, body: unknown): ApiErr
     return {
       status,
       code: 'UNAUTHORIZED',
-      message: 'Your session has expired. Please sign in again.',
+      message: detailMessage(body) ?? 'Your session has expired. Please sign in again.',
       retryable: false,
       correlationId,
     };
@@ -42,7 +42,7 @@ export function normalizeError(response: Response | null, body: unknown): ApiErr
     return {
       status,
       code: 'FORBIDDEN',
-      message: 'You do not have permission to access this resource.',
+      message: detailMessage(body) ?? 'You do not have permission to access this resource.',
       retryable: false,
       correlationId,
     };
@@ -52,7 +52,7 @@ export function normalizeError(response: Response | null, body: unknown): ApiErr
     return {
       status,
       code: 'NOT_FOUND',
-      message: 'The requested resource was not found.',
+      message: detailMessage(body) ?? 'The requested resource was not found.',
       retryable: false,
       correlationId,
     };
@@ -62,7 +62,7 @@ export function normalizeError(response: Response | null, body: unknown): ApiErr
     return {
       status,
       code: 'CONFLICT',
-      message: 'This action conflicts with the current state. Please refresh and try again.',
+      message: detailMessage(body) ?? 'This action conflicts with the current state. Please refresh and try again.',
       retryable: true,
       correlationId,
     };
@@ -143,4 +143,10 @@ function extractFieldErrors(body: unknown): Record<string, string[]> | undefined
     return Object.keys(errors).length > 0 ? errors : undefined;
   }
   return undefined;
+}
+
+function detailMessage(body: unknown): string | undefined {
+  if (typeof body !== 'object' || body === null) return undefined;
+  const detail = (body as Record<string, unknown>).detail;
+  return typeof detail === 'string' && detail.length <= 240 ? detail : undefined;
 }

@@ -7,6 +7,7 @@ import app.main as main_module
 from app.auth.context import AuthenticatedUser
 from app.auth.dependencies import require_authenticated_user
 from app.core.config import Settings
+from .route_utils import flatten_routes
 from app.core.enums import ActorType
 from app.database.session import get_db_session
 
@@ -55,7 +56,7 @@ def test_ordinary_employee_cannot_create_supplier_candidate(monkeypatch) -> None
 
 def test_procurement_routes_do_not_expose_purchase_or_payment_endpoints(monkeypatch) -> None:
     app = application(monkeypatch, ActorType.COMPANY)
-    paths = {route.path for route in app.routes}
+    paths = {route.path for route in flatten_routes(app)}
     assert "/api/v1/procurement-requests/{request_id}" in paths
     assert "/api/v1/procurement-requests/{request_id}/candidates" in paths
     assert "/api/v1/supplier-candidates/{candidate_id}" in paths

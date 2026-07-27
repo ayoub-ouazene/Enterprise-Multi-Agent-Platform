@@ -2,10 +2,11 @@ import { type HTMLAttributes } from 'react';
 import { clsx } from 'clsx';
 import { type StatusCategory, statusCategoryStyles } from '../../lib/status';
 
-export type BadgeVariant = 'default' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
+export type BadgeVariant = 'default' | 'neutral' | 'primary' | 'success' | 'warning' | 'danger' | 'info';
 
 const legacyMap: Record<BadgeVariant, string> = {
   default: 'bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200',
+  neutral: 'bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200',
   primary: 'bg-primary-100 text-primary-800 dark:bg-primary-900 dark:text-primary-200',
   success: 'bg-success-100 text-success-800 dark:bg-success-900 dark:text-success-200',
   warning: 'bg-warning-100 text-warning-800 dark:bg-warning-900 dark:text-warning-200',

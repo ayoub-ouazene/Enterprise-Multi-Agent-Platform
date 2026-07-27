@@ -1,9 +1,12 @@
 export { AdminOverviewPage } from './AdminOverviewPage';
 export { CompanyProfilePage } from './CompanyProfilePage';
 export { EmployeeDirectoryPage } from './EmployeeDirectoryPage';
+export { EmployeeDetailPage } from './EmployeeDetailPage';
 export { ManagersPage } from './ManagersPage';
 export { DepartmentsPage } from './DepartmentsPage';
+export { DepartmentDetailPage } from './DepartmentDetailPage';
 export { AssetsPage } from './AssetsPage';
+export { AssetDetailPage } from './AssetDetailPage';
 export { SoftwareCatalogPage } from './SoftwareCatalogPage';
 export { BudgetsPage } from './BudgetsPage';
 export { SuppliersPage } from './SuppliersPage';

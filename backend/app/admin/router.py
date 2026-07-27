@@ -3,12 +3,14 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.admin.dependencies import (
     require_company_account,
     require_company_or_any_manager,
+    require_onboarding_company,
+    require_onboarding_company_or_any_manager,
     require_finance_admin,
     require_hr_admin,
     require_it_admin,
@@ -60,13 +62,14 @@ from app.admin.service import (
     OptimisticLockError,
 )
 from app.auth.context import AuthenticatedUser
-from app.core.enums import ActorType, DepartmentType
+from app.core.enums import ActorType, DepartmentType, EmploymentStatus
 from app.core.exceptions import (
     BusinessValidationError,
     ConflictError,
     NotFoundError,
 )
 from app.database.session import get_db_session
+from app.departments.repository import DepartmentRepository
 from app.onboarding.models import ImportJob
 from app.onboarding.service import CompanyOnboardingService
 from app.rag.enums import (
@@ -77,6 +80,34 @@ from app.rag.enums import (
 from app.rag.models import KnowledgeDocument
 
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
+
+
+def _employee_response(record) -> AdminEmployeeResponse:
+    user = getattr(record, "user", None) if record.user_id is not None else None
+    actor_type = getattr(user, "actor_type", None) if user else None
+    return AdminEmployeeResponse(
+        id=record.id,
+        user_id=record.user_id,
+        email=user.email if user else None,
+        account_active=bool(user and user.is_active),
+        must_change_password=bool(user and user.must_change_password),
+        actor_type=(
+            actor_type.value if hasattr(actor_type, "value") else actor_type
+        ),
+        employee_code=record.employee_code,
+        job_title=record.job_title,
+        department_id=record.department_id,
+        hire_date=record.hire_date,
+        manager_employee_id=record.manager_employee_id,
+        employment_status=(
+            record.employment_status.value
+            if hasattr(record.employment_status, "value")
+            else record.employment_status
+        ),
+        custom_data=record.custom_data,
+        created_at=record.created_at,
+        updated_at=record.updated_at,
+    )
 
 
 def _handle_admin_exceptions(exc: Exception) -> None:
@@ -103,7 +134,7 @@ def _handle_admin_exceptions(exc: Exception) -> None:
 async def get_company_profile(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[
-        AuthenticatedUser, Depends(require_company_or_any_manager)
+        AuthenticatedUser, Depends(require_onboarding_company_or_any_manager)
     ],
 ) -> AdminCompanyResponse:
     from app.companies.models import Company
@@ -122,7 +153,7 @@ async def update_company_profile(
     payload: AdminCompanyUpdate,
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[
-        AuthenticatedUser, Depends(require_company_account)
+        AuthenticatedUser, Depends(require_onboarding_company)
     ],
 ) -> AdminCompanyResponse:
     from app.companies.models import Company
@@ -221,18 +252,34 @@ async def get_admin_summary(
 async def list_employees(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[
-        AuthenticatedUser, Depends(require_company_or_any_manager)
+        AuthenticatedUser, Depends(require_onboarding_company_or_any_manager)
     ],
     department_id: Annotated[UUID | None, Query()] = None,
+    employment_status: Annotated[str | None, Query()] = None,
     q: Annotated[str | None, Query(max_length=120)] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[AdminEmployeeResponse]:
+    if current_user.actor_type == ActorType.DEPARTMENT_MANAGER:
+        department_id = current_user.department_id
     service = AdminEmployeeService(session, current_user.company_id)
+    try:
+        status_filter = (
+            EmploymentStatus(employment_status) if employment_status else None
+        )
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Invalid employment status",
+        ) from None
     records = await service.list(
-        department_id=department_id, q=q, limit=limit, offset=offset
+        department_id=department_id,
+        status=status_filter,
+        q=q,
+        limit=limit,
+        offset=offset,
     )
-    return [AdminEmployeeResponse.model_validate(r) for r in records]
+    return [_employee_response(r) for r in records]
 
 
 @router.post(
@@ -252,7 +299,7 @@ async def create_employee(
         record = await service.create(payload, current_user)
     except Exception as exc:
         _handle_admin_exceptions(exc)
-    return AdminEmployeeResponse.model_validate(record)
+    return _employee_response(record)
 
 
 @router.get("/employees/{employee_id}", response_model=AdminEmployeeResponse)
@@ -272,7 +319,14 @@ async def get_employee(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found"
         )
-    return AdminEmployeeResponse.model_validate(record)
+    if (
+        current_user.actor_type == ActorType.DEPARTMENT_MANAGER
+        and record.department_id != current_user.department_id
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found"
+        )
+    return _employee_response(record)
 
 
 @router.patch("/employees/{employee_id}", response_model=AdminEmployeeResponse)
@@ -281,15 +335,26 @@ async def update_employee(
     payload: AdminEmployeeUpdate,
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[
-        AuthenticatedUser, Depends(require_company_or_any_manager)
+        AuthenticatedUser, Depends(require_onboarding_company_or_any_manager)
     ],
 ) -> AdminEmployeeResponse:
     service = AdminEmployeeService(session, current_user.company_id)
+    existing = await service.get(employee_id)
+    if (
+        existing is None
+        or (
+            current_user.actor_type == ActorType.DEPARTMENT_MANAGER
+            and existing.department_id != current_user.department_id
+        )
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Employee not found"
+        )
     try:
         record = await service.update(employee_id, payload)
     except Exception as exc:
         _handle_admin_exceptions(exc)
-    return AdminEmployeeResponse.model_validate(record)
+    return _employee_response(record)
 
 
 @router.delete("/employees/{employee_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -316,7 +381,7 @@ async def soft_delete_employee(
 async def list_departments(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[
-        AuthenticatedUser, Depends(require_company_or_any_manager)
+        AuthenticatedUser, Depends(require_onboarding_company_or_any_manager)
     ],
 ) -> list[AdminDepartmentResponse]:
     service = AdminDepartmentService(session, current_user.company_id)
@@ -348,7 +413,7 @@ async def update_department(
     payload: AdminDepartmentUpdate,
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[
-        AuthenticatedUser, Depends(require_company_account)
+        AuthenticatedUser, Depends(require_onboarding_company)
     ],
 ) -> AdminDepartmentResponse:
     service = AdminDepartmentService(session, current_user.company_id)
@@ -368,15 +433,16 @@ async def update_department(
 async def list_assets(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[
-        AuthenticatedUser, Depends(require_company_or_any_manager)
+        AuthenticatedUser, Depends(require_it_admin)
     ],
     asset_type: Annotated[str | None, Query()] = None,
+    asset_status: Annotated[str | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[AdminAssetResponse]:
     service = AdminAssetService(session, current_user.company_id)
     records = await service.list(
-        asset_type=asset_type, limit=limit, offset=offset
+        asset_type=asset_type, status=asset_status, limit=limit, offset=offset
     )
     return [AdminAssetResponse.model_validate(r) for r in records]
 
@@ -404,7 +470,7 @@ async def get_asset(
     asset_id: UUID,
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[
-        AuthenticatedUser, Depends(require_company_or_any_manager)
+        AuthenticatedUser, Depends(require_it_admin)
     ],
 ) -> AdminAssetResponse:
     service = AdminAssetService(session, current_user.company_id)
@@ -454,7 +520,7 @@ async def soft_delete_asset(
 async def list_software_catalog(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[
-        AuthenticatedUser, Depends(require_company_or_any_manager)
+        AuthenticatedUser, Depends(require_it_admin)
     ],
     is_active: Annotated[bool | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
@@ -493,7 +559,7 @@ async def get_software_catalog(
     software_id: UUID,
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[
-        AuthenticatedUser, Depends(require_company_or_any_manager)
+        AuthenticatedUser, Depends(require_it_admin)
     ],
 ) -> AdminSoftwareCatalogResponse:
     service = AdminSoftwareCatalogService(session, current_user.company_id)
@@ -552,6 +618,17 @@ async def list_budgets(
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[AdminBudgetResponse]:
+    if current_user.actor_type == ActorType.DEPARTMENT_MANAGER:
+        department = await DepartmentRepository(
+            session, current_user.company_id
+        ).get_by_id(current_user.department_id) if current_user.department_id else None
+        if department is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Department manager context is required",
+            )
+        if department.department_type != DepartmentType.FINANCE:
+            department_id = current_user.department_id
     service = AdminBudgetService(session, current_user.company_id)
     records = await service.list(
         department_id=department_id, limit=limit, offset=offset
@@ -590,6 +667,20 @@ async def get_budget(
         record = await service.get(budget_id)
     except Exception as exc:
         _handle_admin_exceptions(exc)
+    if current_user.actor_type == ActorType.DEPARTMENT_MANAGER:
+        department = await DepartmentRepository(
+            session, current_user.company_id
+        ).get_by_id(current_user.department_id) if current_user.department_id else None
+        if (
+            department is None
+            or (
+                department.department_type != DepartmentType.FINANCE
+                and record.department_id != current_user.department_id
+            )
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Budget not found"
+            )
     return AdminBudgetResponse.model_validate(record)
 
 
@@ -634,7 +725,7 @@ async def list_leave_balances(
     employee_id: UUID,
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[
-        AuthenticatedUser, Depends(require_company_or_any_manager)
+        AuthenticatedUser, Depends(require_hr_admin)
     ],
 ) -> list[AdminLeaveBalanceResponse]:
     service = AdminLeaveBalanceService(session, current_user.company_id)
@@ -667,7 +758,7 @@ async def get_leave_balance(
     balance_id: UUID,
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[
-        AuthenticatedUser, Depends(require_company_or_any_manager)
+        AuthenticatedUser, Depends(require_hr_admin)
     ],
 ) -> AdminLeaveBalanceResponse:
     service = AdminLeaveBalanceService(session, current_user.company_id)
@@ -719,7 +810,7 @@ async def delete_leave_balance(
 async def list_holidays(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[
-        AuthenticatedUser, Depends(require_company_or_any_manager)
+        AuthenticatedUser, Depends(require_hr_admin)
     ],
     year: Annotated[int | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
@@ -753,7 +844,7 @@ async def get_holiday(
     holiday_id: UUID,
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[
-        AuthenticatedUser, Depends(require_company_or_any_manager)
+        AuthenticatedUser, Depends(require_hr_admin)
     ],
 ) -> AdminHolidayResponse:
     service = AdminHolidayService(session, current_user.company_id)
@@ -801,7 +892,7 @@ async def hard_delete_holiday(
 async def list_staffing_rules(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[
-        AuthenticatedUser, Depends(require_company_or_any_manager)
+        AuthenticatedUser, Depends(require_hr_admin)
     ],
     department_id: Annotated[UUID | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
@@ -839,7 +930,7 @@ async def get_staffing_rule(
     rule_id: UUID,
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[
-        AuthenticatedUser, Depends(require_company_or_any_manager)
+        AuthenticatedUser, Depends(require_hr_admin)
     ],
 ) -> AdminStaffingRuleResponse:
     service = AdminStaffingRuleService(session, current_user.company_id)
@@ -891,7 +982,7 @@ async def hard_delete_staffing_rule(
 async def list_suppliers(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[
-        AuthenticatedUser, Depends(require_company_or_any_manager)
+        AuthenticatedUser, Depends(require_procurement_admin)
     ],
     is_active: Annotated[bool | None, Query()] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
@@ -929,7 +1020,7 @@ async def get_supplier(
     supplier_id: UUID,
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[
-        AuthenticatedUser, Depends(require_company_or_any_manager)
+        AuthenticatedUser, Depends(require_procurement_admin)
     ],
 ) -> AdminSupplierResponse:
     service = AdminSupplierService(session, current_user.company_id)
@@ -985,7 +1076,7 @@ async def soft_delete_supplier(
 async def get_policy_readiness(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[
-        AuthenticatedUser, Depends(require_company_or_any_manager)
+        AuthenticatedUser, Depends(require_onboarding_company_or_any_manager)
     ],
 ) -> AdminPolicyReadinessResponse:
     company_id = current_user.company_id

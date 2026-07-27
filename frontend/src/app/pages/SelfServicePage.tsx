@@ -17,6 +17,7 @@ export function SelfServicePage() {
   const { user } = useAuthContext();
   const [tab, setTab] = useState<Tab>('overview');
   if (!user) return null;
+  const externalUser = user.actor_type === 'external_user';
 
   return (
     <PageContainer>
@@ -24,12 +25,12 @@ export function SelfServicePage() {
 
       <div className="mb-4 flex gap-1 border-b border-neutral-200 dark:border-neutral-800">
         <TabButton label="Overview" active={tab === 'overview'} onClick={() => setTab('overview')} />
-        <TabButton label="Leave" active={tab === 'leave'} onClick={() => setTab('leave')} />
+        {!externalUser && <TabButton label="Leave" active={tab === 'leave'} onClick={() => setTab('leave')} />}
         <TabButton label="My Requests" active={tab === 'requests'} onClick={() => setTab('requests')} />
       </div>
 
       {tab === 'overview' && <OverviewTab user={user} />}
-      {tab === 'leave' && <LeaveTab />}
+      {tab === 'leave' && !externalUser && <LeaveTab />}
       {tab === 'requests' && <RequestsTab />}
     </PageContainer>
   );

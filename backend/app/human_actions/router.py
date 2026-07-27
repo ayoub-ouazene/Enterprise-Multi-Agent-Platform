@@ -11,7 +11,8 @@ from app.database.session import get_db_session
 from app.human_actions.schemas import (
     HumanActionCreate,
     HumanActionListFilters,
-    HumanActionResponse,
+    HumanActionDetailResponse,
+    HumanActionSummaryResponse,
     HumanActionSubmitPayload,
     HumanActionSubmitResponse,
 )
@@ -30,23 +31,23 @@ def _service(
     return HumanActionService(session, current_user)
 
 
-@router.get("", response_model=list[HumanActionResponse])
+@router.get("", response_model=list[HumanActionSummaryResponse])
 async def list_human_actions(
     filters: Annotated[HumanActionListFilters, Depends()],
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
-) -> list[HumanActionResponse]:
-    return await _service(session, current_user).list(filters)
+) -> list[HumanActionSummaryResponse]:
+    return await _service(session, current_user).list_public(filters)
 
 
-@router.get("/{action_id}", response_model=HumanActionResponse)
+@router.get("/{action_id}", response_model=HumanActionDetailResponse)
 async def get_human_action(
     action_id: UUID,
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
-) -> HumanActionResponse:
+) -> HumanActionDetailResponse:
     try:
-        return await _service(session, current_user).get(action_id)
+        return await _service(session, current_user).get_public(action_id)
     except NotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -54,12 +55,12 @@ async def get_human_action(
         ) from None
 
 
-@router.post("", response_model=HumanActionResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=HumanActionDetailResponse, status_code=status.HTTP_201_CREATED)
 async def create_human_action(
     payload: HumanActionCreate,
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
-) -> HumanActionResponse:
+) -> HumanActionDetailResponse:
     try:
         action = await _service(session, current_user).create(payload)
     except NotFoundError:
@@ -72,7 +73,7 @@ async def create_human_action(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(exc),
         ) from None
-    return HumanActionResponse.model_validate(action)
+    return await _service(session, current_user).get_public(action.id)
 
 
 @router.post(

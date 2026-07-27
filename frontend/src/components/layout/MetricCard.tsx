@@ -15,7 +15,7 @@ export function MetricCard({ title, value, subtitle, icon, category = 'neutral',
   return (
     <div
       className={clsx(
-        'relative overflow-hidden rounded-lg border border-neutral-200 bg-white p-4 shadow-xs transition-colors dark:border-neutral-800 dark:bg-neutral-800',
+        'relative overflow-hidden rounded-card border border-neutral-200 bg-white p-5 shadow-card transition-colors dark:border-neutral-800 dark:bg-neutral-900',
         onClick && 'cursor-pointer hover:border-neutral-300 dark:hover:border-neutral-700'
       )}
       onClick={onClick}

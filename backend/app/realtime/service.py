@@ -147,12 +147,10 @@ def _serialize_workflow_event(event: WorkflowEvent) -> dict[str, Any]:
         id=event.id,
         request_id=event.request_id,
         event_type=event.event_type,
-        stage=event.stage,
         title=event.title,
         message=event.message,
         actor_label=_ACTOR_LABELS.get(str(event.actor_type), "Unknown"),
         department_id=event.department_id,
-        event_data=event.event_data,
         sequence_number=event.sequence_number,
         created_at=event.created_at,
     ).model_dump(mode="json")
@@ -235,6 +233,7 @@ async def workflow_event_stream(
                 events = await repo.list_for_request(
                     request_id,
                     visibilities=allowed,
+                    after_sequence=cursor,
                     limit=MAX_REPLAY_EVENTS,
                     offset=0,
                 )
@@ -258,6 +257,7 @@ async def workflow_event_stream(
                 events = await repo.list_for_request(
                     request_id,
                     visibilities=allowed,
+                    after_sequence=last_cursor,
                     limit=SSE_BATCH_SIZE,
                     offset=0,
                 )

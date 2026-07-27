@@ -12,6 +12,7 @@ from app.database.session import get_db_session
 from app.departments.repository import DepartmentRepository
 from app.departments.schemas import (
     DepartmentActivityResponse,
+    DepartmentOperationalRecordResponse,
     DepartmentReadinessResponse,
     DepartmentResponse,
     DepartmentStatsResponse,
@@ -19,6 +20,7 @@ from app.departments.schemas import (
 from app.departments.service import DepartmentWorkspaceService
 from app.requests.permissions import can_view_business_request
 from app.requests.schemas import BusinessRequestSummaryResponse
+from app.requests.service import BusinessRequestService
 from app.human_actions.schemas import HumanActionResponse
 
 router = APIRouter(prefix="/api/v1/departments", tags=["departments"])
@@ -46,13 +48,25 @@ async def _require_department_access(
     session: AsyncSession,
     current_user: AuthenticatedUser,
 ) -> UUID:
-    """Require COMPANY or matching DEPARTMENT_MANAGER access. Returns dept_id."""
-    dept_id = await _resolve_department(dept_type, session, current_user)
+    """Require company-wide or matching active department access."""
+    department = await DepartmentRepository(
+        session, current_user.company_id
+    ).get_by_type(dept_type)
+    if department is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Department not found",
+        )
+    dept_id = department.id
     if current_user.actor_type == ActorType.COMPANY:
         return dept_id
     if (
-        current_user.actor_type == ActorType.DEPARTMENT_MANAGER
+        current_user.actor_type in {
+            ActorType.DEPARTMENT_MANAGER,
+            ActorType.EMPLOYEE,
+        }
         and current_user.department_id == dept_id
+        and department.is_active
     ):
         return dept_id
     raise HTTPException(
@@ -66,9 +80,20 @@ async def list_departments(
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
 ) -> list[DepartmentResponse]:
+    if current_user.actor_type == ActorType.EXTERNAL_USER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Department workspace access is not available",
+        )
     records = await DepartmentRepository(
         session, current_user.company_id
     ).list()
+    if current_user.actor_type != ActorType.COMPANY:
+        records = [
+            record
+            for record in records
+            if record.id == current_user.department_id and record.is_active
+        ]
     return [DepartmentResponse.model_validate(item) for item in records]
 
 
@@ -80,7 +105,7 @@ async def get_department_stats(
 ) -> DepartmentStatsResponse:
     dept_id = await _require_department_access(dept_type, session, current_user)
     service = DepartmentWorkspaceService(session, current_user.company_id)
-    return await service.get_stats(dept_id)
+    return await service.get_stats(dept_id, current_user=current_user)
 
 
 @router.get("/{dept_type}/requests", response_model=list[BusinessRequestSummaryResponse])
@@ -102,7 +127,7 @@ async def list_department_requests(
         r for r in records
         if can_view_business_request(current_user, r)
     ]
-    return [BusinessRequestSummaryResponse.model_validate(item) for item in visible]
+    return await BusinessRequestService(session, current_user).present_summaries(visible)
 
 
 @router.get("/{dept_type}/actions", response_model=list[HumanActionResponse])
@@ -146,4 +171,31 @@ async def get_department_activity(
 ) -> list[DepartmentActivityResponse]:
     dept_id = await _require_department_access(dept_type, session, current_user)
     service = DepartmentWorkspaceService(session, current_user.company_id)
-    return await service.get_activity(dept_id, limit=limit, offset=offset)
+    return await service.get_activity(
+        dept_id,
+        current_user=current_user,
+        limit=limit,
+        offset=offset,
+    )
+
+
+@router.get(
+    "/{dept_type}/operational-records",
+    response_model=list[DepartmentOperationalRecordResponse],
+)
+async def list_department_operational_records(
+    dept_type: DepartmentType,
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    current_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
+    kind: Annotated[str | None, Query(max_length=80)] = None,
+    limit: Annotated[int, Query(ge=1, le=100)] = 30,
+) -> list[DepartmentOperationalRecordResponse]:
+    dept_id = await _require_department_access(dept_type, session, current_user)
+    service = DepartmentWorkspaceService(session, current_user.company_id)
+    return await service.list_operational_records(
+        dept_id,
+        dept_type,
+        current_user=current_user,
+        kind=kind,
+        limit=limit,
+    )

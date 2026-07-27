@@ -14,12 +14,20 @@ export function useSubmitHumanAction(actionId: string | undefined) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (payload: { decision: string; response: string }) =>
+    mutationFn: (payload: { decision: string; response: string; expected_updated_at?: string }) =>
       api.post<HumanActionSubmitResponse>(`/human-actions/${actionId}/submit`, payload),
     onSuccess: () => {
       if (actionId) {
+        const action = queryClient.getQueryData<HumanActionDetail>(['human-action', actionId]);
         queryClient.invalidateQueries({ queryKey: ['human-action', actionId] });
         queryClient.invalidateQueries({ queryKey: ['human-actions'] });
+        queryClient.invalidateQueries({ queryKey: ['notifications'] });
+        queryClient.invalidateQueries({ queryKey: ['notifications', 'unread'] });
+        queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+        if (action?.request_id) {
+          queryClient.invalidateQueries({ queryKey: ['request', action.request_id] });
+          queryClient.invalidateQueries({ queryKey: ['workflow-events', action.request_id] });
+        }
       }
     },
   });
@@ -28,11 +36,13 @@ export function useSubmitHumanAction(actionId: string | undefined) {
 /** Structured submit: serializes `fields` to JSON in the `response` payload field. */
 export function useSubmitStructuredHumanAction(actionId: string | undefined) {
   const base = useSubmitHumanAction(actionId);
+  const queryClient = useQueryClient();
 
   return {
     ...base,
     submit(decision: string, fields: Record<string, unknown>, options?: Parameters<typeof base.mutate>[1]) {
-      base.mutate({ decision, response: JSON.stringify(fields) }, options);
+      const action = queryClient.getQueryData<HumanActionDetail>(['human-action', actionId]);
+      base.mutate({ decision, response: JSON.stringify(fields), expected_updated_at: action?.updated_at }, options);
     },
   };
 }

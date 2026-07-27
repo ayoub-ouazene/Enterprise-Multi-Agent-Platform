@@ -45,8 +45,34 @@ async def get_current_user(
         raise _unauthorized() from None
 
 
+async def get_current_user_allow_inactive_company(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(bearer_scheme)],
+    session: Annotated[AsyncSession, Depends(get_db_session)],
+    settings: Annotated[Settings, Depends(get_request_settings)],
+) -> AuthenticatedUser:
+    """Authenticate an inactive Company account for its restricted setup routes."""
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise _unauthorized()
+    try:
+        return await AuthenticationService(session, settings).authenticate_access_token(
+            credentials.credentials,
+            allow_inactive_company=True,
+        )
+    except AuthenticationError:
+        raise _unauthorized() from None
+
+
 async def require_authenticated_user(
     current_user: Annotated[AuthenticatedUser, Depends(get_current_user)],
+) -> AuthenticatedUser:
+    return current_user
+
+
+async def require_setup_authenticated_user(
+    current_user: Annotated[
+        AuthenticatedUser,
+        Depends(get_current_user_allow_inactive_company),
+    ],
 ) -> AuthenticatedUser:
     return current_user
 

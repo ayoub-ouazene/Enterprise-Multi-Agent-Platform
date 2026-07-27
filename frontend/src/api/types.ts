@@ -16,6 +16,98 @@ export interface AuthenticatedUser {
   department_id: UUID | null;
   is_manager: boolean;
   permissions: string[];
+  company_active: boolean;
+  onboarding_complete: boolean;
+  must_change_password: boolean;
+}
+
+export interface DashboardMetric {
+  key: string;
+  label: string;
+  value: number;
+  detail: string | null;
+  status: 'neutral' | 'info' | 'success' | 'warning' | 'danger';
+  href: string | null;
+}
+
+export interface DashboardAttentionItem {
+  id: string;
+  severity: string;
+  title: string;
+  explanation: string;
+  resource_type: string;
+  resource_id: UUID | null;
+  action_label: string;
+  action_url: string;
+  occurred_at: string | null;
+  due_at: string | null;
+}
+
+export interface DashboardRequestItem {
+  id: UUID;
+  title: string;
+  status: string;
+  priority: string;
+  current_stage: string;
+  owner_department: string | null;
+  action_required: boolean;
+  updated_at: string;
+}
+
+export interface DashboardActionItem {
+  id: UUID;
+  request_id: UUID;
+  title: string;
+  action_type: string;
+  due_at: string | null;
+  created_at: string;
+}
+
+export interface DashboardActivityItem {
+  id: UUID;
+  title: string;
+  message: string;
+  severity: string;
+  resource_url: string | null;
+  occurred_at: string;
+}
+
+export interface DashboardReadinessItem {
+  key: string;
+  label: string;
+  ready: boolean;
+  detail: string | null;
+}
+
+export interface DashboardDepartmentItem {
+  id: UUID;
+  name: string;
+  department_type: string;
+  enabled: boolean;
+  manager_label: string | null;
+  ready: boolean;
+  active_requests: number;
+  pending_actions: number;
+}
+
+export interface DashboardResponse {
+  role: ActorType;
+  identity: {
+    company_name: string;
+    company_active: boolean;
+    account_label: string;
+    department_name: string | null;
+    department_type: string | null;
+  };
+  metrics: DashboardMetric[];
+  attention: DashboardAttentionItem[];
+  active_requests: DashboardRequestItem[];
+  completed_requests: DashboardRequestItem[];
+  pending_actions: DashboardActionItem[];
+  activity: DashboardActivityItem[];
+  readiness: DashboardReadinessItem[];
+  departments: DashboardDepartmentItem[];
+  generated_at: string;
 }
 
 export interface Company {
@@ -62,22 +154,74 @@ export interface BusinessRequestSummary {
   summary: string;
   status: RequestStatus;
   current_stage: string;
+  current_state_summary: string;
   priority: RequestPriority;
   owner_department_id: UUID | null;
   active_department_id: UUID | null;
+  owner_department: RequestDepartment | null;
+  active_department: RequestDepartment | null;
+  requester_user_id?: UUID | null;
+  requester_label: string | null;
+  attention_required: boolean;
+  pending_action_count: number;
+  can_cancel: boolean;
   created_at: string;
   updated_at: string;
 }
 
+export interface RequestDepartment {
+  id: UUID;
+  name: string;
+  department_type: string;
+}
+
+export interface ConnectedHumanAction {
+  id: UUID;
+  title: string;
+  action_type: string;
+  status: string;
+  due_at: string | null;
+  assigned_role: string | null;
+  can_respond: boolean;
+  action_url: string | null;
+}
+
+export interface RequestClarification {
+  question: string;
+  number: number;
+  maximum: number;
+}
+
+export interface RequestSourceReference {
+  document_id: UUID | null;
+  title: string;
+  version: string | null;
+  section: string | null;
+  scope: string | null;
+}
+
+export interface RequestFinalResult {
+  title: string;
+  summary: string;
+  limitations: string[];
+  next_steps: string[];
+  sources: RequestSourceReference[];
+}
+
 export interface BusinessRequestDetail extends BusinessRequestSummary {
-  requester_user_id: UUID;
   requester_employee_id: UUID | null;
   final_decision: string | null;
   final_reason: string | null;
   completed_at: string | null;
   cancelled_at: string | null;
   failed_at: string | null;
-  workflow_state: Record<string, unknown>;
+  clarification: RequestClarification | null;
+  collaboration_summary: string | null;
+  quality_check_summary: string | null;
+  failure_summary: string | null;
+  final_result: RequestFinalResult | null;
+  connected_actions: ConnectedHumanAction[];
+  allowed_actions: string[];
 }
 
 export enum WorkflowEventType {
@@ -105,12 +249,10 @@ export interface WorkflowEvent {
   id: UUID;
   request_id: UUID;
   event_type: WorkflowEventType;
-  stage: string | null;
   title: string;
   message: string;
   actor_label: string;
   department_id: UUID | null;
-  event_data: Record<string, unknown>;
   sequence_number: number;
   created_at: string;
 }
@@ -193,6 +335,21 @@ export interface OnboardingStatusDetailed {
   items: OnboardingStatusItem[];
 }
 
+export interface OnboardingManagerCandidate {
+  id: UUID;
+  department_id: UUID;
+  employee_code: string;
+  job_title: string | null;
+  is_current_manager: boolean;
+}
+
+export interface OnboardingManagerCoverage {
+  department_id: UUID;
+  department_name: string;
+  department_type: string;
+  manager: OnboardingManagerCandidate | null;
+}
+
 export interface RowValidationResult {
   row_number: number;
   status: string; // "valid" | "invalid"
@@ -203,6 +360,8 @@ export interface RowValidationResult {
 export interface ImportValidateResponse {
   import_job_id: UUID;
   import_type: string;
+  original_filename: string;
+  atomic: boolean;
   total_rows: number;
   valid_rows: number;
   invalid_rows: number;
@@ -291,6 +450,10 @@ export interface AdminDepartmentResponse {
 export interface AdminEmployeeResponse {
   id: UUID;
   user_id: UUID | null;
+  email: string | null;
+  account_active: boolean;
+  must_change_password: boolean;
+  actor_type: string | null;
   employee_code: string;
   job_title: string | null;
   department_id: UUID | null;
@@ -317,12 +480,8 @@ export interface HumanActionSummary {
   request_id: UUID;
   action_type: string;
   title: string;
-  description: string;
   status: string;
-  assigned_user_id: UUID | null;
   assigned_role: string | null;
-  decision_package: Record<string, unknown>;
-  response: Record<string, unknown>;
   due_date: string | null;
   resolved_at: string | null;
   created_at: string;
@@ -332,9 +491,29 @@ export interface HumanActionSummary {
   can_respond: boolean;
   request_title: string | null;
   request_status: string | null;
+  requesting_department: string | null;
 }
 
-export type HumanActionDetail = HumanActionSummary;
+export interface SafeActionHistoryItem {
+  event: 'created' | 'resolved' | 'cancelled';
+  title: string;
+  description: string;
+  occurred_at: string;
+}
+
+export interface HumanActionDetail extends HumanActionSummary {
+  description: string;
+  safe_context: Record<string, unknown>;
+  resolution_decision: string | null;
+  resolution_comment: string | null;
+  related_request: {
+    id: UUID;
+    title: string;
+    status: string;
+    owner_department: string | null;
+  };
+  history: SafeActionHistoryItem[];
+}
 
 export interface AdminSummary {
   totalEmployees: number;
@@ -374,6 +553,7 @@ export interface AdminAssetResponse {
   brand: string;
   model: string;
   serial_number: string | null;
+  assigned_employee_id: UUID | null;
   status: string;
   location: string | null;
   custom_data: Record<string, unknown>;
@@ -550,6 +730,24 @@ export interface DepartmentActivityResponse {
   message: string;
   actor_label: string;
   created_at: string;
+}
+
+export interface DepartmentOperationalField {
+  label: string;
+  value: string;
+  emphasis: 'default' | 'positive' | 'warning' | 'critical';
+}
+
+export interface DepartmentOperationalRecord {
+  id: UUID;
+  request_id: UUID | null;
+  record_type: string;
+  title: string;
+  summary: string | null;
+  status: string;
+  fields: DepartmentOperationalField[];
+  action_url: string | null;
+  updated_at: string | null;
 }
 
 // ---------------------------------------------------------------------------

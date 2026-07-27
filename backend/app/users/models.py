@@ -50,6 +50,12 @@ class User(UUIDPrimaryKeyMixin, TimestampMixin, Base):
         default=True,
         server_default=text("true"),
     )
+    must_change_password: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default=text("false"),
+    )
 
     company: Mapped["Company"] = relationship(
         back_populates="users",

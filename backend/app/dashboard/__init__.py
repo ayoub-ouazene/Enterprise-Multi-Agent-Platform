@@ -1,0 +1,1 @@
+"""Role-scoped dashboard projections."""

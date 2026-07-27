@@ -1,239 +1,165 @@
-#!/usr/bin/env python3
-"""
-Demo seed script for TellUS AI.
-Creates a single demo company with employees, departments, and sample requests.
+"""Idempotent, development-only demo identity seed.
 
-Usage (from backend root):
-    uv run python scripts/seed_demo.py
+Run from ``backend`` with:
+    conda run -n dev python scripts/seed_demo.py
 
-Dependencies:
-    - backend environment must be configured (via .env)
-    - database connection must be available
+Passwords are requested interactively and are never logged or stored as plain text.
+The command refuses to run outside development/test environments.
 """
 
 import asyncio
-import os
-from uuid import uuid4, UUID
-from datetime import date, datetime, UTC
+from getpass import getpass
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
-os.environ.setdefault("SECRET_KEY", "demo-secret-key-not-for-production")
-
-from app.database.session import create_database_engine, create_session_factory
+from app.auth.passwords import hash_password
 from app.companies.repository import CompanyRepository
+from app.companies.service import DEPARTMENT_NAMES
+from app.core.config import AppEnvironment, get_settings
+from app.core.enums import ActorType, DepartmentType, EmploymentStatus
+from app.database import models as database_models
+from app.database.session import create_database_engine, create_session_factory
 from app.departments.repository import DepartmentRepository
 from app.employees.repository import EmployeeRepository
 from app.users.repository import UserRepository
-from app.business_requests.repository import BusinessRequestRepository
-from app.core.enums import ActorType, RequestStatus, RequestPriority
-from app.auth.passwords import hash_password
-from app.database import models  # noqa: F401
 
 
-DEMO_COMPANY_NAME = "Acme Corporation"
-DEMO_COMPANY_SLUG = "acme"
-DEPARTMENTS = [
-    ("Customer Support", "customer_support"),
-    ("Human Resources", "hr"),
-    ("Information Technology", "it"),
-    ("Finance", "finance"),
-    ("Procurement", "procurement"),
-]
-
-EMPLOYEES = [
-    # dept_name, code, job_title, hire_date
-    ("Customer Support", "EMP001", "Support Specialist", date(2020, 3, 15)),
-    ("Human Resources", "EMP002", "HR Manager", date(2019, 6, 1)),
-    ("Information Technology", "EMP003", "IT Administrator", date(2021, 1, 10)),
-    ("Finance", "EMP004", "Finance Analyst", date(2020, 8, 22)),
-    ("Procurement", "EMP005", "Procurement Officer", date(2021, 5, 5)),
-]
-
-REQUESTS = [
-    {
-        "request_type": "leave_request",
-        "title": "Annual Leave Request",
-        "summary": "Requesting 5 days of annual leave in August.",
-        "status": RequestStatus.COMPLETED,
-        "priority": RequestPriority.NORMAL,
-        "current_stage": "completed",
-    },
-    {
-        "request_type": "expense_reimbursement",
-        "title": "Travel Expense Reimbursement",
-        "summary": "Reimbursement for client meeting travel expenses.",
-        "status": RequestStatus.PROCESSING,
-        "priority": RequestPriority.HIGH,
-        "current_stage": "finance_approval",
-    },
-    {
-        "request_type": "software_access",
-        "title": "Request Access to Analytics Platform",
-        "summary": "Need access to the internal analytics dashboard for Q3 reporting.",
-        "status": RequestStatus.CREATED,
-        "priority": RequestPriority.NORMAL,
-        "current_stage": "created",
-    },
-    {
-        "request_type": "procurement_request",
-        "title": "Purchase Office Equipment",
-        "summary": "Request to purchase 10 new ergonomic chairs for the floor.",
-        "status": RequestStatus.WAITING_FOR_HUMAN_APPROVAL,
-        "priority": RequestPriority.NORMAL,
-        "current_stage": "manager_approval",
-    },
-]
+_ = database_models
+DEMO_SLUG = "tellus-demo"
 
 
-def _now():
-    return datetime.now(UTC)
-
-
-async def _get_or_create_company(session: AsyncSession) -> UUID:
-    repo = CompanyRepository(session)
-    existing = await repo.get_by_slug(DEMO_COMPANY_SLUG)
-    if existing:
-        print(f"  Company already exists: {existing.name} ({existing.id})")
-        return existing.id
-
-    company = await repo.create(
-        name=DEMO_COMPANY_NAME,
-        slug=DEMO_COMPANY_SLUG,
-        is_active=True,
-    )
-    await session.commit()
-    print(f"  Created company: {company.name} ({company.id})")
-    return company.id
-
-
-async def _seed_departments(session: AsyncSession, company_id: UUID) -> dict[str, UUID]:
-    dept_repo = DepartmentRepository(session, company_id)
-    existing = await dept_repo.list()
-    mapping: dict[str, UUID] = {}
-    for dept in existing:
-        mapping[dept.department_type] = dept.id
-
-    for name, dept_type in DEPARTMENTS:
-        if dept_type in mapping:
-            print(f"    Department exists: {name}")
-            continue
-        dept = await dept_repo.create(
-            name=name,
-            department_type=dept_type,
-        )
-        mapping[dept_type] = dept.id
-        print(f"    Created department: {name}")
-
-    await session.commit()
-    return mapping
-
-
-async def _seed_company_account(session: AsyncSession, company_id: UUID) -> UUID:
-    user_repo = UserRepository(session, company_id)
-    email = "admin@acme.example"
-    existing = await user_repo.get_by_email(email)
-    if existing:
-        print(f"    Company account exists: {email}")
-        return existing.id
-
-    user = await user_repo.create(
+async def _ensure_user(
+    users: UserRepository,
+    *,
+    email: str,
+    actor_type: ActorType,
+    password_hash: str,
+    must_change_password: bool,
+):
+    existing = await users.get_by_email(email)
+    if existing is not None:
+        existing.actor_type = actor_type
+        existing.password_hash = password_hash
+        existing.is_active = True
+        existing.must_change_password = must_change_password
+        return existing
+    return await users.create(
         email=email,
-        actor_type=ActorType.COMPANY,
+        actor_type=actor_type,
         is_active=True,
-        password_hash=hash_password("DemoPassword123!"),
+        password_hash=password_hash,
+        must_change_password=must_change_password,
     )
-    await session.commit()
-    print(f"    Created company account: {email}")
-    return user.id
 
 
-async def _seed_employees_and_managers(session: AsyncSession, company_id: UUID, dept_map: dict[str, UUID]) -> list[UUID]:
-    emp_repo = EmployeeRepository(session, company_id)
-    user_repo = UserRepository(session, company_id)
-    existing_emps = await emp_repo.list()
-    existing_codes = {e.employee_code for e in existing_emps}
+async def seed(password: str) -> None:
+    settings = get_settings()
+    if settings.app_env not in {
+        AppEnvironment.DEVELOPMENT,
+        AppEnvironment.TEST,
+    }:
+        raise SystemExit("Demo seeding is allowed only in development or test")
 
-    user_ids: list[UUID] = []
-    for dept_type, code, job_title, hire_date in EMPLOYEES:
-        if code in existing_codes:
-            emp = next((e for e in existing_emps if e.employee_code == code), None)
-            if emp:
-                user_ids.append(emp.id)
-            print(f"    Employee exists: {code}")
-            continue
-
-        email = f"{code.lower()}@acme.example"
-        user = await user_repo.create(
-            email=email,
-            actor_type=ActorType.EMPLOYEE,
-            is_active=True,
-            password_hash=hash_password("DemoPassword123!"),
-        )
-        dept_id = dept_map.get(dept_type)
-        emp = await emp_repo.create(
-            employee_code=code,
-            job_title=job_title,
-            department_id=dept_id,
-            user_id=user.id,
-            hire_date=hire_date,
-        )
-        user_ids.append(emp.id)
-        print(f"    Created employee: {code} ({email})")
-
-    await session.commit()
-    return user_ids
-
-
-async def _seed_requests(session: AsyncSession, company_id: UUID, requester_user_id: UUID) -> None:
-    req_repo = BusinessRequestRepository(session, company_id)
-    existing = await req_repo.list()
-    existing_titles = {r.title for r in existing}
-
-    for payload in REQUESTS:
-        if payload["title"] in existing_titles:
-            print(f"    Request exists: {payload['title']}")
-            continue
-
-        req = await req_repo.create(
-            request_type=payload["request_type"],
-            title=payload["title"],
-            summary=payload["summary"],
-            priority=payload["priority"],
-            requester_user_id=requester_user_id,
-            requester_employee_id=None,
-        )
-        # Set explicit status for demo variety
-        req.status = payload["status"]
-        req.current_stage = payload["current_stage"]
-        if payload["status"] == RequestStatus.COMPLETED:
-            req.final_decision = "Approved"
-            req.completed_at = _now()
-        await session.flush()
-        print(f"    Created request: {payload['title']} ({payload['status'].value})")
-
-    await session.commit()
-
-
-async def seed() -> None:
-    engine = create_database_engine()
+    engine = create_database_engine(settings)
     factory = create_session_factory(engine)
-    async with factory() as session:
-        print("\n⚙️  Seeding demo data...")
-        company_id = await _get_or_create_company(session)
-        dept_map = await _seed_departments(session, company_id)
-        await _seed_company_account(session, company_id)
-        emp_ids = await _seed_employees_and_managers(session, company_id, dept_map)
-        # Seed sample requests — use first employee's identity if available, else company account
-        if emp_ids:
-            requester = await UserRepository(session, company_id).get_by_id(emp_ids[0])
-            requester_id = requester.id if requester else None
-        else:
-            requester_id = None
-        if requester_id:
-            await _seed_requests(session, company_id, requester_id)
-        print("\n✅ Demo seed complete.\n")
+    try:
+        async with factory() as session:
+            companies = CompanyRepository(session)
+            company = await companies.get_by_slug(DEMO_SLUG)
+            if company is None:
+                company = await companies.create(
+                    {
+                        "name": "TellUS Demo Company",
+                        "slug": DEMO_SLUG,
+                        "is_active": True,
+                        "custom_data": {},
+                    }
+                )
+            else:
+                company.is_active = True
+
+            departments = DepartmentRepository(session, company.id)
+            department_ids = {}
+            for department_type, name in DEPARTMENT_NAMES.items():
+                department = await departments.get_by_type(department_type)
+                if department is None:
+                    department = await departments.create(
+                        name=name,
+                        department_type=department_type,
+                        is_active=True,
+                        custom_data={},
+                    )
+                else:
+                    department.is_active = True
+                department_ids[department_type] = department.id
+
+            encoded = hash_password(password)
+            users = UserRepository(session, company.id)
+            await _ensure_user(
+                users,
+                email="company@tellus-demo.example.com",
+                actor_type=ActorType.COMPANY,
+                password_hash=encoded,
+                must_change_password=False,
+            )
+            employee_user = await _ensure_user(
+                users,
+                email="employee@tellus-demo.example.com",
+                actor_type=ActorType.EMPLOYEE,
+                password_hash=encoded,
+                must_change_password=True,
+            )
+            manager_user = await _ensure_user(
+                users,
+                email="manager@tellus-demo.example.com",
+                actor_type=ActorType.DEPARTMENT_MANAGER,
+                password_hash=encoded,
+                must_change_password=False,
+            )
+            await _ensure_user(
+                users,
+                email="external@tellus-demo.example.com",
+                actor_type=ActorType.EXTERNAL_USER,
+                password_hash=encoded,
+                must_change_password=False,
+            )
+
+            employees = EmployeeRepository(session, company.id)
+            if await employees.get_by_user_id(manager_user.id) is None:
+                await employees.create(
+                    user_id=manager_user.id,
+                    department_id=department_ids[DepartmentType.IT],
+                    employee_code="DEMO-MGR",
+                    job_title="IT Manager",
+                    manager_employee_id=None,
+                    employment_status=EmploymentStatus.ACTIVE,
+                    custom_data={},
+                )
+            if await employees.get_by_user_id(employee_user.id) is None:
+                await employees.create(
+                    user_id=employee_user.id,
+                    department_id=department_ids[DepartmentType.IT],
+                    employee_code="DEMO-EMP",
+                    job_title="Demo Employee",
+                    manager_employee_id=None,
+                    employment_status=EmploymentStatus.ACTIVE,
+                    custom_data={},
+                )
+            await session.commit()
+    finally:
+        await engine.dispose()
+
+    print(
+        "Demo identities are ready in workspace 'tellus-demo'. "
+        "Use the password entered for this command."
+    )
+
+
+def main() -> None:
+    password = getpass("Demo password (12-128 characters): ")
+    confirmation = getpass("Confirm demo password: ")
+    if password != confirmation:
+        raise SystemExit("Passwords do not match")
+    asyncio.run(seed(password))
 
 
 if __name__ == "__main__":
-    asyncio.run(seed())
+    main()

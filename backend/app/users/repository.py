@@ -89,6 +89,7 @@ class UserRepository:
         actor_type: ActorType,
         is_active: bool,
         password_hash: str | None = None,
+        must_change_password: bool = False,
     ) -> User:
         user = User(
             company_id=self.company_id,
@@ -96,6 +97,7 @@ class UserRepository:
             password_hash=password_hash,
             actor_type=actor_type,
             is_active=is_active,
+            must_change_password=must_change_password,
         )
         self.session.add(user)
         await self.session.flush()

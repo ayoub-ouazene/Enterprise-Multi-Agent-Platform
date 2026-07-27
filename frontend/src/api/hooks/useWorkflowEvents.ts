@@ -7,6 +7,6 @@ export function useWorkflowEvents(requestId: string) {
     queryKey: ['workflow-events', requestId],
     queryFn: () => api.get<WorkflowEvent[]>(`/requests/${requestId}/events`),
     enabled: !!requestId,
-    refetchInterval: 5000,
+    placeholderData: (previous) => previous,
   });
 }

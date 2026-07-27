@@ -15,38 +15,42 @@ export type StatusCategory =
 export interface StatusMeta {
   label: string;
   category: StatusCategory;
-  description?: string;
+  description: string;
+  terminal: boolean;
+  attention: boolean;
 }
 
 const requestStatusMap: Record<string, StatusMeta> = {
-  created:                    { label: 'Created',                       category: 'neutral' },
-  routing:                    { label: 'Routing',                       category: 'info' },
-  processing:                 { label: 'Processing',                    category: 'inProgress' },
-  waiting_for_department:     { label: 'Waiting for Department',       category: 'pending' },
-  waiting_for_human_approval: { label: 'Waiting for Approval',         category: 'pending' },
-  waiting_for_human_action:   { label: 'Waiting for Action',           category: 'attention' },
-  under_review:               { label: 'Under Review',                 category: 'inProgress' },
-  completed:                  { label: 'Completed',                     category: 'success' },
-  rejected:                   { label: 'Rejected',                      category: 'failed' },
-  cancelled:                  { label: 'Cancelled',                     category: 'cancelled' },
-  failed:                     { label: 'Failed',                        category: 'failed' },
+  created:                    { label: 'Submitted', category: 'neutral', description: 'Received and ready for routing.', terminal: false, attention: false },
+  routing:                    { label: 'Being routed', category: 'info', description: 'Selecting the appropriate owner department.', terminal: false, attention: false },
+  processing:                 { label: 'In progress', category: 'inProgress', description: 'The owner department is working on this request.', terminal: false, attention: false },
+  waiting_for_department:     { label: 'Another department is assisting', category: 'pending', description: 'An authorized department is contributing.', terminal: false, attention: false },
+  waiting_for_human_approval: { label: 'Waiting for approval', category: 'pending', description: 'An authorized decision is required.', terminal: false, attention: true },
+  waiting_for_human_action:   { label: 'Waiting for information or manual work', category: 'attention', description: 'A person must complete an assigned action.', terminal: false, attention: true },
+  under_review:               { label: 'Quality check', category: 'inProgress', description: 'An internal quality check is in progress.', terminal: false, attention: false },
+  completed:                  { label: 'Completed', category: 'success', description: 'The request completed successfully.', terminal: true, attention: false },
+  rejected:                   { label: 'Rejected', category: 'failed', description: 'The request was not approved.', terminal: true, attention: true },
+  cancelled:                  { label: 'Cancelled', category: 'cancelled', description: 'The request will not continue.', terminal: true, attention: false },
+  failed:                     { label: 'Failed', category: 'failed', description: 'The request could not be completed.', terminal: true, attention: true },
 };
 
-const humanActionStatusMap: Record<string, StatusMeta> = {
+type BasicStatusMeta = Pick<StatusMeta, 'label' | 'category'>;
+
+const humanActionStatusMap: Record<string, BasicStatusMeta> = {
   pending:   { label: 'Pending',   category: 'pending' },
   resolved:  { label: 'Resolved',  category: 'success' },
   cancelled: { label: 'Cancelled', category: 'cancelled' },
   overdue:   { label: 'Overdue',   category: 'attention' },
 };
 
-const importJobStatusMap: Record<string, StatusMeta> = {
+const importJobStatusMap: Record<string, BasicStatusMeta> = {
   queued:     { label: 'Queued',     category: 'neutral' },
   processing: { label: 'Processing', category: 'inProgress' },
   completed:  { label: 'Completed',  category: 'success' },
   failed:     { label: 'Failed',     category: 'failed' },
 };
 
-const notificationSeverityMap: Record<string, StatusMeta> = {
+const notificationSeverityMap: Record<string, BasicStatusMeta> = {
   info:    { label: 'Info',    category: 'neutral' },
   success: { label: 'Success', category: 'success' },
   warning: { label: 'Warning', category: 'attention' },
@@ -54,19 +58,22 @@ const notificationSeverityMap: Record<string, StatusMeta> = {
 };
 
 export function getRequestStatusMeta(status: string): StatusMeta {
-  return requestStatusMap[status] ?? { label: status, category: 'neutral' };
+  return requestStatusMap[status] ?? { label: 'Status unavailable', category: 'neutral', description: 'The latest state is unavailable.', terminal: false, attention: false };
 }
 
 export function getHumanActionStatusMeta(status: string): StatusMeta {
-  return humanActionStatusMap[status] ?? { label: status, category: 'neutral' };
+  const meta = humanActionStatusMap[status] ?? { label: status, category: 'neutral' };
+  return { ...meta, description: '', terminal: status !== 'pending', attention: status === 'pending' };
 }
 
 export function getImportJobStatusMeta(status: string): StatusMeta {
-  return importJobStatusMap[status] ?? { label: status, category: 'neutral' };
+  const meta = importJobStatusMap[status] ?? { label: status, category: 'neutral' };
+  return { ...meta, description: '', terminal: status === 'completed' || status === 'failed', attention: status === 'failed' };
 }
 
 export function getNotificationSeverityMeta(severity: string): StatusMeta {
-  return notificationSeverityMap[severity] ?? { label: severity, category: 'neutral' };
+  const meta = notificationSeverityMap[severity] ?? { label: severity, category: 'neutral' };
+  return { ...meta, description: '', terminal: true, attention: severity === 'warning' || severity === 'error' };
 }
 
 /**

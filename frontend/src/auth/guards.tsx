@@ -13,12 +13,16 @@ interface GuardProps {
 export function ProtectedRoute({ children }: GuardProps) {
   const { isAuthenticated, isLoading } = useAuthContext();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      navigate('/login', { replace: true });
+      navigate('/login', {
+        replace: true,
+        state: { from: location.pathname + location.search },
+      });
     }
-  }, [isLoading, isAuthenticated, navigate]);
+  }, [isLoading, isAuthenticated, navigate, location.pathname, location.search]);
 
   if (isLoading) {
     return (
@@ -68,11 +72,11 @@ export function PasswordChangeRoute({ children }: GuardProps) {
 }
 
 export function OnboardingRoute({ children }: GuardProps) {
-  const { user, onboardingComplete, isLoading } = useAuthContext();
+  const { user, isLoading } = useAuthContext();
   const navigate = useNavigate();
 
   const isCompany = user?.actor_type === ActorType.COMPANY;
-  const needsOnboarding = isCompany && onboardingComplete === false;
+  const needsOnboarding = isCompany && user.company_active === false;
 
   useEffect(() => {
     if (!isLoading && needsOnboarding) {

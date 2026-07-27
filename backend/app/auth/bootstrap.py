@@ -11,6 +11,8 @@ from app.companies.repository import CompanyRepository
 from app.companies.schemas import CompanyCreate
 from app.core.config import get_settings, validate_auth_configuration
 from app.core.enums import ActorType
+from app.companies.service import DEPARTMENT_NAMES
+from app.departments.repository import DepartmentRepository
 from app.core.exceptions import ConflictError
 from app.database.session import create_database_engine, create_session_factory
 from app.database import models as database_models
@@ -31,6 +33,7 @@ async def bootstrap_company_account(
     company_payload = CompanyCreate(
         name=company_name.strip(),
         slug=company_slug.strip().lower(),
+        is_active=False,
     )
     normalized_email = str(TypeAdapter(EmailStr).validate_python(email)).casefold()
     encoded_password = hash_password(password)
@@ -46,7 +49,16 @@ async def bootstrap_company_account(
             actor_type=ActorType.COMPANY,
             is_active=True,
             password_hash=encoded_password,
+            must_change_password=False,
         )
+        departments = DepartmentRepository(session, company.id)
+        for department_type, name in DEPARTMENT_NAMES.items():
+            await departments.create(
+                name=name,
+                department_type=department_type,
+                is_active=False,
+                custom_data={},
+            )
         await session.commit()
     except ConflictError:
         await session.rollback()

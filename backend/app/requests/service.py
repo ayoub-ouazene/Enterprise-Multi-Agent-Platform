@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 from datetime import UTC, datetime
 from uuid import UUID
 
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.context import AuthenticatedUser
@@ -17,9 +20,19 @@ from app.requests.permissions import can_view_business_request
 from app.requests.repository import BusinessRequestRepository
 from app.requests.schemas import (
     BusinessRequestCreate,
+    BusinessRequestDetailResponse,
     BusinessRequestListFilters,
     BusinessRequestMetadataUpdate,
+    BusinessRequestSummaryResponse,
+    ConnectedHumanActionResponse,
+    RequestClarificationResponse,
+    RequestDepartmentResponse,
+    RequestFinalResultResponse,
+    RequestSourceReferenceResponse,
 )
+from app.departments.models import Department
+from app.human_actions.models import HumanAction
+from app.users.models import User
 from app.workflow.enums import (
     WorkflowEventActorType,
     WorkflowEventType,
@@ -247,6 +260,98 @@ class BusinessRequestService:
     async def get(self, request_id: UUID) -> BusinessRequest:
         return await self._get_visible(request_id)
 
+    async def get_detail(self, request_id: UUID) -> BusinessRequestDetailResponse:
+        business_request = await self._get_visible(request_id)
+        summaries = await self._present_summaries([business_request])
+        actions = await self._connected_actions(business_request)
+        state = (
+            business_request.workflow_state
+            if isinstance(business_request.workflow_state, dict)
+            else {}
+        )
+        routing = state.get("routing") if isinstance(state.get("routing"), dict) else {}
+        collaboration = (
+            state.get("collaboration")
+            if isinstance(state.get("collaboration"), dict)
+            else {}
+        )
+        review = state.get("review") if isinstance(state.get("review"), dict) else {}
+        failure = state.get("failure") if isinstance(state.get("failure"), dict) else {}
+        result = state.get("result") if isinstance(state.get("result"), dict) else {}
+        execution = (
+            state.get("execution") if isinstance(state.get("execution"), dict) else {}
+        )
+
+        clarification = None
+        question = routing.get("latest_question")
+        if routing.get("needs_clarification") is True and isinstance(question, str):
+            count = routing.get("clarification_count")
+            clarification = RequestClarificationResponse(
+                question=question,
+                number=max(1, min(int(count or 1), 3)),
+            )
+
+        collaboration_summary = None
+        if collaboration.get("is_active") is True:
+            collaboration_summary = (
+                "Another authorized department is assisting with this request."
+                if self.current_user.actor_type == ActorType.EXTERNAL_USER
+                else "A collaborating department is currently assisting the owner department."
+            )
+
+        quality_check_summary = None
+        review_status = review.get("status")
+        if business_request.status == RequestStatus.UNDER_REVIEW or review_status in {
+            "pending",
+            "in_progress",
+            "revision_required",
+        }:
+            quality_check_summary = (
+                "Internal revision is in progress."
+                if review_status == "revision_required"
+                else "A quality check is in progress before the workflow continues."
+            )
+        elif review_status == "approved":
+            quality_check_summary = "The quality check completed successfully."
+
+        failure_summary = None
+        safe_failure = failure.get("safe_message")
+        if isinstance(safe_failure, str) and safe_failure.strip():
+            failure_summary = safe_failure.strip()
+        elif business_request.status in {RequestStatus.FAILED, RequestStatus.REJECTED}:
+            failure_summary = (
+                business_request.final_reason
+                or "This request could not be completed. Review the safe timeline for details."
+            )
+
+        final_result = self._safe_final_result(
+            business_request,
+            result=result,
+            execution=execution,
+        )
+        allowed_actions: list[str] = []
+        if summaries[0].can_cancel:
+            allowed_actions.append("cancel")
+        if clarification is not None:
+            allowed_actions.append("answer_clarification")
+
+        return BusinessRequestDetailResponse(
+            **summaries[0].model_dump(),
+            requester_employee_id=business_request.requester_employee_id,
+            final_decision=business_request.final_decision,
+            final_reason=business_request.final_reason,
+            completed_at=business_request.completed_at,
+            cancelled_at=business_request.cancelled_at,
+            failed_at=business_request.failed_at,
+            clarification=clarification,
+            collaboration_summary=collaboration_summary,
+            quality_check_summary=quality_check_summary,
+            failure_summary=failure_summary,
+            final_result=final_result,
+            connected_actions=actions,
+            allowed_actions=allowed_actions,
+        )
+
     async def list(self, filters: BusinessRequestListFilters) -> list[BusinessRequest]:
         requester_user_id: UUID | None = None
         department_id: UUID | None = None
@@ -254,15 +359,272 @@ class BusinessRequestService:
             requester_user_id = self.current_user.user_id
         if self.current_user.actor_type == ActorType.DEPARTMENT_MANAGER:
             department_id = self.current_user.department_id
+        requester_filter_id = None
+        if self.current_user.actor_type in {
+            ActorType.COMPANY,
+            ActorType.DEPARTMENT_MANAGER,
+        }:
+            requester_filter_id = filters.requester_user_id
 
         return await self.repository.list(
             status=filters.status,
             priority=filters.priority,
             request_type=filters.request_type,
+            search=filters.search,
+            owner_department_id=filters.owner_department_id,
+            requester_filter_id=requester_filter_id,
+            attention_required=filters.attention_required,
+            created_from=filters.created_from,
+            created_to=filters.created_to,
             requester_user_id=requester_user_id,
             department_id=department_id,
             limit=filters.limit,
             offset=filters.offset,
+        )
+
+    async def list_summaries(
+        self,
+        filters: BusinessRequestListFilters,
+    ) -> list[BusinessRequestSummaryResponse]:
+        return await self.present_summaries(await self.list(filters))
+
+    async def present_summaries(
+        self,
+        requests: list[BusinessRequest],
+    ) -> list[BusinessRequestSummaryResponse]:
+        """Build the shared safe summary projection for already-authorized records."""
+        return await self._present_summaries(requests)
+
+    async def _present_summaries(
+        self,
+        requests: list[BusinessRequest],
+    ) -> list[BusinessRequestSummaryResponse]:
+        if not requests:
+            return []
+        department_ids = {
+            department_id
+            for request in requests
+            for department_id in (
+                request.owner_department_id,
+                request.active_department_id,
+            )
+            if department_id is not None
+        }
+        departments: dict[UUID, RequestDepartmentResponse] = {}
+        if department_ids:
+            rows = (
+                await self.session.scalars(
+                    select(Department).where(
+                        Department.company_id == self.current_user.company_id,
+                        Department.id.in_(department_ids),
+                    )
+                )
+            ).all()
+            departments = {
+                row.id: RequestDepartmentResponse(
+                    id=row.id,
+                    name=row.name,
+                    department_type=row.department_type.value,
+                )
+                for row in rows
+            }
+
+        pending_counts = dict(
+            (
+                await self.session.execute(
+                    select(HumanAction.request_id, func.count(HumanAction.id))
+                    .where(
+                        HumanAction.company_id == self.current_user.company_id,
+                        HumanAction.request_id.in_([request.id for request in requests]),
+                        HumanAction.status == "pending",
+                    )
+                    .group_by(HumanAction.request_id)
+                )
+            ).all()
+        )
+
+        requester_labels: dict[UUID, str] = {}
+        if self.current_user.actor_type in {
+            ActorType.COMPANY,
+            ActorType.DEPARTMENT_MANAGER,
+        }:
+            requester_ids = {request.requester_user_id for request in requests}
+            requester_labels = dict(
+                (
+                    await self.session.execute(
+                        select(User.id, User.email).where(
+                            User.company_id == self.current_user.company_id,
+                            User.id.in_(requester_ids),
+                        )
+                    )
+                ).all()
+            )
+
+        hide_departments = self.current_user.actor_type == ActorType.EXTERNAL_USER
+        return [
+            BusinessRequestSummaryResponse(
+                id=request.id,
+                request_type=request.request_type,
+                title=request.title,
+                summary=request.summary,
+                status=request.status,
+                current_stage=request.current_stage,
+                current_state_summary=self._current_state_summary(request.status),
+                priority=request.priority,
+                owner_department_id=request.owner_department_id,
+                active_department_id=request.active_department_id,
+                owner_department=(
+                    None
+                    if hide_departments
+                    else departments.get(request.owner_department_id)
+                ),
+                active_department=(
+                    None
+                    if hide_departments
+                    else departments.get(request.active_department_id)
+                ),
+                requester_user_id=(
+                    request.requester_user_id
+                    if self.current_user.actor_type
+                    in {ActorType.COMPANY, ActorType.DEPARTMENT_MANAGER}
+                    else None
+                ),
+                requester_label=requester_labels.get(request.requester_user_id),
+                attention_required=(
+                    int(pending_counts.get(request.id, 0)) > 0
+                    or request.status
+                    in {
+                        RequestStatus.WAITING_FOR_HUMAN_APPROVAL,
+                        RequestStatus.WAITING_FOR_HUMAN_ACTION,
+                        RequestStatus.FAILED,
+                        RequestStatus.REJECTED,
+                    }
+                ),
+                pending_action_count=int(pending_counts.get(request.id, 0)),
+                can_cancel=(
+                    request.status not in TERMINAL_REQUEST_STATUSES
+                    and not self._has_irreversible_operation(request)
+                ),
+                created_at=request.created_at,
+                updated_at=request.updated_at,
+            )
+            for request in requests
+        ]
+
+    async def _connected_actions(
+        self,
+        business_request: BusinessRequest,
+    ) -> list[ConnectedHumanActionResponse]:
+        actions = (
+            await self.session.scalars(
+                select(HumanAction)
+                .where(
+                    HumanAction.company_id == self.current_user.company_id,
+                    HumanAction.request_id == business_request.id,
+                )
+                .order_by(HumanAction.created_at.desc())
+                .limit(50)
+            )
+        ).all()
+        is_privileged = self.current_user.actor_type in {
+            ActorType.COMPANY,
+            ActorType.DEPARTMENT_MANAGER,
+        }
+        return [
+            ConnectedHumanActionResponse(
+                id=action.id,
+                title=action.title,
+                action_type=action.action_type,
+                status=action.status,
+                due_at=action.due_date,
+                assigned_role=action.assigned_role if is_privileged else None,
+                can_respond=(
+                    action.status == "pending"
+                    and (
+                        is_privileged
+                        or action.assigned_user_id == self.current_user.user_id
+                    )
+                ),
+                action_url=(
+                    f"/app/human-actions/{action.id}"
+                    if is_privileged
+                    or action.assigned_user_id == self.current_user.user_id
+                    else None
+                ),
+            )
+            for action in actions
+        ]
+
+    @staticmethod
+    def _current_state_summary(status: RequestStatus) -> str:
+        return {
+            RequestStatus.CREATED: "The request was received and is ready for routing.",
+            RequestStatus.ROUTING: "The Router is selecting the appropriate owner department.",
+            RequestStatus.PROCESSING: "The owner department is working on the request.",
+            RequestStatus.WAITING_FOR_DEPARTMENT: "Another authorized department is assisting.",
+            RequestStatus.WAITING_FOR_HUMAN_APPROVAL: "The request is waiting for an authorized approval.",
+            RequestStatus.WAITING_FOR_HUMAN_ACTION: "The request is waiting for authorized manual work or information.",
+            RequestStatus.UNDER_REVIEW: "A quality check is in progress.",
+            RequestStatus.COMPLETED: "The request completed successfully.",
+            RequestStatus.REJECTED: "The request was not approved.",
+            RequestStatus.CANCELLED: "The request was cancelled and will not continue.",
+            RequestStatus.FAILED: "The request could not be completed.",
+        }[status]
+
+    @staticmethod
+    def _safe_final_result(
+        business_request: BusinessRequest,
+        *,
+        result: dict,
+        execution: dict,
+    ) -> RequestFinalResultResponse | None:
+        if business_request.status != RequestStatus.COMPLETED:
+            return None
+        summary = result.get("final_response")
+        if not isinstance(summary, str) or not summary.strip():
+            summary = business_request.final_reason or business_request.final_decision
+        if not isinstance(summary, str) or not summary.strip():
+            summary = "The request completed successfully."
+
+        references = execution.get("retrieval_references")
+        safe_sources: list[RequestSourceReferenceResponse] = []
+        if isinstance(references, list):
+            for reference in references[:20]:
+                if not isinstance(reference, dict):
+                    continue
+                title = reference.get("title") or reference.get("document_title")
+                if not isinstance(title, str) or not title.strip():
+                    continue
+                document_id = reference.get("document_id")
+                try:
+                    parsed_id = UUID(str(document_id)) if document_id else None
+                except (TypeError, ValueError):
+                    parsed_id = None
+                safe_sources.append(
+                    RequestSourceReferenceResponse(
+                        document_id=parsed_id,
+                        title=title.strip(),
+                        version=(
+                            str(reference["version"])[:100]
+                            if reference.get("version") is not None
+                            else None
+                        ),
+                        section=(
+                            str(reference["section"])[:255]
+                            if reference.get("section") is not None
+                            else None
+                        ),
+                        scope=(
+                            str(reference["scope"])[:100]
+                            if reference.get("scope") is not None
+                            else None
+                        ),
+                    )
+                )
+        return RequestFinalResultResponse(
+            title="Request completed",
+            summary=summary.strip(),
+            sources=safe_sources,
         )
 
     async def update_metadata(

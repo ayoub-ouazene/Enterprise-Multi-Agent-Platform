@@ -1,7 +1,9 @@
+import { useId, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, X } from 'lucide-react';
 import { scaleIn, fadeIn } from '../../motion/tokens';
 import { Button } from './Button';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface ConfirmDialogProps {
   title: string;
@@ -26,6 +28,11 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const messageId = useId();
+  useFocusTrap(dialogRef, isOpen, onCancel);
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -38,10 +45,12 @@ export function ConfirmDialog({
           onClick={onCancel}
           role="alertdialog"
           aria-modal="true"
-          aria-labelledby="confirm-title"
-          aria-describedby="confirm-message"
+          aria-labelledby={titleId}
+          aria-describedby={messageId}
         >
           <motion.div
+            ref={dialogRef}
+            tabIndex={-1}
             className="w-full max-w-sm rounded-xl bg-white p-5 shadow-xl dark:bg-neutral-800"
             initial={scaleIn.initial}
             animate={scaleIn.animate}
@@ -55,13 +64,13 @@ export function ConfirmDialog({
               </div>
               <div className="min-w-0 flex-1">
                 <h3
-                  id="confirm-title"
+                  id={titleId}
                   className="text-sm font-semibold text-neutral-900 dark:text-neutral-100"
                 >
                   {title}
                 </h3>
                 <p
-                  id="confirm-message"
+                  id={messageId}
                   className="mt-1 text-sm text-neutral-600 dark:text-neutral-400"
                 >
                   {message}

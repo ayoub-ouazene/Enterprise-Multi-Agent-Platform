@@ -12,6 +12,8 @@ import type {
   PolicyReadinessResponse,
   DocumentListResponse,
   DocumentUploadPayload,
+  OnboardingManagerCandidate,
+  OnboardingManagerCoverage,
 } from '../types';
 
 // ---------------------------------------------------------------------------
@@ -36,6 +38,41 @@ export function useActivateCompany() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['onboarding', 'status'] });
       qc.invalidateQueries({ queryKey: ['onboarding', 'status', 'detailed'] });
+      qc.invalidateQueries({ queryKey: ['me'] });
+    },
+  });
+}
+
+export function useManagerCoverage() {
+  return useQuery({
+    queryKey: ['onboarding', 'manager-coverage'],
+    queryFn: () => api.get<OnboardingManagerCoverage[]>('/onboarding/manager-coverage'),
+  });
+}
+
+export function useManagerCandidates(departmentId: string, query: string) {
+  const params = new URLSearchParams({ department_id: departmentId, limit: '25' });
+  if (query.trim()) params.set('q', query.trim());
+  return useQuery({
+    queryKey: ['onboarding', 'manager-candidates', departmentId, query],
+    queryFn: () => api.get<OnboardingManagerCandidate[]>(`/onboarding/manager-candidates?${params}`),
+    enabled: Boolean(departmentId),
+  });
+}
+
+export function useAssignDepartmentManager() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ departmentId, employeeId }: { departmentId: string; employeeId: string }) =>
+      api.post<OnboardingManagerCandidate>(
+        `/onboarding/departments/${departmentId}/manager`,
+        { employee_id: employeeId },
+      ),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['onboarding', 'manager-coverage'] });
+      qc.invalidateQueries({ queryKey: ['onboarding', 'manager-candidates'] });
+      qc.invalidateQueries({ queryKey: ['onboarding', 'status', 'detailed'] });
+      qc.invalidateQueries({ queryKey: ['admin', 'employees'] });
     },
   });
 }

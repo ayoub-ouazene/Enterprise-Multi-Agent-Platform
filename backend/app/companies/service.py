@@ -3,10 +3,30 @@ from uuid import UUID
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.context import AuthenticatedUser
+from app.auth.passwords import hash_password
+from app.auth.service import AuthenticationService, TokenPair
 from app.companies.models import Company
 from app.companies.repository import CompanyRepository
-from app.companies.schemas import CompanyCreate, CompanyUpdate
+from app.companies.schemas import (
+    CompanyCreate,
+    CompanyRegistrationRequest,
+    CompanyUpdate,
+)
+from app.core.config import Settings
+from app.core.enums import ActorType, DepartmentType
 from app.core.exceptions import ConflictError, NotFoundError
+from app.departments.repository import DepartmentRepository
+from app.users.repository import UserRepository
+
+
+DEPARTMENT_NAMES: dict[DepartmentType, str] = {
+    DepartmentType.CUSTOMER_SUPPORT: "Customer Support",
+    DepartmentType.HR: "Human Resources",
+    DepartmentType.IT: "Information Technology",
+    DepartmentType.FINANCE: "Finance",
+    DepartmentType.PROCUREMENT: "Procurement",
+}
 
 
 class CompanyService:
@@ -42,6 +62,66 @@ class CompanyService:
         except IntegrityError:
             await self.session.rollback()
             raise ConflictError("Company slug already exists") from None
+        except Exception:
+            await self.session.rollback()
+            raise
+
+    async def register(
+        self,
+        payload: CompanyRegistrationRequest,
+        settings: Settings,
+    ) -> TokenPair:
+        """Create an inactive tenant and its restricted onboarding account atomically."""
+        slug = payload.company_slug.strip().lower()
+        email = str(payload.email).strip().casefold()
+        try:
+            if await self.repository.get_by_slug(slug) is not None:
+                raise ConflictError("Company workspace already exists")
+
+            company = await self.repository.create(
+                {
+                    "name": payload.company_name.strip(),
+                    "slug": slug,
+                    "is_active": False,
+                    "custom_data": {},
+                }
+            )
+            user = await UserRepository(self.session, company.id).create(
+                email=email,
+                actor_type=ActorType.COMPANY,
+                is_active=True,
+                password_hash=hash_password(payload.password.get_secret_value()),
+                must_change_password=False,
+            )
+            departments = DepartmentRepository(self.session, company.id)
+            for department_type, name in DEPARTMENT_NAMES.items():
+                await departments.create(
+                    name=name,
+                    department_type=department_type,
+                    is_active=False,
+                    custom_data={},
+                )
+
+            context = AuthenticatedUser(
+                user_id=user.id,
+                company_id=company.id,
+                email=user.email,
+                actor_type=ActorType.COMPANY,
+                company_active=False,
+                onboarding_complete=False,
+            )
+            tokens = await AuthenticationService(
+                self.session,
+                settings,
+            ).issue_token_pair(context)
+            await self.session.commit()
+            return tokens
+        except ConflictError:
+            await self.session.rollback()
+            raise
+        except IntegrityError:
+            await self.session.rollback()
+            raise ConflictError("Company workspace already exists") from None
         except Exception:
             await self.session.rollback()
             raise

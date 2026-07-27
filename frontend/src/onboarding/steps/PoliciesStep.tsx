@@ -134,7 +134,7 @@ export function PoliciesStep({ status }: PoliciesStepProps) {
             <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">File</label>
             <input
               type="file"
-              accept=".pdf,.doc,.docx,.txt,.md"
+              accept=".pdf,.docx,.txt,.md"
               onChange={(e) => { setFile(e.target.files?.[0] ?? null); }}
               className="mt-1 block w-full text-sm text-neutral-600 file:mr-4 file:rounded-md file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-xs file:font-medium file:text-primary-700 hover:file:bg-primary-100 dark:text-neutral-400 dark:file:bg-primary-900 dark:file:text-primary-300"
             />

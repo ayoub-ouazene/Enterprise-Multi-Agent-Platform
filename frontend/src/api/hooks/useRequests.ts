@@ -6,6 +6,12 @@ export interface RequestFilters {
   status?: string;
   priority?: string;
   request_type?: string;
+  search?: string;
+  owner_department_id?: string;
+  requester_user_id?: string;
+  attention_required?: boolean;
+  created_from?: string;
+  created_to?: string;
   limit?: number;
   offset?: number;
 }
@@ -15,6 +21,12 @@ export function useRequests(filters: RequestFilters = {}) {
   if (filters.status) params.set('status', filters.status);
   if (filters.priority) params.set('priority', filters.priority);
   if (filters.request_type) params.set('request_type', filters.request_type);
+  if (filters.search) params.set('search', filters.search);
+  if (filters.owner_department_id) params.set('owner_department_id', filters.owner_department_id);
+  if (filters.requester_user_id) params.set('requester_user_id', filters.requester_user_id);
+  if (filters.attention_required !== undefined) params.set('attention_required', String(filters.attention_required));
+  if (filters.created_from) params.set('created_from', filters.created_from);
+  if (filters.created_to) params.set('created_to', filters.created_to);
   if (filters.limit !== undefined) params.set('limit', String(filters.limit));
   if (filters.offset !== undefined) params.set('offset', String(filters.offset));
 
@@ -24,6 +36,7 @@ export function useRequests(filters: RequestFilters = {}) {
   return useQuery({
     queryKey: ['requests', filters],
     queryFn: () => api.get<BusinessRequestSummary[]>(path),
+    placeholderData: (previous) => previous,
   });
 }
 

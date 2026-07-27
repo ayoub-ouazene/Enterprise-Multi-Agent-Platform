@@ -13,7 +13,12 @@ from app.core.config import Settings
 from app.core.enums import ActorType
 from app.core.exceptions import BusinessValidationError, NotFoundError
 from app.database.session import get_db_session
-from app.human_actions.schemas import HumanActionSubmitResponse
+from app.human_actions.schemas import (
+    HumanActionDetailResponse,
+    HumanActionSubmitResponse,
+    HumanActionSummaryResponse,
+    RelatedRequestSummary,
+)
 from app.human_actions.service import HumanActionPermissionError
 from app.requests.enums import RequestPriority, RequestStatus
 
@@ -83,6 +88,29 @@ def action_record(user: AuthenticatedUser, **overrides):
     return SimpleNamespace(**values)
 
 
+def safe_summary(record):
+    return HumanActionSummaryResponse(
+        id=record.id, request_id=record.request_id, action_type=record.action_type,
+        title=record.title, status=record.status, assigned_role=record.assigned_role,
+        due_date=record.due_date, resolved_at=record.resolved_at,
+        created_at=record.created_at, updated_at=record.updated_at,
+        allowed_decisions=["approved", "rejected"], can_respond=True,
+        request_title="Test request", request_status="processing",
+        requesting_department="Finance",
+    )
+
+
+def safe_detail(record):
+    return HumanActionDetailResponse(
+        **safe_summary(record).model_dump(), description=record.description,
+        safe_context={"amount": "1000.00", "currency": "USD"},
+        related_request=RelatedRequestSummary(
+            id=record.request_id, title="Test request", status="processing",
+            owner_department="Finance",
+        ),
+    )
+
+
 def build_application(monkeypatch, user: AuthenticatedUser):
     engine = Mock()
     engine.dispose = AsyncMock()
@@ -117,7 +145,7 @@ def test_list_actions_returns_actions(monkeypatch) -> None:
     user = company_user()
     record = action_record(user)
     fake_service = Mock()
-    fake_service.list = AsyncMock(return_value=[record])
+    fake_service.list_public = AsyncMock(return_value=[safe_summary(record)])
 
     import app.human_actions.router as human_actions_router_module
 
@@ -144,7 +172,7 @@ def test_list_actions_returns_actions(monkeypatch) -> None:
 def test_get_action_not_found(monkeypatch) -> None:
     user = company_user()
     fake_service = Mock()
-    fake_service.get = AsyncMock(side_effect=NotFoundError("Not found"))
+    fake_service.get_public = AsyncMock(side_effect=NotFoundError("Not found"))
 
     import app.human_actions.router as human_actions_router_module
 
@@ -214,7 +242,7 @@ def test_get_action_returns_action(monkeypatch) -> None:
     user = company_user()
     record = action_record(user)
     fake_service = Mock()
-    fake_service.get = AsyncMock(return_value=record)
+    fake_service.get_public = AsyncMock(return_value=safe_detail(record))
 
     import app.human_actions.router as human_actions_router_module
 
@@ -232,7 +260,8 @@ def test_get_action_returns_action(monkeypatch) -> None:
     body = response.json()
     assert body["id"] == str(record.id)
     assert body["title"] == "Approve budget"
-    assert body["decision_package"] == {"amount": 1000}
+    assert body["safe_context"] == {"amount": "1000.00", "currency": "USD"}
+    assert "decision_package" not in body
 
 
 # --- Submit ---

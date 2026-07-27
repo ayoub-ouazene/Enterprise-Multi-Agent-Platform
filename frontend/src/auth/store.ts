@@ -24,7 +24,20 @@ interface AuthState {
   init: () => void;
 }
 
-let _tokens: TokenPair | null = null;
+const TOKEN_STORAGE_KEY = 'tellus.auth.tokens';
+
+function readStoredTokens(): TokenPair | null {
+  try {
+    const raw = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as TokenPair) : null;
+  } catch {
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+    return null;
+  }
+}
+
+let _tokens: TokenPair | null =
+  typeof sessionStorage === 'undefined' ? null : readStoredTokens();
 
 export function getTokens(): TokenPair | null {
   return _tokens;
@@ -32,15 +45,21 @@ export function getTokens(): TokenPair | null {
 
 export function setTokens(tokens: TokenPair | null): void {
   _tokens = tokens;
+  if (typeof sessionStorage === 'undefined') return;
+  if (tokens) {
+    sessionStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(tokens));
+  } else {
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+  }
 }
 
 function clearStorage(): void {
-  _tokens = null;
+  setTokens(null);
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  tokens: null,
+  tokens: _tokens,
   isAuthenticated: false,
   isLoading: true,
   mustChangePassword: false,
@@ -56,7 +75,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   setLoading: (value) => set({ isLoading: value }),
 
   init: () => {
-    set({ isLoading: false });
+    set({ tokens: _tokens, isLoading: Boolean(_tokens) });
   },
 
   logout: () => {
@@ -73,5 +92,5 @@ export const useAuthStore = create<AuthState>((set) => ({
 }));
 
 export function clearAuth(): void {
-  clearStorage();
+  useAuthStore.getState().logout();
 }

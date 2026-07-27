@@ -57,6 +57,8 @@ class RowValidationResult(BaseModel):
 class ImportValidateResponse(BaseModel):
     import_job_id: UUID
     import_type: ImportType
+    original_filename: str
+    atomic: bool
     total_rows: int
     valid_rows: int
     invalid_rows: int
@@ -110,3 +112,22 @@ class OnboardingActivateResponse(BaseModel):
     company_id: UUID
     activated: bool
     message: str
+
+
+class ManagerCandidateResponse(BaseModel):
+    id: UUID
+    department_id: UUID
+    employee_code: str
+    job_title: str | None
+    is_current_manager: bool
+
+
+class ManagerCoverageResponse(BaseModel):
+    department_id: UUID
+    department_name: str
+    department_type: str
+    manager: ManagerCandidateResponse | None
+
+
+class ManagerAssignmentRequest(BaseModel):
+    employee_id: UUID

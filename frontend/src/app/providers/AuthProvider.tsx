@@ -1,26 +1,20 @@
-import { type ReactNode, useEffect, useRef } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { useMe } from '../../api/hooks/useAuth';
 import { useAuthStore } from '../../auth/store';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const initRef = useRef(false);
   const setLoading = useAuthStore((s) => s.setLoading);
   const setUser = useAuthStore((s) => s.setUser);
+  const tokens = useAuthStore((s) => s.tokens);
 
-  const { isLoading, isError } = useMe({ enabled: !initRef.current });
-
-  useEffect(() => {
-    if (!initRef.current) {
-      initRef.current = true;
-    }
-  }, []);
+  const { isLoading, isError } = useMe({ enabled: Boolean(tokens?.access_token) });
 
   useEffect(() => {
-    setLoading(isLoading);
-    if (isError) {
+    setLoading(Boolean(tokens?.access_token) && isLoading);
+    if (!tokens?.access_token || isError) {
       setUser(null);
     }
-  }, [isLoading, isError, setLoading, setUser]);
+  }, [tokens?.access_token, isLoading, isError, setLoading, setUser]);
 
   return <>{children}</>;
 }

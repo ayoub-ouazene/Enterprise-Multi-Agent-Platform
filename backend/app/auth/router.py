@@ -4,7 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.context import AuthenticatedUser
-from app.auth.dependencies import get_request_settings, require_authenticated_user
+from app.auth.dependencies import (
+    get_request_settings,
+    require_setup_authenticated_user,
+)
 from app.auth.schemas import (
     AuthenticatedUserResponse,
     ChangePasswordRequest,
@@ -13,7 +16,14 @@ from app.auth.schemas import (
     RefreshRequest,
     TokenResponse,
 )
-from app.auth.service import AuthenticationError, AuthenticationService, TokenPair
+from app.auth.service import (
+    AuthenticationError,
+    AuthenticationService,
+    CompanyInactiveError,
+    InactiveUserError,
+    TokenPair,
+    WorkspaceNotFoundError,
+)
 from app.core.config import Settings
 from app.database.session import get_db_session
 
@@ -27,6 +37,25 @@ def _authentication_error() -> HTTPException:
         detail="Invalid authentication credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+
+def _raise_login_error(exc: AuthenticationError) -> None:
+    if isinstance(exc, WorkspaceNotFoundError):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Company workspace was not found",
+        ) from None
+    if isinstance(exc, InactiveUserError):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive",
+        ) from None
+    if isinstance(exc, CompanyInactiveError):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Company workspace is not active",
+        ) from None
+    raise _authentication_error() from None
 
 
 def _token_response(pair: TokenPair) -> TokenResponse:
@@ -50,8 +79,8 @@ async def login(
             str(payload.email),
             payload.password.get_secret_value(),
         )
-    except AuthenticationError:
-        raise _authentication_error() from None
+    except AuthenticationError as exc:
+        _raise_login_error(exc)
     return _token_response(pair)
 
 
@@ -72,7 +101,10 @@ async def refresh(
 
 @router.get("/me", response_model=AuthenticatedUserResponse)
 async def me(
-    current_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
+    current_user: Annotated[
+        AuthenticatedUser,
+        Depends(require_setup_authenticated_user),
+    ],
 ) -> AuthenticatedUserResponse:
     return AuthenticatedUserResponse.from_context(current_user)
 
@@ -80,7 +112,10 @@ async def me(
 @router.post("/change-password", response_model=ChangePasswordResponse)
 async def change_password(
     payload: ChangePasswordRequest,
-    current_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
+    current_user: Annotated[
+        AuthenticatedUser,
+        Depends(require_setup_authenticated_user),
+    ],
     session: Annotated[AsyncSession, Depends(get_db_session)],
     settings: Annotated[Settings, Depends(get_request_settings)],
 ) -> ChangePasswordResponse:

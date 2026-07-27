@@ -4,7 +4,7 @@ from decimal import Decimal
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 
 from app.core.enums import DepartmentType, EmploymentStatus
 from app.departments.finance.enums import BudgetStatus, BudgetType
@@ -63,6 +63,7 @@ class AdminEmployeeCreate(BaseModel):
     manager_employee_id: UUID | None = None
     employment_status: EmploymentStatus = EmploymentStatus.ACTIVE
     custom_data: dict[str, Any] = Field(default_factory=dict)
+    temporary_password: SecretStr | None = None
 
 
 class AdminEmployeeUpdate(BaseModel):
@@ -81,6 +82,10 @@ class AdminEmployeeResponse(BaseModel):
 
     id: UUID
     user_id: UUID | None
+    email: str | None = None
+    account_active: bool = False
+    must_change_password: bool = False
+    actor_type: str | None = None
     employee_code: str
     job_title: str | None
     department_id: UUID | None
@@ -124,6 +129,7 @@ class AdminAssetCreate(BaseModel):
     brand: str = Field(min_length=1, max_length=120)
     model: str = Field(min_length=1, max_length=160)
     serial_number: str | None = Field(default=None, max_length=255)
+    assigned_employee_id: UUID | None = None
     status: AssetStatus = AssetStatus.AVAILABLE
     location: str | None = Field(default=None, max_length=255)
     custom_data: dict[str, Any] = Field(default_factory=dict)
@@ -135,6 +141,7 @@ class AdminAssetUpdate(BaseModel):
     brand: str | None = Field(default=None, min_length=1, max_length=120)
     model: str | None = Field(default=None, min_length=1, max_length=160)
     serial_number: str | None = Field(default=None, max_length=255)
+    assigned_employee_id: UUID | None = None
     status: AssetStatus | None = None
     location: str | None = Field(default=None, max_length=255)
     custom_data: dict[str, Any] | None = None
@@ -150,6 +157,7 @@ class AdminAssetResponse(BaseModel):
     brand: str
     model: str
     serial_number: str | None
+    assigned_employee_id: UUID | None = None
     status: str
     location: str | None
     custom_data: dict[str, Any]

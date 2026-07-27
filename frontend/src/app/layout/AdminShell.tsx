@@ -1,164 +1,122 @@
-import { useState } from 'react';
-import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { clsx } from 'clsx';
 import {
-  LayoutDashboard,
-  Building2,
-  Users,
-  Star,
-  Layers,
-  Wrench,
-  FileText,
-  Wallet,
-  Truck,
-  Calendar,
-  ClipboardList,
-  ShieldCheck,
-  ChevronRight,
-  Menu,
-  X,
-  TriangleAlert,
-  Zap,
-  BookOpen,
+  Boxes, Building2, CalendarDays, ChevronRight, CircleDollarSign,
+  ClipboardCheck, FileText, Gauge, HardDrive, Menu, PackageSearch,
+  ShieldAlert, ShieldCheck, Users, X,
 } from 'lucide-react';
+import { useAuthContext } from '../../auth/hooks/useAuthContext';
+import { useDashboard } from '../../api/hooks/useDashboard';
+import { canUseAdminCapability, type AdminCapability } from '../../admin/permissions';
+import { Button } from '../../components/ui/Button';
+import { Modal } from '../../components/ui/Modal';
 
-
-interface NavItem {
+interface AdminNavItem {
   label: string;
   href: string;
-  icon: React.ReactNode;
+  capability: AdminCapability;
+  icon: ReactNode;
+  companyOnly?: boolean;
 }
 
-const navItems: NavItem[] = [
-  { label: 'Overview', href: '/app/admin/overview', icon: <LayoutDashboard size={16} /> },
-  { label: 'Company', href: '/app/admin/company', icon: <Building2 size={16} /> },
-  { label: 'Employees', href: '/app/admin/employees', icon: <Users size={16} /> },
-  { label: 'Managers', href: '/app/admin/managers', icon: <Star size={16} /> },
-  { label: 'Departments', href: '/app/admin/departments', icon: <Layers size={16} /> },
-  { label: 'Assets', href: '/app/admin/assets', icon: <Wrench size={16} /> },
-  { label: 'Software', href: '/app/admin/software', icon: <FileText size={16} /> },
-  { label: 'Budgets', href: '/app/admin/budgets', icon: <Wallet size={16} /> },
-  { label: 'Suppliers', href: '/app/admin/suppliers', icon: <Truck size={16} /> },
-  { label: 'Holidays', href: '/app/admin/holidays', icon: <Calendar size={16} /> },
-  { label: 'Staffing', href: '/app/admin/staffing-rules', icon: <ClipboardList size={16} /> },
-  { label: 'Policies', href: '/app/admin/policies', icon: <ShieldCheck size={16} /> },
-  { label: 'Documents', href: '/app/admin/documents', icon: <BookOpen size={16} /> },
-  { label: 'Failures', href: '/app/admin/failures', icon: <TriangleAlert size={16} /> },
-  { label: 'Gaps', href: '/app/admin/capability-gaps', icon: <Zap size={16} /> },
+const items: AdminNavItem[] = [
+  { label: 'Overview', href: '/app/admin/overview', capability: 'overview', icon: <Gauge size={17} /> },
+  { label: 'Company profile', href: '/app/admin/company', capability: 'company', icon: <Building2 size={17} />, companyOnly: true },
+  { label: 'Employees', href: '/app/admin/employees', capability: 'employees', icon: <Users size={17} /> },
+  { label: 'Managers', href: '/app/admin/managers', capability: 'managers', icon: <ShieldCheck size={17} /> },
+  { label: 'Departments', href: '/app/admin/departments', capability: 'departments', icon: <Boxes size={17} /> },
+  { label: 'Assets', href: '/app/admin/assets', capability: 'assets', icon: <HardDrive size={17} /> },
+  { label: 'Software', href: '/app/admin/software', capability: 'software', icon: <PackageSearch size={17} /> },
+  { label: 'Budgets', href: '/app/admin/budgets', capability: 'budgets', icon: <CircleDollarSign size={17} /> },
+  { label: 'Suppliers', href: '/app/admin/suppliers', capability: 'suppliers', icon: <ClipboardCheck size={17} /> },
+  { label: 'Holidays', href: '/app/admin/holidays', capability: 'holidays', icon: <CalendarDays size={17} /> },
+  { label: 'Staffing rules', href: '/app/admin/staffing-rules', capability: 'staffing', icon: <Users size={17} /> },
+  { label: 'Policy readiness', href: '/app/admin/policies', capability: 'policies', icon: <ShieldCheck size={17} /> },
+  { label: 'Documents', href: '/app/admin/documents', capability: 'documents', icon: <FileText size={17} /> },
+  { label: 'Operational issues', href: '/app/admin/failures', capability: 'failures', icon: <ShieldAlert size={17} />, companyOnly: true },
+  { label: 'Capability gaps', href: '/app/admin/capability-gaps', capability: 'failures', icon: <ShieldAlert size={17} />, companyOnly: true },
 ];
 
-function useBreadcrumb() {
-  const location = useLocation();
-  const parts = location.pathname.replace('/app/admin', '').split('/').filter(Boolean);
-  if (parts.length === 0) return [{ label: 'Administration', href: '/app/admin' }];
-
-  const crumbs = [{ label: 'Administration', href: '/app/admin/overview' }];
-  const currentItem = navItems.find((i) => i.href === location.pathname);
-  if (currentItem && currentItem.href !== '/app/admin/overview') {
-    crumbs.push({ label: currentItem.label, href: currentItem.href });
-  }
-  return crumbs;
-}
-
 export function AdminShell() {
+  const { user } = useAuthContext();
+  const dashboard = useDashboard();
   const location = useLocation();
-  const navigate = useNavigate();
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const breadcrumbs = useBreadcrumb();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const departmentType = dashboard.data?.identity.department_type;
+  const companyName = dashboard.data?.identity.company_name ?? 'Company workspace';
+  const visibleItems = useMemo(
+    () => items.filter((item) => canUseAdminCapability(user, departmentType, item.capability)),
+    [departmentType, user],
+  );
+  const current = visibleItems.find((item) => location.pathname.startsWith(item.href));
+  const requested = items.find((item) => location.pathname.startsWith(item.href));
+  const denied = Boolean(requested && !visibleItems.includes(requested));
+
+  useEffect(() => setMobileOpen(false), [location.pathname]);
 
   return (
-    <div className="flex h-full flex-col">
-      {/* Breadcrumbs + mobile toggle */}
-      <div className="flex items-center justify-between border-b border-neutral-200 bg-white px-4 py-2 dark:border-neutral-800 dark:bg-neutral-900">
-        <nav aria-label="Breadcrumb" className="flex items-center space-x-1 text-sm">
-          {breadcrumbs.map((crumb, idx) => (
-            <div key={crumb.href} className="flex items-center">
-              {idx > 0 && <ChevronRight size={14} className="mx-1 text-neutral-400" />}
-              <button
-                onClick={() => navigate(crumb.href)}
-                className={clsx(
-                  'hover:text-primary-600 dark:hover:text-primary-400',
-                  idx === breadcrumbs.length - 1
-                    ? 'font-medium text-neutral-900 dark:text-neutral-100'
-                    : 'text-neutral-600 dark:text-neutral-400'
-                )}
-              >
-                {crumb.label}
-              </button>
-            </div>
-          ))}
-        </nav>
-        <button
-          className="rounded-md p-1 text-neutral-500 hover:bg-neutral-100 md:hidden dark:text-neutral-400 dark:hover:bg-neutral-800"
-          onClick={() => setMobileNavOpen(!mobileNavOpen)}
-          aria-label="Toggle admin navigation"
-        >
-          {mobileNavOpen ? <X size={18} /> : <Menu size={18} />}
-        </button>
+    <div className="min-h-full bg-neutral-50 dark:bg-neutral-950">
+      <div className="border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+        <div className="flex min-h-16 items-center justify-between gap-4 px-4 sm:px-6">
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-neutral-950 dark:text-white">{companyName}</p>
+            <p className="text-xs text-neutral-500">{departmentType ? `${departmentType.replaceAll('_', ' ')} administration` : 'Company administration'}</p>
+          </div>
+          <Button variant="secondary" size="sm" className="md:hidden" onClick={() => setMobileOpen(true)}>
+            <Menu size={16} className="mr-2" />Sections
+          </Button>
+        </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
-        {/* Desktop secondary nav */}
-        <aside className="hidden w-56 flex-shrink-0 overflow-y-auto border-r border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900 md:block">
-          <nav aria-label="Admin navigation" className="space-y-0.5 p-2">
-            {navItems.map((item) => {
-              const isActive = location.pathname === item.href;
-              return (
-                <button
-                  key={item.href}
-                  onClick={() => navigate(item.href)}
-                  className={clsx(
-                    'flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
-                    isActive
-                      ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
-                      : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-200'
-                  )}
-                >
-                  <span className={isActive ? 'text-primary-500 dark:text-primary-400' : 'text-neutral-400'}>
-                    {item.icon}
-                  </span>
-                  {item.label}
-                </button>
-              );
-            })}
-          </nav>
+      <div className="flex min-h-[calc(100dvh-8rem)]">
+        <aside className="hidden w-60 shrink-0 border-r border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900 md:block">
+          <AdminNavigation items={visibleItems} />
         </aside>
 
-        {/* Mobile secondary nav */}
-        {mobileNavOpen && (
-          <div className="absolute inset-x-0 top-[41px] z-40 border-b border-neutral-200 bg-white shadow-sm md:hidden dark:border-neutral-800 dark:bg-neutral-900">
-            <nav aria-label="Admin navigation mobile" className="space-y-0.5 p-2">
-              {navItems.map((item) => {
-                const isActive = location.pathname === item.href;
-                return (
-                  <button
-                    key={item.href}
-                    onClick={() => {
-                      navigate(item.href);
-                      setMobileNavOpen(false);
-                    }}
-                    className={clsx(
-                      'flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium transition-colors',
-                      isActive
-                        ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300'
-                        : 'text-neutral-600 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800'
-                    )}
-                  >
-                    {item.icon}
-                    {item.label}
-                  </button>
-                );
-              })}
+        <section className="min-w-0 flex-1">
+          <div className="border-b border-neutral-200 bg-white px-4 py-2.5 dark:border-neutral-800 dark:bg-neutral-900 sm:px-6">
+            <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-xs text-neutral-500">
+              <span>Administration</span><ChevronRight size={13} aria-hidden="true" />
+              <span className="font-medium text-neutral-800 dark:text-neutral-200">{current?.label ?? 'Resource detail'}</span>
             </nav>
           </div>
-        )}
-
-        {/* Main content area */}
-        <main className="flex-1 overflow-y-auto bg-neutral-50 p-4 dark:bg-neutral-900">
-          <Outlet />
-        </main>
+          <main className="mx-auto max-w-[1500px] p-4 sm:p-6">{denied ? <AdminAccessDenied /> : <Outlet />}</main>
+        </section>
       </div>
+
+      <Modal title="Administration sections" isOpen={mobileOpen} onClose={() => setMobileOpen(false)}>
+        <div className="flex items-center justify-between pb-2">
+          <p className="text-xs text-neutral-500">Only sections authorized for your role are shown.</p>
+          <button aria-label="Close administration sections" onClick={() => setMobileOpen(false)} className="sr-only"><X /></button>
+        </div>
+        <AdminNavigation items={visibleItems} />
+      </Modal>
     </div>
+  );
+}
+
+function AdminAccessDenied() {
+  return <div className="mx-auto max-w-xl rounded-card border border-danger-200 bg-white p-8 text-center dark:border-danger-900 dark:bg-neutral-900"><ShieldAlert className="mx-auto text-danger-600" size={30} /><h1 className="mt-4 text-xl font-semibold">Administration access denied</h1><p className="mt-2 text-sm text-neutral-600 dark:text-neutral-400">This section is outside your department-management scope. Backend authorization remains authoritative.</p></div>;
+}
+
+function AdminNavigation({ items: navigation }: { items: AdminNavItem[] }) {
+  return (
+    <nav aria-label="Administration navigation" className="grid gap-1">
+      {navigation.map((item) => (
+        <NavLink
+          key={item.href}
+          to={item.href}
+          className={({ isActive }) => clsx(
+            'flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
+            isActive
+              ? 'bg-primary-50 text-primary-800 dark:bg-primary-950 dark:text-primary-200'
+              : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white',
+          )}
+        >
+          {item.icon}<span>{item.label}</span>
+        </NavLink>
+      ))}
+    </nav>
   );
 }

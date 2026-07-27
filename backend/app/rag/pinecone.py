@@ -3,7 +3,7 @@ import logging
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from typing import Any, TypeVar
 
-from app.core.config import Settings, validate_pinecone_configuration
+from app.core.config import ConfigurationError, Settings, validate_pinecone_configuration
 from app.rag.exceptions import KnowledgeProviderError
 
 
@@ -61,7 +61,12 @@ class PineconeProvider:
         async with self._lock:
             if self._validated:
                 return self._index
-            validate_pinecone_configuration(self.settings)
+            try:
+                validate_pinecone_configuration(self.settings)
+            except ConfigurationError as exc:
+                raise KnowledgeProviderError(
+                    "The company knowledge service is not configured"
+                ) from exc
             from pinecone import PineconeAsyncio
 
             self._client = PineconeAsyncio(

@@ -1,63 +1,48 @@
-import { Building2, Info } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Building2, LockKeyhole } from 'lucide-react';
 import type { OnboardingStatusDetailed } from '../../api/types';
-import { useAdminDepartments } from '../../api/hooks/useOnboarding';
+import { useAdminCompany, useUpdateAdminCompany } from '../../api/hooks/useAdmin';
 import { Alert } from '../../components/ui/Alert';
+import { Button } from '../../components/ui/Button';
 import { Skeleton } from '../../components/layout/Skeleton';
 
-interface ProfileStepProps {
-  status: OnboardingStatusDetailed;
+export function ProfileStep({ status }: { status: OnboardingStatusDetailed }) {
+  const company = useAdminCompany();
+  const update = useUpdateAdminCompany();
+  const [name, setName] = useState('');
+  const item = status.items.find((entry) => entry.requirement === 'company_profile');
+
+  useEffect(() => {
+    if (company.data) setName(company.data.name);
+  }, [company.data]);
+
+  const dirty = Boolean(company.data && name.trim() !== company.data.name);
+  useEffect(() => {
+    const warn = (event: BeforeUnloadEvent) => {
+      if (!dirty) return;
+      event.preventDefault();
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
+
+  if (company.isLoading) return <Skeleton className="h-64" />;
+  if (!company.data) return <Alert variant="error">The company profile could not be loaded.</Alert>;
+
+  return <div className="space-y-6">
+    <div className="flex items-start gap-3"><span className="grid h-11 w-11 place-items-center rounded-lg bg-primary-50 text-primary-700 dark:bg-primary-950"><Building2 /></span><div><h2 className="text-lg font-semibold">Company profile</h2><p className="text-sm text-neutral-500">Confirm the identity employees will see across the workspace.</p></div></div>
+    <Alert variant={item?.satisfied ? 'success' : 'warning'} title={item?.satisfied ? 'Profile ready' : 'Profile needs attention'}>{item?.details ?? 'A display name and workspace slug are required.'}</Alert>
+    <div className="grid gap-5 rounded-card border border-neutral-200 p-5 dark:border-neutral-800">
+      <label className="grid gap-1.5 text-sm font-medium">Company display name<input value={name} maxLength={255} onChange={(event) => setName(event.target.value)} className="h-11 rounded-lg border border-neutral-300 px-3 dark:border-neutral-700 dark:bg-neutral-950" /><span className="text-xs font-normal text-neutral-500">Used in navigation, dashboards, and employee-facing pages.</span></label>
+      <label className="grid gap-1.5 text-sm font-medium">Workspace slug<div className="flex h-11 items-center gap-2 rounded-lg border border-neutral-200 bg-neutral-50 px-3 text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900"><LockKeyhole size={15} />{company.data.slug}</div><span className="text-xs font-normal text-neutral-500">The workspace identifier is immutable after registration.</span></label>
+      <div className="grid gap-3 sm:grid-cols-2"><ReadOnly label="Company ID" value={company.data.id} /><ReadOnly label="Activation state" value={company.data.is_active ? 'Active' : 'Setup in progress'} /></div>
+      {update.isError && <Alert variant="error">The profile was not saved. Review the value and try again.</Alert>}
+      {update.isSuccess && !dirty && <Alert variant="success">Company profile saved.</Alert>}
+      <div className="flex justify-end"><Button disabled={!dirty || !name.trim()} isLoading={update.isPending} onClick={() => update.mutate({ name: name.trim() })}>Save profile</Button></div>
+    </div>
+  </div>;
 }
 
-export function ProfileStep({ status }: ProfileStepProps) {
-  const { data: departments, isLoading } = useAdminDepartments();
-  const profileItem = status.items.find((i) => i.requirement === 'company_profile');
-  const companyName = departments?.[0]?.name?.split(' ')[0] ?? 'Your Company';
-
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-100 text-primary-600 dark:bg-primary-900 dark:text-primary-300">
-          <Building2 size={20} />
-        </div>
-        <div>
-          <h2 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">Company Profile</h2>
-          <p className="text-xs text-neutral-500 dark:text-neutral-400">Basic company identity</p>
-        </div>
-      </div>
-
-      {profileItem?.satisfied ? (
-        <Alert variant="success" title="Profile complete">
-          Your company profile is set up and ready.
-        </Alert>
-      ) : (
-        <Alert variant="warning" title="Profile incomplete">
-          {profileItem?.details ?? 'Company name and slug are required.'}
-        </Alert>
-      )}
-
-      {isLoading ? (
-        <Skeleton variant="rect" className="h-20 w-full" />
-      ) : (
-        <div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-800">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Company Name</label>
-              <p className="mt-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">{companyName}</p>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-neutral-500 dark:text-neutral-400">Slug</label>
-              <p className="mt-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">{companyName.toLowerCase().replace(/\s+/g, '-')}</p>
-            </div>
-          </div>
-          <div className="mt-3 flex items-start gap-2 rounded-md bg-info-50 p-2 text-xs text-info-800 dark:bg-info-900/30 dark:text-info-200">
-            <Info size={14} className="mt-0.5 shrink-0" />
-            <p>
-              Company name and slug were set during registration and cannot be changed here.
-              Contact support to update these fields.
-            </p>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+function ReadOnly({ label, value }: { label: string; value: string }) {
+  return <div><p className="text-xs font-medium text-neutral-500">{label}</p><p className="mt-1 break-all text-sm">{value}</p></div>;
 }

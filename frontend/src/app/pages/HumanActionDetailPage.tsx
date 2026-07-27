@@ -19,6 +19,7 @@ import { useHumanAction, useSubmitStructuredHumanAction } from '../../api/hooks/
 import { useRequestSse } from '../../api/hooks/useRequestSse';
 import { formatDateTime, relativeTime } from '../../lib/formatters';
 import { getHumanActionStatusMeta } from '../../lib/status';
+import { ApiErrorException } from '../../api/errors';
 import {
   ActionTypeBadge,
   DecisionPackageView,
@@ -29,7 +30,7 @@ import {
 export function HumanActionDetailPage() {
   const { actionId = '' } = useParams();
   const navigate = useNavigate();
-  const { data: action, isLoading, error } = useHumanAction(actionId);
+  const { data: action, isLoading, error, refetch } = useHumanAction(actionId);
   const submit = useSubmitStructuredHumanAction(actionId);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -41,7 +42,16 @@ export function HumanActionDetailPage() {
     setSubmitError(null);
     submit.submit(decision, fields, {
       onError: (err: unknown) => {
-        setSubmitError(err instanceof Error ? err.message : 'Submission failed');
+        if (err instanceof ApiErrorException && err.error.status === 409) {
+          setSubmitError('This action was already resolved or its facts changed. The latest information has been loaded.');
+          refetch();
+        } else {
+          setSubmitError('The response was not confirmed. Your action remains unchanged.');
+        }
+      },
+      onSuccess: () => {
+        sessionStorage.removeItem(`tellus.action-comment.${actionId}`);
+        refetch();
       },
     });
   };
@@ -130,7 +140,7 @@ export function HumanActionDetailPage() {
             Due {formatDateTime(action.due_date)}
           </span>
         )}
-        {action.assigned_user_id && (
+        {action.can_respond && (
           <span className="inline-flex items-center gap-1">
             <User size={12} aria-hidden="true" />
             Assigned to you
@@ -155,7 +165,7 @@ export function HumanActionDetailPage() {
             >
               Context
             </h3>
-            <DecisionPackageView package={action.decision_package} />
+            <DecisionPackageView actionType={action.action_type} context={action.safe_context} />
           </section>
 
           {/* Response form */}
@@ -172,7 +182,7 @@ export function HumanActionDetailPage() {
               </h3>
               {submit.isSuccess ? (
                 <Alert variant="success" title="Response submitted">
-                  Your response has been recorded successfully. The request will resume processing shortly.
+                  Your response has been recorded. The related request now shows the authoritative workflow state.
                 </Alert>
               ) : (
                 <ResponseForm
@@ -190,8 +200,7 @@ export function HumanActionDetailPage() {
           )}
 
           {/* History */}
-          {action.status !== 'pending' && (
-            <section aria-labelledby="history-heading">
+          <section aria-labelledby="history-heading">
               <h3
                 id="history-heading"
                 className="mb-3 text-sm font-semibold uppercase tracking-wide text-neutral-500 dark:text-neutral-400"
@@ -199,8 +208,8 @@ export function HumanActionDetailPage() {
                 Response Record
               </h3>
               <ActionHistory action={action} />
+              {action.status !== 'pending' && action.resolution_decision && <Alert variant="success" className="mt-4" title={`Final response: ${action.resolution_decision.replaceAll('_', ' ')}`}>{action.resolution_comment ?? 'No additional comment was recorded.'}</Alert>}
             </section>
-          )}
         </div>
 
         {/* Right: Meta sidebar */}
@@ -212,9 +221,9 @@ export function HumanActionDetailPage() {
             <dl className="mt-3 space-y-3">
               <DetailRow label="Request ID" value={action.request_id.slice(0, 8)} />
               <DetailRow label="Status" value={<span className="capitalize">{action.status}</span>} />
-              {action.request_status && (
-                <DetailRow label="Request Status" value={<span className="capitalize">{action.request_status.replace(/_/g, ' ')}</span>} />
-              )}
+              <DetailRow label="Request Status" value={<span className="capitalize">{action.related_request.status.replace(/_/g, ' ')}</span>} />
+              {action.requesting_department && <DetailRow label="Requested by" value={action.requesting_department} />}
+              {action.assigned_role && <DetailRow label="Assigned role" value={action.assigned_role.replaceAll('_', ' ')} />}
               <DetailRow label="Created" value={formatDateTime(action.created_at)} />
               {action.updated_at !== action.created_at && (
                 <DetailRow label="Updated" value={formatDateTime(action.updated_at)} />

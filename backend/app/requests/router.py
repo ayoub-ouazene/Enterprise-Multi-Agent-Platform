@@ -52,23 +52,27 @@ async def create_request(
     current_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
 ) -> BusinessRequestDetailResponse:
     try:
-        business_request = await _service(session, current_user).create(payload)
+        service = _service(session, current_user)
+        business_request = await service.create(payload)
     except RequestPermissionError as exc:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail=str(exc),
         ) from None
-    return BusinessRequestDetailResponse.model_validate(business_request)
+    return await service.get_detail(business_request.id)
 
 
-@router.get("", response_model=list[BusinessRequestSummaryResponse])
+@router.get(
+    "",
+    response_model=list[BusinessRequestSummaryResponse],
+    response_model_exclude_none=True,
+)
 async def list_requests(
     filters: Annotated[BusinessRequestListFilters, Depends()],
     session: Annotated[AsyncSession, Depends(get_db_session)],
     current_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
 ) -> list[BusinessRequestSummaryResponse]:
-    requests = await _service(session, current_user).list(filters)
-    return [BusinessRequestSummaryResponse.model_validate(item) for item in requests]
+    return await _service(session, current_user).list_summaries(filters)
 
 
 @router.get(
@@ -104,13 +108,12 @@ async def get_request(
     current_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
 ) -> BusinessRequestDetailResponse:
     try:
-        business_request = await _service(session, current_user).get(request_id)
+        return await _service(session, current_user).get_detail(request_id)
     except NotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Business request not found",
         ) from None
-    return BusinessRequestDetailResponse.model_validate(business_request)
 
 
 @router.post(
@@ -123,7 +126,8 @@ async def cancel_request(
     current_user: Annotated[AuthenticatedUser, Depends(require_authenticated_user)],
 ) -> BusinessRequestCancellationResponse:
     try:
-        business_request = await _service(session, current_user).cancel(request_id)
+        service = _service(session, current_user)
+        business_request = await service.cancel(request_id)
     except NotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -134,4 +138,5 @@ async def cancel_request(
             status_code=status.HTTP_409_CONFLICT,
             detail=str(exc),
         ) from None
-    return BusinessRequestCancellationResponse.model_validate(business_request)
+    detail = await service.get_detail(business_request.id)
+    return BusinessRequestCancellationResponse(**detail.model_dump())
