@@ -6,7 +6,9 @@ export function Card({ className, children, ...props }: HTMLAttributes<HTMLDivEl
     <div
       className={clsx(
         'rounded-lg border border-neutral-200 bg-white shadow-xs',
-        'dark:border-neutral-800 dark:bg-neutral-800',
+        'transition-[border-color,box-shadow,transform] duration-ui ease-productive',
+        'hover:border-neutral-300 hover:shadow-card motion-safe:hover:-translate-y-0.5',
+        'dark:border-neutral-800 dark:bg-neutral-800 dark:hover:border-neutral-700',
         className
       )}
       {...props}

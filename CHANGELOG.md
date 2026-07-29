@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to the Enterprise Multi-Agent Platform are documented in this file.
+All notable changes to Orchestra are documented in this file.
 
 ## [1.0.0] — 2026-07-27
 

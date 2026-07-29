@@ -18,7 +18,7 @@ interface RequestForm {
   priority: 'low' | 'normal' | 'high' | 'urgent';
 }
 
-const DRAFT_KEY = 'tellus.request.draft';
+const DRAFT_KEY = 'orchestra.request.draft';
 const defaults: RequestForm = { request_type: '', title: '', summary: '', priority: 'normal' };
 
 export function NewRequestPage() {

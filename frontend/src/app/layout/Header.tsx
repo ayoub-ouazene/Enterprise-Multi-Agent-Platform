@@ -78,7 +78,7 @@ export function Header({ onMenuClick, sidebarCollapsed, onSidebarToggle }: Heade
 
         <Link to="/app" className="flex shrink-0 items-center gap-2.5 rounded-lg">
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary-600 text-sm font-bold text-white shadow-sm">T</span>
-          <span className="hidden text-base font-semibold tracking-tight text-neutral-950 sm:block dark:text-white">TellUS AI</span>
+          <span className="hidden text-base font-semibold tracking-tight text-neutral-950 sm:block dark:text-white">Orchestra</span>
         </Link>
 
         <button

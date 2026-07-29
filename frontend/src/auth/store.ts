@@ -24,7 +24,7 @@ interface AuthState {
   init: () => void;
 }
 
-const TOKEN_STORAGE_KEY = 'tellus.auth.tokens';
+const TOKEN_STORAGE_KEY = 'orchestra.auth.tokens';
 
 function readStoredTokens(): TokenPair | null {
   try {

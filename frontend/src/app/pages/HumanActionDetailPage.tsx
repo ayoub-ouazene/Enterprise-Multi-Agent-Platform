@@ -50,7 +50,7 @@ export function HumanActionDetailPage() {
         }
       },
       onSuccess: () => {
-        sessionStorage.removeItem(`tellus.action-comment.${actionId}`);
+        sessionStorage.removeItem(`orchestra.action-comment.${actionId}`);
         refetch();
       },
     });

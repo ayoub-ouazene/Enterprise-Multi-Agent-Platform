@@ -17,13 +17,15 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         disabled={disabled || isLoading}
         className={clsx(
-          'inline-flex items-center justify-center rounded-md font-medium transition-colors',
+          'inline-flex items-center justify-center rounded-md font-medium',
+          'transition-[background-color,border-color,color,box-shadow,transform] duration-ui ease-productive',
+          'motion-safe:active:scale-[0.98]',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 focus-visible:ring-offset-2',
           'disabled:pointer-events-none disabled:opacity-50',
           'dark:focus-visible:ring-offset-neutral-900',
           {
-            'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800': variant === 'primary',
-            'bg-white text-neutral-700 border border-neutral-300 hover:bg-neutral-50 active:bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-700 dark:hover:bg-neutral-700 dark:active:bg-neutral-600': variant === 'secondary',
+            'bg-primary-600 text-white shadow-sm hover:bg-primary-700 hover:shadow-md hover:shadow-primary-600/20 active:bg-primary-800': variant === 'primary',
+            'bg-white text-neutral-700 border border-neutral-300 hover:bg-neutral-50 hover:border-neutral-400 active:bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-300 dark:border-neutral-700 dark:hover:bg-neutral-700 dark:active:bg-neutral-600': variant === 'secondary',
             'bg-danger-600 text-white hover:bg-danger-700 active:bg-danger-800': variant === 'danger',
             'bg-transparent text-neutral-700 hover:bg-neutral-100 active:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:active:bg-neutral-700': variant === 'ghost',
             'h-8 px-3 text-sm': size === 'sm',

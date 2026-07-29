@@ -1,6 +1,7 @@
 import { forwardRef, useState, type InputHTMLAttributes, type ReactNode } from 'react';
 import { Eye, EyeOff, LockKeyhole, Network, ShieldCheck } from 'lucide-react';
 import { clsx } from 'clsx';
+import { motion, useReducedMotion } from 'framer-motion';
 import { PublicHeader } from '../public/PublicHeader';
 import { PublicFooter } from '../public/PublicFooter';
 import { Alert, type AlertVariant } from '../ui/Alert';
@@ -25,17 +26,24 @@ export function AuthPanel({
   illustration: ReactNode;
   formFirstOnMobile?: boolean;
 }) {
+  const reducedMotion = useReducedMotion();
   return (
     <section className="app-container py-8 sm:py-12 lg:py-16">
-      <div className="mx-auto grid max-w-6xl overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-[0_24px_80px_-32px_rgba(15,23,42,0.3)] dark:border-neutral-800 dark:bg-neutral-900 lg:grid-cols-[0.9fr_1.1fr]">
+      <motion.div
+        className="mx-auto grid max-w-6xl overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-[0_24px_80px_-32px_rgba(15,23,42,0.3)] dark:border-neutral-800 dark:bg-neutral-900 lg:grid-cols-[0.9fr_1.1fr]"
+        initial={reducedMotion ? false : { opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: reducedMotion ? 0 : 0.5, ease: [0.2, 0, 0, 1] }}
+      >
         <div className={clsx('min-w-0 p-6 sm:p-10 lg:p-12', formFirstOnMobile ? 'order-1 lg:order-2' : 'order-2')}>{children}</div>
         <div className={clsx('min-w-0', formFirstOnMobile ? 'order-2 lg:order-1' : 'order-1')}>{illustration}</div>
-      </div>
+      </motion.div>
     </section>
   );
 }
 
 export function AuthIllustration({ variant }: { variant: 'signup' | 'login' | 'password' }) {
+  const reducedMotion = useReducedMotion();
   const content = {
     signup: {
       eyebrow: 'A workspace built around your company',
@@ -57,16 +65,23 @@ export function AuthIllustration({ variant }: { variant: 'signup' | 'login' | 'p
   return (
     <aside className="relative flex h-full min-h-[320px] flex-col justify-between overflow-hidden bg-neutral-950 p-7 text-white sm:p-10 lg:min-h-[650px] lg:p-12">
       <div className="absolute inset-0 auth-grid opacity-30" aria-hidden="true" />
-      <div className="absolute -right-24 top-10 h-64 w-64 rounded-full bg-primary-500/20 blur-3xl" aria-hidden="true" />
+      <div className="absolute -right-24 top-10 h-64 w-64 rounded-full bg-primary-500/20 blur-3xl floating-glow" aria-hidden="true" />
+      <div className="absolute -left-16 bottom-20 h-56 w-56 rounded-full bg-violet-600/10 blur-3xl" aria-hidden="true" />
       <div className="relative">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-300">{content.eyebrow}</p>
         <h2 className="mt-5 max-w-lg text-3xl font-bold leading-tight sm:text-4xl">{content.title}</h2>
         <ul className="mt-8 space-y-4">
-          {content.points.map((point) => (
-            <li key={point} className="flex items-center gap-3 text-sm text-neutral-300">
+          {content.points.map((point, i) => (
+            <motion.li
+              key={point}
+              className="flex items-center gap-3 text-sm text-neutral-300"
+              initial={reducedMotion ? false : { opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: reducedMotion ? 0 : 0.4, delay: 0.2 + i * 0.1 }}
+            >
               <ShieldCheck size={18} className="shrink-0 text-primary-300" aria-hidden="true" />
               {point}
-            </li>
+            </motion.li>
           ))}
         </ul>
       </div>

@@ -11,7 +11,7 @@ type ThemeStore = {
   init: () => void;
 };
 
-export const THEME_STORAGE_KEY = 'tellus.theme';
+export const THEME_STORAGE_KEY = 'orchestra.theme';
 let stopSystemListener: (() => void) | null = null;
 
 function getSavedTheme(): Theme | null {

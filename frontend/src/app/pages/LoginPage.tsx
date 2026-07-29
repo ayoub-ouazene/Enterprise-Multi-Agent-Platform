@@ -61,7 +61,7 @@ export function LoginPage() {
       if (!apiError) {
         setError('An unexpected error occurred. Please try again.');
       } else if (apiError.status === 0) {
-        setError('The TellUS service cannot be reached. Check your connection and try again.');
+        setError('The Orchestra service cannot be reached. Check your connection and try again.');
       } else if (apiError.status === 401) {
         setError('The workspace, email, or password is incorrect.');
       } else if (apiError.status === 404) {

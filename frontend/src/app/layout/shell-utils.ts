@@ -13,7 +13,7 @@ type Icon = ComponentType<SVGProps<SVGSVGElement> & { size?: number | string }>;
 export interface NavigationItem { label: string; href: string; icon: Icon; }
 export interface NavigationGroup { label: string; items: NavigationItem[]; }
 
-export const SIDEBAR_KEY = 'tellus.sidebar.collapsed';
+export const SIDEBAR_KEY = 'orchestra.sidebar.collapsed';
 export const getInitialSidebarCollapsed = () => localStorage.getItem(SIDEBAR_KEY) === 'true';
 export const persistSidebarCollapsed = (value: boolean) => localStorage.setItem(SIDEBAR_KEY, String(value));
 

@@ -20,7 +20,9 @@ import {
 import { Link } from 'react-router-dom';
 import { PublicHeader } from '../../components/public/PublicHeader';
 import { PublicFooter } from '../../components/public/PublicFooter';
+import { DemoVideoSection } from '../../components/public/DemoVideoSection';
 import { accessibleMotionDuration } from '../../motion/accessibility';
+import { TextReveal } from '../../motion/TextReveal';
 
 const workflow = [
   ['Submit', 'Describe the outcome you need'],
@@ -64,31 +66,51 @@ export function LandingPage() {
       <PublicHeader transparent />
       <main id="main-content">
         <section className="relative overflow-hidden bg-neutral-950 pb-24 pt-16 text-white sm:pt-24 lg:pb-32 lg:pt-28">
-          <div className="absolute inset-0 auth-grid opacity-20" aria-hidden="true" />
-          <div className="absolute left-1/2 top-0 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-primary-600/15 blur-3xl" aria-hidden="true" />
+          <div className="absolute inset-0 spotlight-grid opacity-70" aria-hidden="true" />
+          <div className="absolute left-1/2 top-0 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-primary-600/15 blur-3xl floating-glow" aria-hidden="true" />
+          <div className="absolute right-10 top-32 h-72 w-72 rounded-full bg-violet-600/10 blur-3xl" aria-hidden="true" />
           <div className="app-container relative grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
             <motion.div
               initial={reducedMotion ? false : { opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: reducedMotion ? 0 : 0.6 }}
             >
-              <div className="inline-flex items-center gap-2 rounded-full border border-primary-400/20 bg-primary-400/10 px-3 py-1.5 text-sm font-semibold text-primary-200">
+              <motion.div
+                className="inline-flex items-center gap-2 rounded-full border border-primary-400/20 bg-primary-400/10 px-3 py-1.5 text-sm font-semibold text-primary-200"
+                initial={reducedMotion ? false : { opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: reducedMotion ? 0 : 0.5, delay: 0.1 }}
+              >
                 <Sparkles size={15} aria-hidden="true" /> Enterprise operations, coordinated
-              </div>
-              <h1 className="mt-7 max-w-4xl text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl">
-                Move enterprise requests from question to controlled outcome.
-              </h1>
-              <p className="mt-6 max-w-2xl text-lg leading-8 text-neutral-300">
-                TellUS AI coordinates five specialized departments, company knowledge, live workflow progress, and human authority in one secure workspace.
-              </p>
-              <div className="mt-9 flex flex-col gap-3 min-[420px]:flex-row">
-                <Link to="/signup" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white shadow-lg shadow-primary-900/30 transition hover:bg-primary-500">
-                  Create company workspace <ArrowRight size={18} aria-hidden="true" />
+              </motion.div>
+              <TextReveal
+                as="h1"
+                text="Move enterprise requests from question to controlled outcome."
+                className="mt-7 max-w-4xl text-4xl font-bold leading-[1.08] tracking-tight sm:text-5xl lg:text-6xl"
+                stagger={0.04}
+              />
+              <motion.p
+                className="mt-6 max-w-2xl text-lg leading-8 text-neutral-300"
+                initial={reducedMotion ? false : { opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: reducedMotion ? 0 : 0.55, delay: 0.4 }}
+              >
+                Orchestra coordinates five specialized departments, company knowledge, live workflow progress, and human authority in one secure workspace.
+              </motion.p>
+              <motion.div
+                className="mt-9 flex flex-col gap-3 min-[420px]:flex-row"
+                initial={reducedMotion ? false : { opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: reducedMotion ? 0 : 0.55, delay: 0.55 }}
+              >
+                <Link to="/signup" className="group inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary-600 px-6 py-3 font-semibold text-white shadow-lg shadow-primary-900/30 transition-[background-color,box-shadow,transform] duration-ui ease-productive hover:bg-primary-500 hover:shadow-primary-500/30 motion-safe:active:scale-[0.98]">
+                  Create company workspace
+                  <ArrowRight size={18} aria-hidden="true" className="transition-transform duration-ui group-hover:translate-x-0.5" />
                 </Link>
-                <Link to="/login" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/20 px-6 py-3 font-semibold text-white transition hover:bg-white/10">
+                <Link to="/login" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/20 px-6 py-3 font-semibold text-white transition-[background-color,border-color] duration-ui ease-productive hover:bg-white/10 hover:border-white/30">
                   Sign in
                 </Link>
-              </div>
+              </motion.div>
               <p className="mt-5 max-w-xl text-sm leading-6 text-neutral-400">
                 Company accounts register publicly. Employees and managers are provisioned by their Company. External requesters use their approved Company-provided account.
               </p>
@@ -96,6 +118,8 @@ export function LandingPage() {
             <ProductPreview reducedMotion={Boolean(reducedMotion)} />
           </div>
         </section>
+
+        <DemoVideoSection />
 
         <section id="product" className="scroll-mt-20 py-20 sm:py-24">
           <motion.div className="app-container" {...reveal}>
@@ -138,14 +162,15 @@ export function LandingPage() {
                 return (
                   <motion.article
                     key={department.title}
-                    className="group rounded-2xl border border-neutral-200 bg-white p-5 shadow-xs transition hover:-translate-y-1 hover:border-primary-300 hover:shadow-lg focus-within:-translate-y-1 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-primary-700"
+                    className="group relative overflow-hidden rounded-2xl border border-neutral-200 bg-white p-5 shadow-xs transition-[border-color,box-shadow,transform] duration-ui ease-productive hover:-translate-y-1 hover:border-primary-300 hover:shadow-lg focus-within:-translate-y-1 dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-primary-700"
                     initial={reducedMotion ? false : { opacity: 0, y: 16 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, amount: 0.3 }}
                     transition={{ duration: reducedMotion ? 0 : 0.4, delay: reducedMotion ? 0 : index * 0.06 }}
                     tabIndex={0}
                   >
-                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-50 text-primary-600 transition group-hover:bg-primary-600 group-hover:text-white dark:bg-primary-950 dark:text-primary-300">
+                    <span className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-primary-500/0 blur-2xl transition-colors duration-300 group-hover:bg-primary-500/15" aria-hidden="true" />
+                    <span className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-primary-50 text-primary-600 transition-[background-color,color,transform] duration-ui ease-productive group-hover:scale-110 group-hover:bg-primary-600 group-hover:text-white dark:bg-primary-950 dark:text-primary-300">
                       <Icon size={21} aria-hidden="true" />
                     </span>
                     <h3 className="mt-5 font-bold">{department.title}</h3>
@@ -167,8 +192,15 @@ export function LandingPage() {
             </motion.div>
             <div className="grid gap-4 sm:grid-cols-2">
               {controls.map(([Icon, title, text], index) => (
-                <motion.article key={String(title)} className="rounded-2xl border border-neutral-200 p-5 dark:border-neutral-800" {...reveal} transition={{ duration: reducedMotion ? 0 : 0.45, delay: index * 0.04 }}>
-                  <Icon size={20} className="text-primary-600 dark:text-primary-400" aria-hidden="true" />
+                <motion.article
+                  key={String(title)}
+                  className="group rounded-2xl border border-neutral-200 bg-white p-5 transition-[border-color,box-shadow,transform] duration-ui ease-productive hover:-translate-y-0.5 hover:border-primary-200 hover:shadow-card dark:border-neutral-800 dark:bg-neutral-900 dark:hover:border-primary-800"
+                  {...reveal}
+                  transition={{ duration: reducedMotion ? 0 : 0.45, delay: index * 0.04 }}
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-50 text-primary-600 transition-[background-color,color,transform] duration-ui group-hover:scale-110 group-hover:bg-primary-600 group-hover:text-white dark:bg-primary-950 dark:text-primary-300">
+                    <Icon size={20} aria-hidden="true" />
+                  </span>
                   <h3 className="mt-4 font-bold">{String(title)}</h3>
                   <p className="mt-2 text-sm leading-6 text-neutral-600 dark:text-neutral-400">{String(text)}</p>
                 </motion.article>
@@ -178,13 +210,19 @@ export function LandingPage() {
         </section>
 
         <section className="px-4 pb-20 sm:px-6 sm:pb-24">
-          <motion.div className="mx-auto max-w-7xl overflow-hidden rounded-3xl bg-primary-600 px-6 py-12 text-center text-white shadow-xl shadow-primary-900/20 sm:px-12 sm:py-16" {...reveal}>
-            <BadgeCheck className="mx-auto text-primary-100" size={34} aria-hidden="true" />
-            <h2 className="mt-5 text-3xl font-bold tracking-tight sm:text-4xl">Create the workspace where coordinated work becomes visible.</h2>
-            <p className="mx-auto mt-4 max-w-2xl text-primary-100">Register a Company workspace, configure the departments you need, and activate when your organization is ready.</p>
-            <div className="mt-8 flex flex-col justify-center gap-3 min-[420px]:flex-row">
-              <Link to="/signup" className="rounded-xl bg-white px-6 py-3 font-semibold text-primary-700 hover:bg-primary-50">Create workspace</Link>
-              <Link to="/login" className="rounded-xl border border-white/30 px-6 py-3 font-semibold hover:bg-white/10">Sign in</Link>
+          <motion.div
+            className="gradient-border relative mx-auto max-w-7xl overflow-hidden rounded-3xl bg-primary-600 px-6 py-12 text-center text-white shadow-xl shadow-primary-900/20 sm:px-12 sm:py-16"
+            {...reveal}
+          >
+            <div className="absolute inset-0 bg-gradient-to-br from-primary-500/0 via-violet-500/10 to-sky-500/0 opacity-60" aria-hidden="true" />
+            <div className="relative">
+              <BadgeCheck className="mx-auto text-primary-100" size={34} aria-hidden="true" />
+              <h2 className="mt-5 text-3xl font-bold tracking-tight sm:text-4xl">Create the workspace where coordinated work becomes visible.</h2>
+              <p className="mx-auto mt-4 max-w-2xl text-primary-100">Register a Company workspace, configure the departments you need, and activate when your organization is ready.</p>
+              <div className="mt-8 flex flex-col justify-center gap-3 min-[420px]:flex-row">
+                <Link to="/signup" className="rounded-xl bg-white px-6 py-3 font-semibold text-primary-700 shadow-sm transition-[background-color,box-shadow,transform] duration-ui ease-productive hover:bg-primary-50 hover:shadow-md motion-safe:active:scale-[0.98]">Create workspace</Link>
+                <Link to="/login" className="rounded-xl border border-white/30 px-6 py-3 font-semibold transition-[background-color,border-color] duration-ui ease-productive hover:bg-white/10 hover:border-white/40">Sign in</Link>
+              </div>
             </div>
           </motion.div>
         </section>
@@ -228,12 +266,12 @@ function ProductPreview({ reducedMotion }: { reducedMotion: boolean }) {
             {cards.map(([title, owner, status], index) => (
               <motion.div
                 key={title}
-                className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.04] p-3"
+                className="group/card flex items-center gap-3 rounded-xl border border-white/[0.07] bg-white/[0.04] p-3 transition-[background-color,border-color,transform] duration-ui ease-productive hover:bg-white/[0.07] hover:border-primary-400/30 motion-safe:hover:translate-x-0.5"
                 initial={reducedMotion ? false : { opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: reducedMotion ? 0 : 0.35, delay: 0.35 + index * 0.1 }}
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-500/15 text-primary-300"><CheckCircle2 size={17} /></span>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-500/15 text-primary-300 transition-colors duration-ui group-hover/card:bg-primary-500/25"><CheckCircle2 size={17} /></span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold">{title}</p>
                   <p className="truncate text-xs text-neutral-400">{owner}</p>

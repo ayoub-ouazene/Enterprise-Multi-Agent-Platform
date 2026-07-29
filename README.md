@@ -1,6 +1,10 @@
-# Enterprise Multi-Agent Platform
+# Orchestra
 
-A generalized, multi-tenant enterprise web platform that routes internal and external business requests through specialized AI-powered departments. Companies register, onboard their operational data, and let department agents — grounded in company knowledge via RAG — answer questions, make policy-based decisions, collaborate across teams, and request human approval only when truly necessary.
+<p align="center">
+  <img src="frontend/src/assets/logo.svg" alt="Orchestra logo" width="120" />
+</p>
+
+**Orchestra** is a generalized, multi-tenant enterprise multi-agent platform that routes internal and external business requests through specialized AI-powered departments. Companies register, onboard their operational data, and let department agents — grounded in company knowledge via RAG — answer questions, make policy-based decisions, collaborate across teams, and request human approval only when truly necessary.
 
 > **Status:** v1.0 · Feature-based modular monolith · 5 predefined departments · 590+ passing tests
 
@@ -26,7 +30,7 @@ A generalized, multi-tenant enterprise web platform that routes internal and ext
 
 ## Overview
 
-The Enterprise Multi-Agent Platform is a hosted, multi-tenant SaaS that lets organizations automate everyday enterprise workflows through specialized AI departments. A registered company provides its own data — employees, budgets, assets, suppliers, policies, manuals — and department agents use that company-specific knowledge to:
+Orchestra is a hosted, multi-tenant SaaS that lets organizations automate everyday enterprise workflows through specialized AI departments. A registered company provides its own data — employees, budgets, assets, suppliers, policies, manuals — and department agents use that company-specific knowledge to:
 
 - answer questions and retrieve policies;
 - make policy-based decisions;

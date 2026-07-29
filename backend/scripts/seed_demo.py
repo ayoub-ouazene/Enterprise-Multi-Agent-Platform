@@ -23,7 +23,7 @@ from app.users.repository import UserRepository
 
 
 _ = database_models
-DEMO_SLUG = "tellus-demo"
+DEMO_SLUG = "orchestra-demo"
 
 
 async def _ensure_user(
@@ -67,7 +67,7 @@ async def seed(password: str) -> None:
             if company is None:
                 company = await companies.create(
                     {
-                        "name": "TellUS Demo Company",
+                        "name": "Orchestra Demo Company",
                         "slug": DEMO_SLUG,
                         "is_active": True,
                         "custom_data": {},
@@ -95,28 +95,28 @@ async def seed(password: str) -> None:
             users = UserRepository(session, company.id)
             await _ensure_user(
                 users,
-                email="company@tellus-demo.example.com",
+                email="company@orchestra-demo.example.com",
                 actor_type=ActorType.COMPANY,
                 password_hash=encoded,
                 must_change_password=False,
             )
             employee_user = await _ensure_user(
                 users,
-                email="employee@tellus-demo.example.com",
+                email="employee@orchestra-demo.example.com",
                 actor_type=ActorType.EMPLOYEE,
                 password_hash=encoded,
                 must_change_password=True,
             )
             manager_user = await _ensure_user(
                 users,
-                email="manager@tellus-demo.example.com",
+                email="manager@orchestra-demo.example.com",
                 actor_type=ActorType.DEPARTMENT_MANAGER,
                 password_hash=encoded,
                 must_change_password=False,
             )
             await _ensure_user(
                 users,
-                email="external@tellus-demo.example.com",
+                email="external@orchestra-demo.example.com",
                 actor_type=ActorType.EXTERNAL_USER,
                 password_hash=encoded,
                 must_change_password=False,
@@ -148,7 +148,7 @@ async def seed(password: str) -> None:
         await engine.dispose()
 
     print(
-        "Demo identities are ready in workspace 'tellus-demo'. "
+        "Demo identities are ready in workspace 'orchestra-demo'. "
         "Use the password entered for this command."
     )
 

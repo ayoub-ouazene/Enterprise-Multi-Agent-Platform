@@ -100,7 +100,7 @@ function CurrentState({ request, status }: { request: BusinessRequestDetail; sta
 
 function ClarificationPanel({ request, refresh }: { request: BusinessRequestDetail; refresh: () => void }) {
   const workflow = useWorkflowControl(request.id);
-  const key = `tellus.clarification.${request.id}`;
+  const key = `orchestra.clarification.${request.id}`;
   const submissionInFlight = useRef(false);
   const [answer, setAnswer] = useState(() => sessionStorage.getItem(key) ?? '');
   const [message, setMessage] = useState<string | null>(null);

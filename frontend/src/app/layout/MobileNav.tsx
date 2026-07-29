@@ -53,7 +53,7 @@ export function MobileNav({ isOpen, onClose, user }: MobileNavProps) {
           >
             <div className="flex h-16 shrink-0 items-center justify-between border-b border-neutral-200 px-4 dark:border-neutral-800">
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-neutral-950 dark:text-white">TellUS AI</p>
+                <p className="text-sm font-semibold text-neutral-950 dark:text-white">Orchestra</p>
                 <p className="truncate text-xs text-neutral-500">{user ? roleLabel(user) : 'Workspace'}</p>
               </div>
               <button

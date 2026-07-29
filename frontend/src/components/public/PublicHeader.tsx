@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, X } from 'lucide-react';
 import { clsx } from 'clsx';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { BrandMark } from './BrandMark';
 
 const navigation = [
@@ -14,6 +15,7 @@ export function PublicHeader({ transparent = false }: { transparent?: boolean })
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const reducedMotion = useReducedMotion();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -67,7 +69,7 @@ export function PublicHeader({ transparent = false }: { transparent?: boolean })
           </Link>
           <Link
             to="/signup"
-            className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-primary-500"
+            className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-[background-color,box-shadow,transform] duration-ui ease-productive hover:bg-primary-500 hover:shadow-md motion-safe:active:scale-[0.98]"
           >
             Create workspace
           </Link>
@@ -86,25 +88,32 @@ export function PublicHeader({ transparent = false }: { transparent?: boolean })
           {menuOpen ? <X aria-hidden="true" /> : <Menu aria-hidden="true" />}
         </button>
       </div>
-      {menuOpen && (
-        <nav
-          id="public-mobile-navigation"
-          className="border-t border-neutral-200 bg-white px-4 py-4 text-neutral-900 shadow-lg dark:border-neutral-800 dark:bg-neutral-950 dark:text-white md:hidden"
-          aria-label="Mobile public navigation"
-        >
-          <div className="mx-auto flex max-w-7xl flex-col gap-1">
-            {navigation.map((item) => (
-              <a key={item.hash} href={sectionHref(item.hash)} className="rounded-lg px-3 py-3 text-base font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800">
-                {item.label}
-              </a>
-            ))}
-            <div className="mt-3 grid grid-cols-1 gap-2 border-t border-neutral-200 pt-4 dark:border-neutral-800 min-[360px]:grid-cols-2">
-              <Link to="/login" className="rounded-lg border border-neutral-300 px-4 py-3 text-center font-semibold dark:border-neutral-700">Sign in</Link>
-              <Link to="/signup" className="rounded-lg bg-primary-600 px-4 py-3 text-center font-semibold text-white">Create workspace</Link>
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.nav
+            id="public-mobile-navigation"
+            className="border-t border-neutral-200 bg-white px-4 py-4 text-neutral-900 shadow-lg dark:border-neutral-800 dark:bg-neutral-950 dark:text-white md:hidden"
+            aria-label="Mobile public navigation"
+            initial={reducedMotion ? false : { opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={reducedMotion ? undefined : { opacity: 0, height: 0 }}
+            transition={{ duration: reducedMotion ? 0 : 0.25, ease: [0.2, 0, 0, 1] }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div className="mx-auto flex max-w-7xl flex-col gap-1">
+              {navigation.map((item) => (
+                <a key={item.hash} href={sectionHref(item.hash)} className="rounded-lg px-3 py-3 text-base font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800">
+                  {item.label}
+                </a>
+              ))}
+              <div className="mt-3 grid grid-cols-1 gap-2 border-t border-neutral-200 pt-4 dark:border-neutral-800 min-[360px]:grid-cols-2">
+                <Link to="/login" className="rounded-lg border border-neutral-300 px-4 py-3 text-center font-semibold dark:border-neutral-700">Sign in</Link>
+                <Link to="/signup" className="rounded-lg bg-primary-600 px-4 py-3 text-center font-semibold text-white">Create workspace</Link>
+              </div>
             </div>
-          </div>
-        </nav>
-      )}
+          </motion.nav>
+        )}
+      </AnimatePresence>
     </header>
   );
 }

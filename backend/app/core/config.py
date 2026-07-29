@@ -46,7 +46,7 @@ class Settings(BaseSettings):
     )
 
     # Application
-    app_name: str = "Enterprise Multi-Agent Platform"
+    app_name: str = "Orchestra"
     app_env: AppEnvironment = AppEnvironment.DEVELOPMENT
     debug: bool = False
     log_level: Literal["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"] = "INFO"

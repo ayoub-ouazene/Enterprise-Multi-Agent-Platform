@@ -71,7 +71,7 @@ export function SignupPage() {
         if (caught.error.status === 409) {
           setServerError('That workspace address is already in use. Choose another address.');
         } else if (caught.error.status === 0) {
-          setServerError('The TellUS service cannot be reached. Your workspace was not created.');
+          setServerError('The Orchestra service cannot be reached. Your workspace was not created.');
         } else {
           setServerError(caught.error.message);
         }

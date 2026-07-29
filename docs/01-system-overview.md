@@ -2,7 +2,7 @@
 
 ## 1.1 Purpose
 
-The Enterprise Multi-Agent Platform is a generalized web application that allows companies to automate internal and external business requests through specialized AI-powered departments.
+Orchestra is a generalized web application that allows companies to automate internal and external business requests through specialized AI-powered departments.
 
 A registered company provides its own operational data, policies, manuals, employee information, budgets, hardware inventory, supplier information, and other relevant documents. Department agents use that company-specific information to:
 

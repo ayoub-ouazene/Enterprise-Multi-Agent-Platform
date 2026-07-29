@@ -146,7 +146,7 @@ describe('Business Request experience', () => {
     expect(screen.queryByText('Request detail reached')).toBeNull();
     resolveCreate(detail());
     expect(await screen.findByText('Request detail reached')).toBeTruthy();
-    expect(sessionStorage.getItem('tellus.request.draft')).toBeNull();
+    expect(sessionStorage.getItem('orchestra.request.draft')).toBeNull();
   });
 
   it('renders clarification, collaboration, quality check, safe actions, and plain-text results without internals', () => {
@@ -196,7 +196,7 @@ describe('Business Request experience', () => {
     await waitFor(() => expect(state.clarify).toHaveBeenCalledTimes(1));
     expect(state.clarify).toHaveBeenCalledWith('The reporting portal');
     expect(await screen.findByText(/answer was confirmed/i)).toBeTruthy();
-    expect(sessionStorage.getItem(`tellus.clarification.${state.detail.id}`)).toBeNull();
+    expect(sessionStorage.getItem(`orchestra.clarification.${state.detail.id}`)).toBeNull();
   });
 
   it('handles a stale clarification response without losing the session answer', async () => {
@@ -206,7 +206,7 @@ describe('Business Request experience', () => {
     fireEvent.change(screen.getByLabelText('Your answer'), { target: { value: 'The finance reporting portal' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit answer' }));
     expect(await screen.findByText(/already answered or the request changed/i)).toBeTruthy();
-    expect(sessionStorage.getItem(`tellus.clarification.${state.detail.id}`)).toBe('The finance reporting portal');
+    expect(sessionStorage.getItem(`orchestra.clarification.${state.detail.id}`)).toBe('The finance reporting portal');
   });
 
   it('confirms cancellation and reports an authoritative conflict', async () => {

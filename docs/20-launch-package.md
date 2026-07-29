@@ -1,4 +1,4 @@
-# Launch Package — TellUS AI v1.0
+# Launch Package — Orchestra v1.0
 
 ## 1. Deployment Checklist
 
@@ -8,7 +8,7 @@
 - [ ] Backend deployed to production host (Docker / fly.io / VPS).
 - [ ] Frontend built and served from CDN/static host.
 - [ ] Environment variables configured (no secrets in repo):
-  - `DATABASE_URL`, `SECRET_KEY`, `PINECONE_API_KEY`, `OPENAI_API_KEY`
+  - `DATABASE_URL`, `ALEMBIC_DATABASE_URL`, `JWT_SECRET_KEY`, `GROQ_API_KEY`, `PINECONE_API_KEY`
 - [ ] HTTPS enforced for all traffic.
 - [ ] CORS whitelist configured for production domain.
 

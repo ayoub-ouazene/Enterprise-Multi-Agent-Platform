@@ -1,11 +1,11 @@
-# UAT Plan — TellUS AI v1.0
+# UAT Plan — Orchestra v1.0
 
 ## Scope
 Functional acceptance of the five-department multi-agent platform before production launch.
 
 ## Environment
-- **Frontend**: `https://app-staging.tellusai.example` (React + Vite)
-- **Backend**: `https://api-staging.tellusai.example` (FastAPI)
+- **Frontend**: `https://app-staging.orchestra.example` (React + Vite)
+- **Backend**: `https://api-staging.orchestra.example` (FastAPI)
 - **Database**: Neon PostgreSQL staging
 - **Vector Store**: Pinecone staging
 

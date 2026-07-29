@@ -66,7 +66,7 @@ def create_app(settings_override: Settings | None = None) -> FastAPI:
             await engine.dispose()
 
     application = FastAPI(
-        title="Enterprise Multi-Agent Platform",
+        title="Orchestra",
         lifespan=lifespan,
     )
     configured_settings = settings_override or get_settings()
