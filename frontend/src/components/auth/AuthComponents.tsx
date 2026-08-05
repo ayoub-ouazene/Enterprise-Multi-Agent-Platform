@@ -5,13 +5,18 @@ import { motion, useReducedMotion } from 'framer-motion';
 import { PublicHeader } from '../public/PublicHeader';
 import { PublicFooter } from '../public/PublicFooter';
 import { Alert, type AlertVariant } from '../ui/Alert';
+import { AnimatedBackground } from '../backgrounds/AnimatedBackground';
+import { NoiseTexture } from '../backgrounds/NoiseTexture';
 
 export function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-neutral-50 text-neutral-950 dark:bg-neutral-950 dark:text-white">
+    <div className="relative min-h-screen bg-neutral-950 text-neutral-950 dark:bg-neutral-950 dark:text-white">
+      <AnimatedBackground variant="aurora" intensity="medium" className="absolute inset-0" />
+      <div className="dot-grid absolute inset-0 opacity-20" aria-hidden="true" />
+      <NoiseTexture opacity={0.025} className="absolute inset-0 z-[1]" />
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <PublicHeader />
-      <main id="main-content">{children}</main>
+      <main id="main-content" className="relative z-10">{children}</main>
       <PublicFooter />
     </div>
   );
@@ -63,10 +68,11 @@ export function AuthIllustration({ variant }: { variant: 'signup' | 'login' | 'p
   }[variant];
 
   return (
-    <aside className="relative flex h-full min-h-[320px] flex-col justify-between overflow-hidden bg-neutral-950 p-7 text-white sm:p-10 lg:min-h-[650px] lg:p-12">
+    <aside className="relative flex h-full min-h-[320px] flex-col justify-between overflow-hidden bg-neutral-950/50 p-7 text-white sm:p-10 lg:min-h-[650px] lg:p-12">
       <div className="absolute inset-0 auth-grid opacity-30" aria-hidden="true" />
       <div className="absolute -right-24 top-10 h-64 w-64 rounded-full bg-primary-500/20 blur-3xl floating-glow" aria-hidden="true" />
       <div className="absolute -left-16 bottom-20 h-56 w-56 rounded-full bg-violet-600/10 blur-3xl" aria-hidden="true" />
+      <div className="absolute inset-0 bg-gradient-to-br from-primary-500/5 via-transparent to-violet-500/5" aria-hidden="true" />
       <div className="relative">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-300">{content.eyebrow}</p>
         <h2 className="mt-5 max-w-lg text-3xl font-bold leading-tight sm:text-4xl">{content.title}</h2>

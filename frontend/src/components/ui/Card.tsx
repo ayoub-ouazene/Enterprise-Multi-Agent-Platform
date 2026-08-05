@@ -1,16 +1,34 @@
 import { type HTMLAttributes } from 'react';
 import { clsx } from 'clsx';
 
-export function Card({ className, children, ...props }: HTMLAttributes<HTMLDivElement>) {
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
+  variant?: 'default' | 'glass' | 'neon';
+}
+
+export function Card({ className, children, variant = 'default', ...props }: CardProps) {
+  const variants = {
+    default: clsx(
+      'rounded-lg border border-neutral-200 bg-white shadow-xs',
+      'transition-[border-color,box-shadow,transform] duration-ui ease-productive',
+      'hover:border-neutral-300 hover:shadow-card motion-safe:hover:-translate-y-0.5',
+      'dark:border-neutral-800 dark:bg-neutral-800 dark:hover:border-neutral-700',
+    ),
+    glass: clsx(
+      'glass-card',
+      'transition-[border-color,box-shadow,transform] duration-ui ease-productive',
+      'motion-safe:hover:-translate-y-0.5',
+    ),
+    neon: clsx(
+      'neon-border rounded-lg bg-white/80 shadow-sm backdrop-blur',
+      'dark:bg-neutral-900/80',
+      'transition-[box-shadow,transform] duration-ui ease-productive',
+      'motion-safe:hover:-translate-y-0.5',
+    ),
+  };
+
   return (
     <div
-      className={clsx(
-        'rounded-lg border border-neutral-200 bg-white shadow-xs',
-        'transition-[border-color,box-shadow,transform] duration-ui ease-productive',
-        'hover:border-neutral-300 hover:shadow-card motion-safe:hover:-translate-y-0.5',
-        'dark:border-neutral-800 dark:bg-neutral-800 dark:hover:border-neutral-700',
-        className
-      )}
+      className={clsx(variants[variant], className)}
       {...props}
     >
       {children}

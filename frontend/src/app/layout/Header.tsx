@@ -66,8 +66,12 @@ export function Header({ onMenuClick, sidebarCollapsed, onSidebarToggle }: Heade
   const department = departments.find((item) => item.id === user?.department_id);
 
   return (
-    <header className="z-header shrink-0 border-b border-neutral-200 bg-white/95 backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/95">
-      <div className="flex h-16 items-center gap-3 px-3 sm:px-5 lg:px-6">
+    <header className="z-header relative shrink-0 border-b border-neutral-200/80 bg-white/70 backdrop-blur-xl dark:border-neutral-800/80 dark:bg-neutral-900/70">
+      <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
+        <div className="absolute -top-8 left-1/4 h-20 w-64 rounded-full bg-primary-400/10 blur-3xl" />
+        <div className="absolute -top-4 right-1/3 h-16 w-48 rounded-full bg-violet-400/5 blur-2xl" />
+      </div>
+      <div className="relative flex h-16 items-center gap-3 px-3 sm:px-5 lg:px-6">
         <button
           onClick={onMenuClick}
           className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-neutral-500 hover:bg-neutral-100 md:hidden dark:hover:bg-neutral-800"

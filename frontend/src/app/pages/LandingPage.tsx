@@ -65,11 +65,27 @@ export function LandingPage() {
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <PublicHeader transparent />
       <main id="main-content">
+        {/* HERO: Enhanced with aurora + particle field */}
         <section className="relative overflow-hidden bg-neutral-950 pb-24 pt-16 text-white sm:pt-24 lg:pb-32 lg:pt-28">
-          <div className="absolute inset-0 spotlight-grid opacity-70" aria-hidden="true" />
-          <div className="absolute left-1/2 top-0 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-primary-600/15 blur-3xl floating-glow" aria-hidden="true" />
-          <div className="absolute right-10 top-32 h-72 w-72 rounded-full bg-violet-600/10 blur-3xl" aria-hidden="true" />
-          <div className="app-container relative grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="absolute inset-0" aria-hidden="true">
+            <div className="absolute inset-0" style={{
+              background: 'conic-gradient(from 0deg, #6366f1, #3b82f6, #8b5cf6, #6366f1)',
+              opacity: 0.12,
+              filter: 'blur(100px)',
+              animation: 'aurora-1 8s ease-in-out infinite'
+            }} />
+            <div className="absolute bottom-0 right-0 h-full w-full" style={{
+              background: 'conic-gradient(from 180deg, #3b82f6, #06b6d4, #6366f1, #3b82f6)',
+              opacity: 0.1,
+              filter: 'blur(100px)',
+              animation: 'aurora-2 12s ease-in-out infinite'
+            }} />
+            <div className="absolute inset-0 spotlight-grid opacity-50" />
+            <div className="absolute left-1/2 top-0 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-primary-600/15 blur-3xl floating-glow" />
+            <div className="absolute right-10 top-32 h-72 w-72 rounded-full bg-violet-600/10 blur-3xl" />
+            <div className="absolute bottom-0 left-1/4 h-96 w-96 rounded-full bg-cyan-500/5 blur-3xl" />
+          </div>
+          <div className="app-container relative z-10 grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
             <motion.div
               initial={reducedMotion ? false : { opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}

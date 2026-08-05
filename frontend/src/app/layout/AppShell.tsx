@@ -9,6 +9,7 @@ import { API_BASE } from '../../api/client';
 import { useSseConnection } from '../providers/SseProvider';
 import { duration, easing } from '../../motion/tokens';
 import { getInitialSidebarCollapsed, persistSidebarCollapsed } from './shell-utils';
+import { NoiseTexture } from '../../components/backgrounds/NoiseTexture';
 
 export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -31,16 +32,21 @@ export function AppShell() {
   };
 
   return (
-    <div className="flex h-dvh min-h-0 flex-col bg-neutral-50 dark:bg-neutral-950">
+    <div className="relative flex h-dvh min-h-0 flex-col bg-neutral-50 dark:bg-neutral-950">
       <SkipToContent />
       <Header
         onMenuClick={() => setSidebarOpen(true)}
         sidebarCollapsed={collapsed}
         onSidebarToggle={toggleCollapsed}
       />
-      <div className="flex min-h-0 flex-1 overflow-hidden">
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
+        {/* Subtle animated background */}
+        <div className="pointer-events-none absolute inset-0 gradient-orb-bg" aria-hidden="true" />
+        <div className="pointer-events-none absolute inset-0 dot-grid opacity-50 dark:opacity-30" aria-hidden="true" />
+        <NoiseTexture opacity={0.025} className="dark:opacity-[0.04]" />
+
         <aside
-          className="hidden shrink-0 overflow-x-hidden overflow-y-auto border-r border-neutral-200 bg-white transition-[width] duration-panel ease-productive dark:border-neutral-800 dark:bg-neutral-900 md:block"
+          className="relative z-[1] hidden shrink-0 overflow-x-hidden overflow-y-auto border-r border-neutral-200/80 bg-white/80 backdrop-blur-xl transition-[width] duration-panel ease-productive dark:border-neutral-800/80 dark:bg-neutral-900/80 md:block"
           style={{ width: collapsed ? 'var(--sidebar-compact)' : 'var(--sidebar-wide)' }}
           aria-label="Desktop navigation"
         >
@@ -51,7 +57,7 @@ export function AppShell() {
 
         <MobileNav isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} user={user} />
 
-        <main id="main-content" className="min-w-0 flex-1 overflow-y-auto scroll-smooth" tabIndex={-1}>
+        <main id="main-content" className="relative z-[1] min-w-0 flex-1 overflow-y-auto scroll-smooth" tabIndex={-1}>
           <motion.div
             key={location.pathname}
             initial={reducedMotion ? false : { opacity: 0, y: 5 }}

@@ -1,0 +1,16 @@
+employee_email,manager_email
+sarah.chen@northstar.example.com,
+marcus.lee@northstar.example.com,sarah.chen@northstar.example.com
+david.kim@northstar.example.com,sarah.chen@northstar.example.com
+emma.rodriguez@northstar.example.com,
+liam.walsh@northstar.example.com,emma.rodriguez@northstar.example.com
+olivia.parker@northstar.example.com,emma.rodriguez@northstar.example.com
+james.thompson@northstar.example.com,
+sofia.martinez@northstar.example.com,james.thompson@northstar.example.com
+ethan.nguyen@northstar.example.com,james.thompson@northstar.example.com
+ava.mitchell@northstar.example.com,
+noah.patel@northstar.example.com,ava.mitchell@northstar.example.com
+mia.johnson@northstar.example.com,ava.mitchell@northstar.example.com
+isabella.clark@northstar.example.com,
+lucas.brown@northstar.example.com,isabella.clark@northstar.example.com
+charlotte.davis@northstar.example.com,isabella.clark@northstar.example.com

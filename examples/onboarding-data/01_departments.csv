@@ -1,0 +1,6 @@
+department_type,name,is_active
+customer_support,Customer Support,true
+hr,Human Resources,true
+it,Information Technology,true
+finance,Finance,true
+procurement,Procurement,true

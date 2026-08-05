@@ -133,6 +133,8 @@ NCS-HACK-3/
 │   ├── 01-system-overview.md
 │   ├── ...
 │   └── 20-launch-package.md
+├── examples/                  # Ready-to-use mock data for testing
+│   └── onboarding-data/       # Signup values, CSVs, policy documents
 ├── backend/                   # FastAPI modular monolith
 │   ├── app/
 │   │   ├── main.py            # App factory, lifespan, routers
@@ -243,6 +245,19 @@ conda run -n dev python scripts/seed_demo.py
 ### First-run flow
 
 A **Company account** can register publicly and is then directed through onboarding before activation. Employees and department managers are provisioned by a Company account; external users use the approved provisioning flow. Those roles do not have unrestricted public signup.
+
+### 5. Use the example onboarding data (recommended for testing)
+
+The `examples/onboarding-data/` folder contains ready-to-use mock data (CSV spreadsheets + policy documents) for a fictional company called **Northstar Labs**. It lets you complete the full signup → onboarding → activation flow in minutes:
+
+1. Sign up with the values from `examples/onboarding-data/00_company_signup.json`.
+2. Upload `01_departments.csv` in the Departments step.
+3. Upload `02_employees.csv` in the Employees step.
+4. Upload `03_manager_assignments.csv` in the Managers step.
+5. Upload the policy documents from `examples/onboarding-data/policies/` in the Policies step.
+6. Activate the company.
+
+See `examples/onboarding-data/README.md` for full instructions, column references, and demo credentials.
 
 ---
 

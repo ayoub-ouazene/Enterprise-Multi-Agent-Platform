@@ -1,0 +1,16 @@
+email,first_name,last_name,temporary_password,employee_code,department,job_title,employment_status,manager_email,custom_data
+sarah.chen@northstar.example.com,Sarah,Chen,TempPass#2026!,NS-001,Information Technology,Chief Technology Officer,active,
+marcus.lee@northstar.example.com,Marcus,Lee,TempPass#2026!,NS-002,Information Technology,IT Support Specialist,active,sarah.chen@northstar.example.com,{"office_floor":"3","desk":"A12"}
+david.kim@northstar.example.com,David,Kim,TempPass#2026!,NS-003,Information Technology,Systems Administrator,active,sarah.chen@northstar.example.com,{"office_floor":"3","desk":"B07"}
+emma.rodriguez@northstar.example.com,Emma,Rodriguez,TempPass#2026!,NS-010,Human Resources,HR Director,active,
+liam.walsh@northstar.example.com,Liam,Walsh,TempPass#2026!,NS-011,Human Resources,HR Business Partner,active,emma.rodriguez@northstar.example.com,{"office_floor":"2","desk":"C03"}
+olivia.parker@northstar.example.com,Olivia,Parker,TempPass#2026!,NS-012,Human Resources,Recruitment Coordinator,active,emma.rodriguez@northstar.example.com,{"office_floor":"2","desk":"C05"}
+james.thompson@northstar.example.com,James,Thompson,TempPass#2026!,NS-020,Finance,Finance Director,active,
+sofia.martinez@northstar.example.com,Sofia,Martinez,TempPass#2026!,NS-021,Finance,Senior Accountant,active,james.thompson@northstar.example.com,{"office_floor":"4","desk":"D01"}
+ethan.nguyen@northstar.example.com,Ethan,Nguyen,TempPass#2026!,NS-022,Finance,Financial Analyst,active,james.thompson@northstar.example.com,{"office_floor":"4","desk":"D04"}
+ava.mitchell@northstar.example.com,Ava,Mitchell,TempPass#2026!,NS-030,Procurement,Procurement Director,active,
+noah.patel@northstar.example.com,Noah,Patel,TempPass#2026!,NS-031,Procurement,Procurement Specialist,active,ava.mitchell@northstar.example.com,{"office_floor":"4","desk":"E02"}
+mia.johnson@northstar.example.com,Mia,Johnson,TempPass#2026!,NS-032,Procurement,Vendor Relations Coordinator,active,ava.mitchell@northstar.example.com,{"office_floor":"4","desk":"E05"}
+isabella.clark@northstar.example.com,Isabella,Clark,TempPass#2026!,NS-040,Customer Support,Support Director,active,
+lucas.brown@northstar.example.com,Lucas,Brown,TempPass#2026!,NS-041,Customer Support,Senior Support Agent,active,isabella.clark@northstar.example.com,{"office_floor":"1","desk":"F01"}
+charlotte.davis@northstar.example.com,Charlotte,Davis,TempPass#2026!,NS-042,Customer Support,Support Agent,active,isabella.clark@northstar.example.com,{"office_floor":"1","desk":"F03"}

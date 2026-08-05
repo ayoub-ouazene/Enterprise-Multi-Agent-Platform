@@ -5,6 +5,7 @@ import { useAssistantMessage } from '../../api/hooks/useAssistant';
 import type { AssistantMessageResponse } from '../../api/types';
 import { RouterMessageCategory } from '../../api/types';
 import { Button } from '../../components/ui/Button';
+import { AnimatedBackground } from '../../components/backgrounds/AnimatedBackground';
 
 type ChatRole = 'user' | 'assistant';
 
@@ -105,83 +106,91 @@ export function AssistantPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-col bg-neutral-50 dark:bg-neutral-900">
-      <div className="border-b border-neutral-200 bg-white px-6 py-4 dark:border-neutral-800 dark:bg-neutral-900">
-        <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-primary-600 dark:bg-primary-900 dark:text-primary-300">
-            <Bot size={16} />
-          </div>
-          <div>
-            <h1 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
-              Platform Assistant
-            </h1>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400">
-              Ask questions, submit requests, or get guidance
-            </p>
-          </div>
-        </div>
+    <div className="relative flex h-[calc(100vh-4rem)] flex-col bg-neutral-50 dark:bg-neutral-900">
+      {/* Animated particle background */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        <AnimatedBackground variant="particles" intensity="subtle" className="h-full" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-neutral-50/60 dark:to-neutral-900/60" />
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-        <div className="mx-auto max-w-3xl space-y-4">
-          {messages.map((msg) => (
-            <MessageBubble
-              key={msg.id}
-              message={msg}
-              onNavigateToRequest={(id) => navigate(`/app/requests/${id}`)}
-            />
-          ))}
-          {mutation.isPending && (
-            <div className="flex items-center gap-2 py-2">
-              <Loader2 size={16} className="animate-spin text-neutral-400" />
-              <span className="text-xs text-neutral-400">Assistant is thinking...</span>
+      <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
+        <div className="border-b border-neutral-200/80 bg-white/80 px-6 py-4 backdrop-blur-xl dark:border-neutral-800/80 dark:bg-neutral-900/80">
+          <div className="flex items-center gap-3">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-primary-600 shadow-sm dark:bg-primary-900 dark:text-primary-300">
+              <Bot size={16} />
             </div>
-          )}
-          <div ref={messagesEndRef} />
-
-          {messages.length <= 1 && (
-            <div className="grid grid-cols-1 gap-2 pt-4 sm:grid-cols-2">
-              {QUICK_ACTIONS.map((action) => (
-                <button
-                  key={action.label}
-                  onClick={() => handleSend(action.value)}
-                  className="flex items-center justify-between rounded-lg border border-neutral-200 bg-white px-4 py-3 text-left text-sm text-neutral-700 transition hover:border-primary-300 hover:bg-primary-50 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:border-primary-700 dark:hover:bg-primary-900/20"
-                >
-                  <span>{action.label}</span>
-                  <ArrowRight size={14} className="text-neutral-400" />
-                </button>
-              ))}
+            <div>
+              <h1 className="text-base font-semibold text-neutral-900 dark:text-neutral-100">
+                Platform Assistant
+              </h1>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                Ask questions, submit requests, or get guidance
+              </p>
             </div>
-          )}
-        </div>
-      </div>
-
-      <div className="border-t border-neutral-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
-        <form onSubmit={handleSubmit} className="mx-auto flex max-w-3xl items-end gap-2">
-          <div className="relative flex-1">
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              placeholder="Type your message..."
-              className="w-full rounded-lg border border-neutral-300 bg-white px-4 py-3 text-sm text-neutral-900 shadow-sm transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:border-primary-500"
-              disabled={mutation.isPending}
-            />
           </div>
-          <Button
-            type="submit"
-            isLoading={mutation.isPending}
-            disabled={mutation.isPending || !input.trim()}
-            className="h-10 w-10 rounded-full p-0"
-          >
-            <Send size={16} />
-          </Button>
-        </form>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <div className="mx-auto max-w-3xl space-y-4">
+            {messages.map((msg) => (
+              <MessageBubble
+                key={msg.id}
+                message={msg}
+                onNavigateToRequest={(id) => navigate(`/app/requests/${id}`)}
+              />
+            ))}
+            {mutation.isPending && (
+              <div className="flex items-center gap-2 py-2">
+                <Loader2 size={16} className="animate-spin text-neutral-400" />
+                <span className="text-xs text-neutral-400">Assistant is thinking...</span>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+
+            {messages.length <= 1 && (
+              <div className="grid grid-cols-1 gap-2 pt-4 sm:grid-cols-2">
+                {QUICK_ACTIONS.map((action) => (
+                  <button
+                    key={action.label}
+                    onClick={() => handleSend(action.value)}
+                    className="group flex items-center justify-between rounded-xl border border-neutral-200/80 bg-white/80 px-4 py-3 text-left text-sm text-neutral-700 shadow-sm backdrop-blur-sm transition hover:border-primary-300 hover:bg-primary-50/80 hover:shadow-md dark:border-neutral-700/80 dark:bg-neutral-800/60 dark:text-neutral-300 dark:hover:border-primary-700 dark:hover:bg-primary-900/20"
+                  >
+                    <span>{action.label}</span>
+                    <ArrowRight size={14} className="text-neutral-400 transition-transform group-hover:translate-x-0.5" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="border-t border-neutral-200/80 bg-white/80 p-4 backdrop-blur-xl dark:border-neutral-800/80 dark:bg-neutral-900/80">
+          <form onSubmit={handleSubmit} className="mx-auto flex max-w-3xl items-end gap-2">
+            <div className="relative flex-1">
+              <input
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="Type your message..."
+                className="w-full rounded-lg border border-neutral-300/80 bg-white/90 px-4 py-3 text-sm text-neutral-900 shadow-sm backdrop-blur-sm transition focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 dark:border-neutral-700/80 dark:bg-neutral-800/90 dark:text-neutral-100 dark:focus:border-primary-500"
+                disabled={mutation.isPending}
+              />
+            </div>
+            <Button
+              type="submit"
+              isLoading={mutation.isPending}
+              disabled={mutation.isPending || !input.trim()}
+              className="h-10 w-10 rounded-full p-0 shadow-md"
+            >
+              <Send size={16} />
+            </Button>
+          </form>
+        </div>
       </div>
     </div>
   );
