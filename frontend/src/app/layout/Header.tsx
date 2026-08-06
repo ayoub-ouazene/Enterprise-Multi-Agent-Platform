@@ -172,7 +172,7 @@ export function Header({ onMenuClick, sidebarCollapsed, onSidebarToggle }: Heade
                     <span className="truncate text-[11px] font-semibold text-neutral-900">
                       {user.email}
                     </span>
-                    <span text-neutral-700">
+                    <span className="truncate text-[10px] text-neutral-700">
                       {department?.name ?? roleLabel(user)}
                     </span>
                   </span>
@@ -193,15 +193,15 @@ export function Header({ onMenuClick, sidebarCollapsed, onSidebarToggle }: Heade
                       className="absolute right-0 top-full z-dropdown mt-2 w-60 overflow-hidden rounded-xl border border-white/15 bg-slate-900/95 shadow-2xl backdrop-blur-2xl"
                     >
                       <div className="border-b border-white/15 px-4 py-3">
-                        <p text-neutral-900">{user.email}</p>
-                        <p text-neutral-700">
+                        <p className="text-sm text-neutral-900">{user.email}</p>
+                        <p className="text-xs text-neutral-700">
                           {roleLabel(user)}{department ? ` · ${department.name}` : ''}
                         </p>
                       </div>
                       <button
                         role="menuitem"
                         onClick={handleLogout}
-                        text-neutral-700"
+                        className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-neutral-700 hover:bg-white/10"
                       >
                         <LogOut size={16} /> Sign out
                       </button>

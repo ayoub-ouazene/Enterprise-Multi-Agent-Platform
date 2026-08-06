@@ -36,7 +36,7 @@ export function Sidebar({ user, collapsed = false, onNavigate }: SidebarProps) {
           )}
         >
           <p className="truncate text-sm font-semibold text-white">Company workspace</p>
-          <p text-neutral-700">
+          <p className="truncate text-xs text-neutral-700">
             {role}
           </p>
         </div>
