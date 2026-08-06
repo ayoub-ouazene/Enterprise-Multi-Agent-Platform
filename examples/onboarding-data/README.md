@@ -77,6 +77,8 @@ examples/onboarding-data/policies/
 
 > **Tip:** Uploading the shared Code of Conduct alone satisfies the policy requirement for all departments. Upload the department-specific policies for richer RAG answers.
 
+> **Supported policy file formats:** `.pdf`, `.docx`, `.txt`, and `.md`. The example files are Markdown so they render cleanly in version control while still being treated as plain text by the knowledge extractor.
+
 ### 6. Activate the company
 
 Once all onboarding checks are satisfied, click **Activate** in the **Review** step. The company workspace is now live.
