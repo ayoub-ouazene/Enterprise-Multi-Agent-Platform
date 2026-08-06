@@ -9,7 +9,7 @@ from app.rag.exceptions import KnowledgeExtractionError, KnowledgeValidationErro
 from app.rag.schemas import ExtractedDocument
 
 
-SUPPORTED_EXTENSIONS = frozenset({"pdf", "docx", "txt"})
+SUPPORTED_EXTENSIONS = frozenset({"pdf", "docx", "txt", "md"})
 MIME_TYPES = {
     "pdf": frozenset({"application/pdf"}),
     "docx": frozenset(
@@ -19,6 +19,7 @@ MIME_TYPES = {
         }
     ),
     "txt": frozenset({"text/plain"}),
+    "md": frozenset({"text/markdown", "text/plain", "application/octet-stream"}),
 }
 MAX_PDF_PAGES = 1000
 MAX_DOCX_UNCOMPRESSED_BYTES = 100 * 1024 * 1024
@@ -51,7 +52,7 @@ def validate_file_signature(path: Path, extension: str, mime_type: str) -> None:
                     raise KnowledgeValidationError("Invalid or unsafe DOCX file")
         except (OSError, zipfile.BadZipFile) as exc:
             raise KnowledgeValidationError("Invalid or unsafe DOCX file") from exc
-    if extension == "txt":
+    if extension == "txt" or extension == "md":
         if b"\x00" in prefix:
             raise KnowledgeValidationError("TXT file appears to contain binary data")
         try:
@@ -66,7 +67,7 @@ def extract_document(path: Path, extension: str) -> ExtractedDocument:
             return _extract_pdf(path)
         if extension == "docx":
             return _extract_docx(path)
-        if extension == "txt":
+        if extension == "txt" or extension == "md":
             return _extract_txt(path)
     except KnowledgeExtractionError:
         raise

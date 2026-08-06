@@ -8,11 +8,11 @@ import {
 
 describe('status utilities', () => {
   it('maps request statuses with labels', () => {
-    expect(getRequestStatusMeta('processing').label).toBe('Processing');
+    expect(getRequestStatusMeta('processing').label).toBe('In progress');
     expect(getRequestStatusMeta('completed').category).toBe('success');
     expect(getRequestStatusMeta('waiting_for_human_approval').category).toBe('pending');
     expect(getRequestStatusMeta('failed').category).toBe('failed');
-    expect(getRequestStatusMeta('unknown').label).toBe('unknown');
+    expect(getRequestStatusMeta('unknown').label).toBe('Status unavailable');
     expect(getRequestStatusMeta('unknown').category).toBe('neutral');
   });
 

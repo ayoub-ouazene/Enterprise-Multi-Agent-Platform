@@ -15,6 +15,13 @@ def test_txt_extraction(tmp_path: Path) -> None:
     assert extractors.extract_document(path, "txt").text == "Company policy"
 
 
+def test_md_extraction(tmp_path: Path) -> None:
+    path = tmp_path / "policy.md"
+    path.write_text("# Code of Conduct\n\nBe respectful.", encoding="utf-8")
+    extractors.validate_file_signature(path, "md", "text/markdown")
+    assert extractors.extract_document(path, "md").text == "# Code of Conduct\n\nBe respectful."
+
+
 def test_docx_extraction(tmp_path: Path) -> None:
     path = tmp_path / "manual.docx"
     document = Document()

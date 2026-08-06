@@ -97,7 +97,7 @@ class Settings(BaseSettings):
     upload_directory: Path = Path("uploads")
     max_upload_size_mb: int = Field(default=25, gt=0)
     allowed_upload_extensions: StringList = Field(
-        default_factory=lambda: ["pdf", "docx", "txt", "csv", "xlsx"]
+        default_factory=lambda: ["pdf", "docx", "txt", "md", "csv", "xlsx"]
     )
     router_max_clarification_questions: int = Field(default=3, ge=0, le=3)
     workflow_max_tool_retries: int = Field(default=2, ge=0)

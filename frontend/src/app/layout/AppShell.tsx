@@ -32,7 +32,7 @@ export function AppShell() {
   };
 
   return (
-    <div className="relative flex h-dvh min-h-0 flex-col bg-neutral-50 dark:bg-neutral-950">
+    <div className="relative flex h-dvh min-h-0 flex-col bg-slate-950">
       <SkipToContent />
       <Header
         onMenuClick={() => setSidebarOpen(true)}
@@ -40,13 +40,14 @@ export function AppShell() {
         onSidebarToggle={toggleCollapsed}
       />
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
-        {/* Subtle animated background */}
-        <div className="pointer-events-none absolute inset-0 gradient-orb-bg" aria-hidden="true" />
-        <div className="pointer-events-none absolute inset-0 dot-grid opacity-50 dark:opacity-30" aria-hidden="true" />
-        <NoiseTexture opacity={0.025} className="dark:opacity-[0.04]" />
+        {/* Subtle atmospheric background */}
+        <div className="pointer-events-none absolute inset-0 bg-slate-950" aria-hidden="true" />
+        <div className="pointer-events-none absolute inset-0 gradient-orb-bg opacity-40" aria-hidden="true" />
+        <div className="pointer-events-none absolute inset-0 dot-grid opacity-[0.07]" aria-hidden="true" />
+        <NoiseTexture opacity={0.02} />
 
         <aside
-          className="relative z-[1] hidden shrink-0 overflow-x-hidden overflow-y-auto border-r border-neutral-200/80 bg-white/80 backdrop-blur-xl transition-[width] duration-panel ease-productive dark:border-neutral-800/80 dark:bg-neutral-900/80 md:block"
+          className="relative z-[1] hidden shrink-0 overflow-x-hidden overflow-y-auto border-r border-white/8 bg-slate-900/90 transition-[width] duration-panel ease-productive md:block"
           style={{ width: collapsed ? 'var(--sidebar-compact)' : 'var(--sidebar-wide)' }}
           aria-label="Desktop navigation"
         >

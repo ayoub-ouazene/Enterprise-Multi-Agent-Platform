@@ -234,9 +234,8 @@ export function useUploadDocument() {
       if (payload.effective_date) {
         formData.append('effective_date', payload.effective_date);
       }
-      if (payload.custom_metadata) {
-        formData.append('custom_metadata', JSON.stringify(payload.custom_metadata));
-      }
+      // Always send custom_metadata to satisfy FastAPI form parsing
+      formData.append('custom_metadata', JSON.stringify(payload.custom_metadata ?? {}));
       return api.upload<DocumentListResponse>('/documents', formData);
     },
     onSuccess: () => {

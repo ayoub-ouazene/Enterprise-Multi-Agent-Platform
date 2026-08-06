@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ShieldCheck, Upload, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useDocuments, useUploadDocument, usePolicyReadiness } from '../../api/hooks/useOnboarding';
+import { ApiErrorException } from '../../api/errors';
 import type { OnboardingStatusDetailed } from '../../api/types';
 import { Button } from '../../components/ui/Button';
 import { Skeleton } from '../../components/layout/Skeleton';
@@ -44,7 +45,19 @@ export function PoliciesStep({ status }: PoliciesStepProps) {
       setFile(null);
       setTitle('');
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Upload failed';
+      let msg = 'Upload failed';
+      if (e instanceof ApiErrorException) {
+        if (e.error.fieldErrors && Object.keys(e.error.fieldErrors).length > 0) {
+          const fields = Object.entries(e.error.fieldErrors)
+            .map(([field, errors]) => `${field}: ${errors.join(', ')}`)
+            .join('; ');
+          msg = `Validation failed: ${fields}`;
+        } else {
+          msg = e.error.message;
+        }
+      } else if (e instanceof Error) {
+        msg = e.message;
+      }
       setUploadError(msg);
     }
   }

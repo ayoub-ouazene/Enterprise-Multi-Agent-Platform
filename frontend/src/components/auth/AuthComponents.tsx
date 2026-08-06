@@ -68,7 +68,7 @@ export function AuthIllustration({ variant }: { variant: 'signup' | 'login' | 'p
   }[variant];
 
   return (
-    <aside className="relative flex h-full min-h-[320px] flex-col justify-between overflow-hidden bg-neutral-950/50 p-7 text-white sm:p-10 lg:min-h-[650px] lg:p-12">
+    <aside className="relative flex h-full min-h-[320px] flex-col justify-between overflow-hidden bg-neutral-950/50 p-7 text-neutral-800 sm:p-10 lg:min-h-[650px] lg:p-12">
       <div className="absolute inset-0 auth-grid opacity-30" aria-hidden="true" />
       <div className="absolute -right-24 top-10 h-64 w-64 rounded-full bg-primary-500/20 blur-3xl floating-glow" aria-hidden="true" />
       <div className="absolute -left-16 bottom-20 h-56 w-56 rounded-full bg-violet-600/10 blur-3xl" aria-hidden="true" />
