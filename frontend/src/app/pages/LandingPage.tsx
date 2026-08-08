@@ -63,7 +63,7 @@ export function LandingPage() {
   return (
     <div className="min-h-screen overflow-x-clip bg-white text-neutral-950 dark:bg-neutral-950 dark:text-white">
       <a href="#main-content" className="skip-link">Skip to main content</a>
-      <PublicHeader transparent />
+      <PublicHeader />
       <main id="main-content">
         {/* HERO: Enhanced with aurora + particle field */}
         <section className="relative overflow-hidden bg-neutral-950 pb-24 pt-16 text-white sm:pt-24 lg:pb-32 lg:pt-28">
