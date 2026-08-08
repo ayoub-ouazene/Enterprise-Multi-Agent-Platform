@@ -22,7 +22,7 @@ export function Sidebar({ user, collapsed = false, onNavigate }: SidebarProps) {
       {/* Workspace pill */}
       <div
         className={clsx(
-          'mx-3 mb-5 mt-1 flex items-center rounded-2xl border border-white/8 bg-white/5 p-3 backdrop-blur-sm transition-all',
+          'mx-3 mb-5 mt-1 flex items-center rounded-2xl border border-white/10 bg-white/10 p-3 backdrop-blur-sm transition-all',
           collapsed ? 'justify-center' : 'gap-3',
         )}
       >
@@ -35,8 +35,8 @@ export function Sidebar({ user, collapsed = false, onNavigate }: SidebarProps) {
             collapsed ? 'pointer-events-none w-0 opacity-0' : 'opacity-100',
           )}
         >
-          <p className="truncate text-sm font-semibold text-white">Company workspace</p>
-          <p className="truncate text-xs text-neutral-700">
+          <p className="truncate text-sm font-semibold text-neutral-950">Company workspace</p>
+          <p className="truncate text-sm font-semibold text-neutral-700">
             {role}
           </p>
         </div>
@@ -48,7 +48,7 @@ export function Sidebar({ user, collapsed = false, onNavigate }: SidebarProps) {
           <div key={group.label}>
             <p
               className={clsx(
-                'mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-slate-500 transition-opacity duration-300',
+                'mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-white/50 transition-opacity duration-300',
                 collapsed && 'h-0 overflow-hidden opacity-0',
               )}
             >
@@ -69,7 +69,7 @@ export function Sidebar({ user, collapsed = false, onNavigate }: SidebarProps) {
                         collapsed ? 'justify-center px-2' : 'px-3',
                         isActive
                           ? 'bg-gradient-to-r from-primary-600/20 to-primary-500/10 text-white shadow-[inset_0_1px_0_rgba(99,102,241,0.1)]'
-                          : 'text-neutral-700',
+                          : 'text-white/70 hover:bg-white/5 hover:text-white',
                       )
                     }
                   >
@@ -88,7 +88,7 @@ export function Sidebar({ user, collapsed = false, onNavigate }: SidebarProps) {
                             'shrink-0 transition-colors duration-200',
                             isActive
                               ? 'text-primary-400'
-                              : 'text-neutral-700',
+                              : 'text-white/60',
                           )}
                           aria-hidden="true"
                         />
@@ -117,7 +117,7 @@ export function Sidebar({ user, collapsed = false, onNavigate }: SidebarProps) {
           collapsed && 'opacity-0',
         )}
       >
-        <p className="text-[10px] font-medium uppercase tracking-wider text-neutral-600">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-white/50">
           Orchestra v1.0
         </p>
         <p className="mt-0.5 text-[10px] text-neutral-500">

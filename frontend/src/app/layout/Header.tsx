@@ -74,7 +74,7 @@ export function Header({ onMenuClick, sidebarCollapsed, onSidebarToggle }: Heade
   const department = departments.find((item) => item.id === user?.department_id);
 
   return (
-    <header className="z-header relative isolate shrink-0">
+    <header className="z-header relative isolate shrink-0 bg-slate-900/95 dark:border-white/10 dark:bg-slate-950/85">
       {/* Top decorative strip */}
       <div className="h-[3px] w-full bg-gradient-to-r from-violet-500 via-primary-500 to-cyan-500" aria-hidden="true" />
 
@@ -131,7 +131,7 @@ export function Header({ onMenuClick, sidebarCollapsed, onSidebarToggle }: Heade
                   ))}
                 </ol>
               </nav>
-              <p className="truncate text-sm font-semibold capitalize leading-tight text-neutral-950">
+              <p className="text-sm font-semibold text-white">
                 {pageTitle}
               </p>
             </div>
@@ -142,9 +142,9 @@ export function Header({ onMenuClick, sidebarCollapsed, onSidebarToggle }: Heade
             <ConnectionStatus />
 
             {actions.length > 0 && (
-              <Link
+                <Link
                 to="/app/human-actions"
-                className="relative hidden h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm text-neutral-800 transition hover:bg-white/10 hover:text-white sm:flex"
+                className="relative hidden h-9 items-center gap-1.5 rounded-lg px-2.5 text-sm text-white/85 transition hover:bg-white/10 hover:text-white sm:flex"
                 aria-label={`${actions.length} pending human actions`}
               >
                 <Hand size={17} />
@@ -161,7 +161,7 @@ export function Header({ onMenuClick, sidebarCollapsed, onSidebarToggle }: Heade
               <div className="relative ml-1" ref={menuRef}>
                 <button
                   onClick={() => setMenuOpen((v) => !v)}
-                  className="group/profile flex h-10 items-center gap-2 rounded-xl border border-white/15 bg-white/8 px-2 py-1 text-left transition hover:border-white/25 hover:bg-white/12"
+                  className="group/profile flex h-10 items-center gap-2 rounded-xl border border-white/15 bg-white/8 px-2 py-1 text-left transition hover:border-white/25 hover:bg-white/12 text-neutral-800"
                   aria-haspopup="menu"
                   aria-expanded={menuOpen}
                 >
@@ -169,10 +169,10 @@ export function Header({ onMenuClick, sidebarCollapsed, onSidebarToggle }: Heade
                     {user.email.charAt(0).toUpperCase()}
                   </span>
                   <span className="hidden max-w-32 flex-col leading-none lg:flex">
-                    <span className="truncate text-[11px] font-semibold text-neutral-900">
+                    <span className="truncate text-sm text-white">
                       {user.email}
                     </span>
-                    <span className="truncate text-[10px] text-neutral-700">
+                    <span className="truncate text-xs text-white/70">
                       {department?.name ?? roleLabel(user)}
                     </span>
                   </span>
@@ -193,7 +193,7 @@ export function Header({ onMenuClick, sidebarCollapsed, onSidebarToggle }: Heade
                       className="absolute right-0 top-full z-dropdown mt-2 w-60 overflow-hidden rounded-xl border border-white/15 bg-slate-900/95 shadow-2xl backdrop-blur-2xl"
                     >
                       <div className="border-b border-white/15 px-4 py-3">
-                        <p className="text-sm text-neutral-900">{user.email}</p>
+                        <p className="text-sm text-white">{user.email}</p>
                         <p className="text-xs text-neutral-700">
                           {roleLabel(user)}{department ? ` · ${department.name}` : ''}
                         </p>
@@ -201,7 +201,7 @@ export function Header({ onMenuClick, sidebarCollapsed, onSidebarToggle }: Heade
                       <button
                         role="menuitem"
                         onClick={handleLogout}
-                        className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-neutral-700 hover:bg-white/10"
+                        className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-white/60 hover:bg-white/10 hover:text-white"
                       >
                         <LogOut size={16} /> Sign out
                       </button>

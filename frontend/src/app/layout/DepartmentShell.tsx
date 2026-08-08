@@ -46,20 +46,20 @@ export function DepartmentShell() {
 
   return (
     <div className="min-h-full bg-neutral-50 dark:bg-neutral-950">
-      <header className="border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+      <header className="border-b border-neutral-200 bg-slate-900 text-white dark:border-neutral-800 dark:bg-slate-900">
         <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl" style={{ backgroundColor: meta.lightColor, color: meta.darkColor }}>
               <Icon size={21} aria-hidden="true" />
             </span>
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-400">Department workspace</p>
-              <h1 className="truncate text-lg font-semibold text-neutral-950 dark:text-white">{meta.label}</h1>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-300">Department workspace</p>
+              <h1 className="truncate text-lg font-semibold text-white">{meta.label}</h1>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <ConnectionStatus />
-            <span className="hidden max-w-xl text-right text-xs text-neutral-500 lg:block">{meta.description}</span>
+            <span className="hidden max-w-xl text-right text-xs text-neutral-300 lg:block">{meta.description}</span>
           </div>
         </div>
         <div className="mx-auto max-w-[1600px] px-4 pb-3 sm:px-6 lg:px-8">
@@ -91,16 +91,16 @@ export function DepartmentShell() {
       )}
 
       <div className="mx-auto flex max-w-[1600px]">
-        <aside className="hidden w-56 shrink-0 border-r border-neutral-200 px-3 py-5 dark:border-neutral-800 md:block">
+        <aside className="hidden w-56 shrink-0 border-r border-neutral-200 bg-slate-900 px-3 py-5 dark:border-neutral-800 dark:bg-slate-900 md:block">
           <nav aria-label={`${meta.label} workspace navigation`} className="space-y-1">
             {sections.map((item) => <WorkspaceLink key={item.id} base={base} {...item} />)}
           </nav>
           {meta.resourceLinks.length > 0 && canManage && (
             <div className="mt-6 border-t border-neutral-200 pt-4 dark:border-neutral-800">
-              <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-400">Administration</p>
+              <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-300">Administration</p>
               <nav className="space-y-1">
                 {meta.resourceLinks.map((link) => (
-                  <a key={link.href} href={link.href} className="flex min-h-10 items-center gap-2 rounded-lg px-3 text-xs font-medium text-neutral-500 hover:bg-neutral-100 hover:text-neutral-950 dark:hover:bg-neutral-800 dark:hover:text-white">
+                  <a key={link.href} href={link.href} className="flex min-h-10 items-center gap-2 rounded-lg px-3 text-xs font-medium text-neutral-300 hover:bg-slate-800 hover:text-white dark:hover:bg-slate-800 dark:hover:text-white">
                     <Settings size={14} /> {link.label}
                   </a>
                 ))}
@@ -109,7 +109,7 @@ export function DepartmentShell() {
           )}
         </aside>
         <div className="min-w-0 flex-1">
-          <nav aria-label={`${meta.label} mobile workspace navigation`} className="flex overflow-x-auto border-b border-neutral-200 bg-white px-2 md:hidden dark:border-neutral-800 dark:bg-neutral-900">
+          <nav aria-label={`${meta.label} mobile workspace navigation`} className="flex overflow-x-auto border-b border-neutral-200 bg-slate-900 px-2 text-white md:hidden dark:border-neutral-800 dark:bg-slate-900">
             {sections.map((item) => <WorkspaceLink key={item.id} base={base} compact {...item} />)}
           </nav>
           <div className="p-4 sm:p-6 lg:p-8">
@@ -141,8 +141,8 @@ function WorkspaceLink({
         'flex min-h-11 items-center gap-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
         compact ? 'shrink-0 px-3' : 'px-3',
         isActive
-          ? 'bg-primary-50 text-primary-700 dark:bg-primary-950/60 dark:text-primary-300'
-          : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-950 dark:hover:bg-neutral-800 dark:hover:text-white',
+          ? 'bg-primary-700 text-white dark:bg-primary-700 dark:text-white'
+          : 'text-neutral-300 hover:bg-slate-800 hover:text-white dark:text-neutral-300 dark:hover:bg-slate-800 dark:hover:text-white',
       )}
     >
       <Icon size={16} aria-hidden="true" />

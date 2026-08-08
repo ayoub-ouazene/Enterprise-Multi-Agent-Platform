@@ -68,19 +68,19 @@ export function AuthIllustration({ variant }: { variant: 'signup' | 'login' | 'p
   }[variant];
 
   return (
-    <aside className="relative flex h-full min-h-[320px] flex-col justify-between overflow-hidden bg-neutral-950/50 p-7 text-neutral-800 sm:p-10 lg:min-h-[650px] lg:p-12">
+    <aside className="relative flex h-full min-h-[320px] flex-col justify-between overflow-hidden bg-neutral-950 p-7 text-white sm:p-10 lg:min-h-[650px] lg:p-12">
       <div className="absolute inset-0 auth-grid opacity-30" aria-hidden="true" />
       <div className="absolute -right-24 top-10 h-64 w-64 rounded-full bg-primary-500/20 blur-3xl floating-glow" aria-hidden="true" />
       <div className="absolute -left-16 bottom-20 h-56 w-56 rounded-full bg-violet-600/10 blur-3xl" aria-hidden="true" />
       <div className="absolute inset-0 bg-gradient-to-br from-primary-500/5 via-transparent to-violet-500/5" aria-hidden="true" />
       <div className="relative">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-300">{content.eyebrow}</p>
-        <h2 className="mt-5 max-w-lg text-3xl font-bold leading-tight sm:text-4xl">{content.title}</h2>
+        <h2 className="mt-5 max-w-lg text-3xl font-bold leading-tight text-white sm:text-4xl">{content.title}</h2>
         <ul className="mt-8 space-y-4">
           {content.points.map((point, i) => (
             <motion.li
               key={point}
-              className="flex items-center gap-3 text-sm text-neutral-300"
+              className="flex items-center gap-3 text-sm text-neutral-200"
               initial={reducedMotion ? false : { opacity: 0, x: -12 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: reducedMotion ? 0 : 0.4, delay: 0.2 + i * 0.1 }}
@@ -91,12 +91,12 @@ export function AuthIllustration({ variant }: { variant: 'signup' | 'login' | 'p
           ))}
         </ul>
       </div>
-      <div className="relative mt-10 rounded-2xl border border-white/10 bg-white/[0.06] p-4 backdrop-blur">
+      <div className="relative mt-10 rounded-2xl border border-white/10 bg-white/[0.08] p-4 backdrop-blur">
         <div className="flex items-center justify-between border-b border-white/10 pb-3">
-          <span className="flex items-center gap-2 text-sm font-semibold"><Network size={16} /> Request workspace</span>
+          <span className="flex items-center gap-2 text-sm font-semibold text-white"><Network size={16} /> Request workspace</span>
           <span className="inline-flex items-center gap-1.5 text-xs text-emerald-300"><span className="h-2 w-2 rounded-full bg-emerald-400 motion-safe:animate-pulse" /> Controlled</span>
         </div>
-        <div className="mt-4 grid grid-cols-3 gap-2 text-center text-[11px] text-neutral-300">
+        <div className="mt-4 grid grid-cols-3 gap-2 text-center text-[11px] text-neutral-200">
           {['Routed', 'In progress', 'Review'].map((label, index) => (
             <div key={label} className="rounded-lg bg-black/20 px-2 py-3">
               <span className="mx-auto mb-2 block h-1.5 rounded-full bg-primary-400" style={{ width: `${42 + index * 18}%` }} />

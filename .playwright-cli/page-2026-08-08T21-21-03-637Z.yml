@@ -1,0 +1,213 @@
+- generic [ref=e3]:
+  - link "Skip to main content" [ref=e4] [cursor=pointer]:
+    - /url: "#main-content"
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - link [ref=e7] [cursor=pointer]:
+        - /url: /
+        - link "Orchestra home" [ref=e8]:
+          - /url: /
+          - generic [ref=e10]: Orchestra
+      - navigation "Public navigation" [ref=e11]:
+        - link "Product" [ref=e12] [cursor=pointer]:
+          - /url: "#product"
+        - link "Solutions" [ref=e13] [cursor=pointer]:
+          - /url: "#departments"
+        - link "Security" [ref=e14] [cursor=pointer]:
+          - /url: "#security"
+      - generic [ref=e15]:
+        - link "Sign in" [ref=e16] [cursor=pointer]:
+          - /url: /login
+        - link "Create workspace" [ref=e17] [cursor=pointer]:
+          - /url: /signup
+  - main [ref=e18]:
+    - generic [ref=e27]:
+      - generic [ref=e28]:
+        - generic [ref=e29]: Enterprise operations, coordinated
+        - heading "Move enterprise requests from question to controlled outcome." [level=1] [ref=e33]:
+          - generic [ref=e34]: Move
+          - generic [ref=e36]: enterprise
+          - generic [ref=e38]: requests
+          - generic [ref=e40]: from
+          - generic [ref=e42]: question
+          - generic [ref=e44]: to
+          - generic [ref=e46]: controlled
+          - generic [ref=e48]: outcome.
+        - paragraph [ref=e50]: Orchestra coordinates five specialized departments, company knowledge, live workflow progress, and human authority in one secure workspace.
+        - generic [ref=e51]:
+          - link "Create company workspace" [ref=e52] [cursor=pointer]:
+            - /url: /signup
+          - link "Sign in" [ref=e55] [cursor=pointer]:
+            - /url: /login
+        - paragraph [ref=e56]: Company accounts register publicly. Employees and managers are provisioned by their Company. External requesters use their approved Company-provided account.
+      - generic "Product workflow preview" [ref=e57]:
+        - generic [ref=e59]:
+          - generic [ref=e60]:
+            - generic [ref=e61]:
+              - paragraph [ref=e62]: Company workspace
+              - paragraph [ref=e63]: Operations overview
+            - generic [ref=e64]: Live
+          - generic [ref=e66]:
+            - generic [ref=e67]: 12 active
+            - generic [ref=e68]: 3 approvals
+            - generic [ref=e69]: 98% visible
+          - generic [ref=e70]:
+            - generic [ref=e71]:
+              - generic [ref=e76]:
+                - paragraph [ref=e77]: IT access request
+                - paragraph [ref=e78]: Information Technology
+              - generic [ref=e79]: In progress
+            - generic [ref=e80]:
+              - generic [ref=e85]:
+                - paragraph [ref=e86]: Equipment budget check
+                - paragraph [ref=e87]: Finance collaboration
+              - generic [ref=e88]: Validated
+            - generic [ref=e89]:
+              - generic [ref=e94]:
+                - paragraph [ref=e95]: Supplier shortlist
+                - paragraph [ref=e96]: Procurement
+              - generic [ref=e97]: Human selection
+        - generic [ref=e102]:
+          - paragraph [ref=e103]: Human control
+          - paragraph [ref=e104]: Approval requested only when needed
+    - generic [ref=e106]:
+      - generic [ref=e107]:
+        - generic [ref=e108]: Product walkthrough
+        - heading "See Orchestra in action" [level=2] [ref=e112]
+        - paragraph [ref=e113]: Watch a complete request flow — from submission, through routing and collaboration, to human approval and delivery.
+      - generic [ref=e114]:
+        - generic [ref=e115]:
+          - generic [ref=e116]:
+            - generic [ref=e120]: orchestra.app/requests
+            - generic [ref=e122]: Live demo
+          - generic [ref=e126]:
+            - generic [ref=e127]: Orchestra workspace
+            - generic [ref=e141]:
+              - generic [ref=e142]:
+                - generic [ref=e143]: Work email
+                - generic [ref=e144]: alex@northwind.co
+              - generic [ref=e145]:
+                - generic [ref=e146]: Password
+                - generic [ref=e147]: ••••••••••
+              - generic [ref=e148]: Sign in
+          - generic [ref=e156]:
+            - paragraph [ref=e157]: Sign in
+            - paragraph [ref=e158]: Authenticate into your company workspace.
+        - generic [ref=e160]:
+          - generic [ref=e161]: Sign in
+          - generic [ref=e164]: Submit a request
+          - generic [ref=e167]: Router assigns owner
+          - generic [ref=e170]: Department processes
+          - generic [ref=e173]: Collaboration
+          - generic [ref=e176]: Human approval
+          - generic [ref=e179]: Independent review
+          - generic [ref=e182]: Delivered
+    - generic [ref=e186]:
+      - generic [ref=e187]:
+        - paragraph [ref=e188]: One operating flow
+        - heading "Complex coordination, made understandable" [level=2] [ref=e189]
+        - paragraph [ref=e190]: One request keeps one owner while the platform coordinates research, collaboration, approval, review, and delivery.
+      - generic "Request workflow" [ref=e191]:
+        - list [ref=e192]:
+          - listitem [ref=e193]:
+            - generic [ref=e195]: "1"
+            - heading "Submit" [level=3] [ref=e196]
+            - paragraph [ref=e197]: Describe the outcome you need
+          - listitem [ref=e198]:
+            - generic [ref=e200]: "2"
+            - heading "Route" [level=3] [ref=e201]
+            - paragraph [ref=e202]: The right department takes ownership
+          - listitem [ref=e203]:
+            - generic [ref=e205]: "3"
+            - heading "Process" [level=3] [ref=e206]
+            - paragraph [ref=e207]: Work follows company policy
+          - listitem [ref=e208]:
+            - generic [ref=e210]: "4"
+            - heading "Collaborate" [level=3] [ref=e211]
+            - paragraph [ref=e212]: Other departments contribute safely
+          - listitem [ref=e213]:
+            - generic [ref=e215]: "5"
+            - heading "Approve" [level=3] [ref=e216]
+            - paragraph [ref=e217]: People decide when authority is required
+          - listitem [ref=e218]:
+            - generic [ref=e220]: "6"
+            - heading "Verify" [level=3] [ref=e221]
+            - paragraph [ref=e222]: Important results receive a quality check
+          - listitem [ref=e223]:
+            - generic [ref=e224]: "7"
+            - heading "Deliver" [level=3] [ref=e225]
+            - paragraph [ref=e226]: A clear result and history are returned
+    - generic [ref=e228]:
+      - generic [ref=e230]:
+        - paragraph [ref=e231]: Five specialized departments
+        - heading "Deep capabilities, one Company experience" [level=2] [ref=e232]
+        - paragraph [ref=e233]: Each department has clear boundaries and works within the same request lifecycle.
+      - generic [ref=e234]:
+        - article [ref=e235]:
+          - heading "Customer Support" [level=3] [ref=e239]
+          - paragraph [ref=e240]: Resolve company-specific questions with grounded guidance and technical escalation.
+        - article [ref=e241]:
+          - heading "Human Resources" [level=3] [ref=e248]
+          - paragraph [ref=e249]: Coordinate leave, onboarding, benefits guidance, and job-description preparation.
+        - article [ref=e250]:
+          - heading "Information Technology" [level=3] [ref=e254]
+          - paragraph [ref=e255]: Diagnose incidents, validate inventory, and prepare controlled access operations.
+        - article [ref=e256]:
+          - heading "Finance" [level=3] [ref=e261]
+          - paragraph [ref=e262]: Validate budgets and purchases with deterministic balances and approval controls.
+        - article [ref=e263]:
+          - heading "Procurement" [level=3] [ref=e269]
+          - paragraph [ref=e270]: Evaluate eligible suppliers using transparent scores and structured shortlists.
+    - generic [ref=e272]:
+      - generic [ref=e273]:
+        - generic [ref=e274]:
+          - paragraph [ref=e275]: Trust and control
+          - heading "AI assistance without surrendering authority" [level=2] [ref=e276]
+          - paragraph [ref=e277]: The platform keeps company context, policy evidence, access decisions, and important human checkpoints explicit.
+        - generic [ref=e278]: Designed for accountable operations
+      - generic [ref=e282]:
+        - article [ref=e283]:
+          - heading "Company isolation" [level=3] [ref=e289]
+          - paragraph [ref=e290]: Every request, document, and decision stays scoped to its authenticated workspace.
+        - article [ref=e291]:
+          - heading "Policy grounding" [level=3] [ref=e298]
+          - paragraph [ref=e299]: Company knowledge informs answers and recommendations where evidence is required.
+        - article [ref=e300]:
+          - heading "Role-based access" [level=3] [ref=e306]
+          - paragraph [ref=e307]: Company accounts, managers, employees, and external requesters see appropriate capabilities.
+        - article [ref=e308]:
+          - heading "Human control" [level=3] [ref=e312]
+          - paragraph [ref=e313]: Approvals appear only when judgment or authority is genuinely necessary.
+        - article [ref=e314]:
+          - heading "Auditability" [level=3] [ref=e320]
+          - paragraph [ref=e321]: Meaningful workflow events preserve a clear operational history.
+        - article [ref=e322]:
+          - heading "Live progress" [level=3] [ref=e330]
+          - paragraph [ref=e331]: Request updates stay visible without interrupting normal application use.
+    - generic [ref=e335]:
+      - heading "Create the workspace where coordinated work becomes visible." [level=2] [ref=e339]
+      - paragraph [ref=e340]: Register a Company workspace, configure the departments you need, and activate when your organization is ready.
+      - generic [ref=e341]:
+        - link "Create workspace" [ref=e342] [cursor=pointer]:
+          - /url: /signup
+        - link "Sign in" [ref=e343] [cursor=pointer]:
+          - /url: /login
+  - contentinfo [ref=e344]:
+    - generic [ref=e346]:
+      - generic [ref=e347]:
+        - link "Orchestra home" [ref=e348] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e350]: Orchestra
+        - paragraph [ref=e351]: Coordinated enterprise requests with company control at every step.
+      - navigation "Footer navigation" [ref=e352]:
+        - link "Product" [ref=e353] [cursor=pointer]:
+          - /url: /#product
+        - link "Security" [ref=e354] [cursor=pointer]:
+          - /url: /#security
+        - link "How it works" [ref=e355] [cursor=pointer]:
+          - /url: /#workflow
+        - link "Sign in" [ref=e356] [cursor=pointer]:
+          - /url: /login
+        - link "Create workspace" [ref=e357] [cursor=pointer]:
+          - /url: /signup
+    - generic [ref=e358]: © 2026 Orchestra. Enterprise multi-agent platform.

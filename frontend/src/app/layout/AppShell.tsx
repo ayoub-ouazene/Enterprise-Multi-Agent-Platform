@@ -32,7 +32,7 @@ export function AppShell() {
   };
 
   return (
-    <div className="relative flex h-dvh min-h-0 flex-col bg-slate-950">
+    <div className="relative flex h-dvh min-h-0 flex-col bg-slate-950 text-white">
       <SkipToContent />
       <Header
         onMenuClick={() => setSidebarOpen(true)}

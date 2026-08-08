@@ -57,11 +57,11 @@ export function AdminShell() {
 
   return (
     <div className="min-h-full bg-neutral-50 dark:bg-neutral-950">
-      <div className="border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+      <div className="border-b border-neutral-200 bg-slate-900 text-white dark:border-neutral-800 dark:bg-slate-900">
         <div className="flex min-h-16 items-center justify-between gap-4 px-4 sm:px-6">
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-neutral-950 dark:text-white">{companyName}</p>
-            <p className="text-xs text-neutral-500">{departmentType ? `${departmentType.replaceAll('_', ' ')} administration` : 'Company administration'}</p>
+            <p className="truncate text-sm font-semibold text-white">{companyName}</p>
+            <p className="text-xs text-neutral-300">{departmentType ? `${departmentType.replaceAll('_', ' ')} administration` : 'Company administration'}</p>
           </div>
           <Button variant="secondary" size="sm" className="md:hidden" onClick={() => setMobileOpen(true)}>
             <Menu size={16} className="mr-2" />Sections
@@ -70,15 +70,15 @@ export function AdminShell() {
       </div>
 
       <div className="flex min-h-[calc(100dvh-8rem)]">
-        <aside className="hidden w-60 shrink-0 border-r border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900 md:block">
+        <aside className="hidden w-60 shrink-0 border-r border-neutral-200 bg-slate-900 p-3 dark:border-neutral-800 dark:bg-slate-900 md:block">
           <AdminNavigation items={visibleItems} />
         </aside>
 
         <section className="min-w-0 flex-1">
-          <div className="border-b border-neutral-200 bg-white px-4 py-2.5 dark:border-neutral-800 dark:bg-neutral-900 sm:px-6">
-            <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-xs text-neutral-500">
+          <div className="border-b border-neutral-200 bg-slate-900 px-4 py-2.5 dark:border-neutral-800 dark:bg-slate-900 sm:px-6">
+            <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-xs text-neutral-300">
               <span>Administration</span><ChevronRight size={13} aria-hidden="true" />
-              <span className="font-medium text-neutral-800 dark:text-neutral-200">{current?.label ?? 'Resource detail'}</span>
+              <span className="font-medium text-white">{current?.label ?? 'Resource detail'}</span>
             </nav>
           </div>
           <main className="mx-auto max-w-[1500px] p-4 sm:p-6">{denied ? <AdminAccessDenied /> : <Outlet />}</main>
@@ -110,8 +110,8 @@ function AdminNavigation({ items: navigation }: { items: AdminNavItem[] }) {
           className={({ isActive }) => clsx(
             'flex min-h-10 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500',
             isActive
-              ? 'bg-primary-50 text-primary-800 dark:bg-primary-950 dark:text-primary-200'
-              : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-950 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-white',
+              ? 'bg-primary-700 text-white dark:bg-primary-700 dark:text-white'
+              : 'text-neutral-300 hover:bg-slate-800 hover:text-white dark:text-neutral-300 dark:hover:bg-slate-800 dark:hover:text-white',
           )}
         >
           {item.icon}<span>{item.label}</span>

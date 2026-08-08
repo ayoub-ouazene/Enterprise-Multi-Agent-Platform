@@ -66,7 +66,7 @@ export function PublicHeader({ transparent = false }: { transparent?: boolean })
         <div className="hidden items-center gap-2 md:flex">
           <Link
             to="/login"
-            className="rounded-lg px-4 py-2 text-sm font-semibold text-white/85 transition hover:bg-white/10 hover:text-white"
+            className="rounded-lg px-4 py-2 text-sm font-semibold text-neutral-900 transition hover:bg-white/10 hover:text-neutral-700"
           >
             Sign in
           </Link>

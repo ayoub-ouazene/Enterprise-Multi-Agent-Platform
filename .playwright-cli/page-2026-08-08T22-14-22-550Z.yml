@@ -1,0 +1,84 @@
+- generic [ref=e3]:
+  - link "Skip to main content" [ref=e8] [cursor=pointer]:
+    - /url: "#main-content"
+  - banner [ref=e9]:
+    - generic [ref=e11]:
+      - link [ref=e12] [cursor=pointer]:
+        - /url: /
+        - link "Orchestra home" [ref=e13]:
+          - /url: /
+          - generic [ref=e15]: Orchestra
+      - navigation "Public navigation" [ref=e16]:
+        - link "Product" [ref=e17] [cursor=pointer]:
+          - /url: /#product
+        - link "Solutions" [ref=e18] [cursor=pointer]:
+          - /url: /#departments
+        - link "Security" [ref=e19] [cursor=pointer]:
+          - /url: /#security
+      - generic [ref=e20]:
+        - link "Sign in" [ref=e21] [cursor=pointer]:
+          - /url: /login
+        - link "Create workspace" [ref=e22] [cursor=pointer]:
+          - /url: /signup
+  - main [ref=e23]:
+    - generic [ref=e25]:
+      - generic [ref=e27]:
+        - paragraph [ref=e28]: Workspace sign in
+        - heading "Welcome back" [level=1] [ref=e29]
+        - paragraph [ref=e30]: Enter the workspace supplied by your Company, then use your provisioned account.
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - generic [ref=e33]: Company workspace
+            - textbox "Company workspace" [ref=e35]:
+              - /placeholder: your-company
+            - paragraph [ref=e36]: The workspace address assigned to your organization.
+          - generic [ref=e37]:
+            - generic [ref=e38]: Email address
+            - textbox "Email address" [ref=e40]:
+              - /placeholder: you@company.com
+          - generic [ref=e41]:
+            - generic [ref=e42]: Password
+            - generic [ref=e43]:
+              - textbox "Password" [ref=e44]
+              - button "Show password" [ref=e45] [cursor=pointer]
+          - paragraph [ref=e49]: Password recovery is not yet available. Contact your Company administrator if you cannot access your account.
+          - button "Sign in securely" [ref=e50] [cursor=pointer]
+        - generic [ref=e51]:
+          - text: Creating a new Company workspace?
+          - link "Register your Company" [ref=e52] [cursor=pointer]:
+            - /url: /signup
+      - complementary [ref=e54]:
+        - generic [ref=e59]:
+          - paragraph [ref=e60]: Secure workspace entry
+          - heading "Return to requests, decisions, and live progress." [level=2] [ref=e61]
+          - list [ref=e62]:
+            - listitem [ref=e63]: Workspace-aware authentication
+            - listitem [ref=e67]: Role-specific access
+            - listitem [ref=e71]: Trusted company context
+        - generic [ref=e75]:
+          - generic [ref=e76]:
+            - generic [ref=e77]: Request workspace
+            - generic [ref=e83]: Controlled
+          - generic [ref=e85]:
+            - generic [ref=e86]: Routed
+            - generic [ref=e88]: In progress
+            - generic [ref=e90]: Review
+  - contentinfo [ref=e92]:
+    - generic [ref=e94]:
+      - generic [ref=e95]:
+        - link "Orchestra home" [ref=e96] [cursor=pointer]:
+          - /url: /
+          - generic [ref=e98]: Orchestra
+        - paragraph [ref=e99]: Coordinated enterprise requests with company control at every step.
+      - navigation "Footer navigation" [ref=e100]:
+        - link "Product" [ref=e101] [cursor=pointer]:
+          - /url: /#product
+        - link "Security" [ref=e102] [cursor=pointer]:
+          - /url: /#security
+        - link "How it works" [ref=e103] [cursor=pointer]:
+          - /url: /#workflow
+        - link "Sign in" [ref=e104] [cursor=pointer]:
+          - /url: /login
+        - link "Create workspace" [ref=e105] [cursor=pointer]:
+          - /url: /signup
+    - generic [ref=e106]: © 2026 Orchestra. Enterprise multi-agent platform.

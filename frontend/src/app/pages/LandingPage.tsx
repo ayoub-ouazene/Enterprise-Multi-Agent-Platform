@@ -123,7 +123,7 @@ export function LandingPage() {
                   Create company workspace
                   <ArrowRight size={18} aria-hidden="true" className="transition-transform duration-ui group-hover:translate-x-0.5" />
                 </Link>
-                <Link to="/login" text-neutral-700>
+                <Link to="/login" className="text-neutral-700">
                   Sign in
                 </Link>
               </motion.div>
