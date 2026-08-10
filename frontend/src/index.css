@@ -4,30 +4,47 @@
 
 @layer base {
   :root {
-    --surface-canvas: 248 250 252;
+    /* Warm refined surface system - replaces stark cold white */
+    --surface-canvas: 248 246 243;
     --surface-default: 255 255 255;
-    --surface-subtle: 241 245 249;
+    --surface-subtle: 247 245 242;
+    --surface-raised: 253 253 251;
     --surface-elevated: 255 255 255;
-    --text-primary: 15 23 42;
-    --text-secondary: 71 85 105;
-    --text-muted: 100 116 139;
-    --border-default: 226 232 240;
-    --focus-ring: 37 99 235;
+
+    /* Warm, readable text hierarchy */
+    --text-primary: 15 23 32;
+    --text-secondary: 71 77 85;
+    --text-muted: 120 125 133;
+
+    /* Warm subtle borders */
+    --border-default: 226 224 220;
+    --border-subtle: 238 236 233;
+    --border-strong: 180 175 168;
+
+    --focus-ring: 59 130 246;
     --header-height: 4rem;
     --sidebar-wide: 17rem;
     --sidebar-compact: 5rem;
   }
 
   .dark {
-    --surface-canvas: 2 6 23;
-    --surface-default: 15 23 42;
-    --surface-subtle: 30 41 59;
-    --surface-elevated: 30 41 59;
-    --text-primary: 248 250 252;
-    --text-secondary: 203 213 225;
-    --text-muted: 148 163 184;
-    --border-default: 51 65 85;
-    --focus-ring: 96 165 250;
+    /* Rich deep navy with subtle blue undertones */
+    --surface-canvas: 8 12 30;
+    --surface-default: 15 22 44;
+    --surface-subtle: 22 30 55;
+    --surface-raised: 28 38 65;
+    --surface-elevated: 35 48 78;
+
+    /* Comfortable text in dark mode */
+    --text-primary: 241 245 249;
+    --text-secondary: 186 190 200;
+    --text-muted: 130 138 150;
+
+    --border-default: 50 60 90;
+    --border-subtle: 38 48 75;
+    --border-strong: 70 82 115;
+
+    --focus-ring: 99 165 255;
   }
 
   html {
@@ -38,14 +55,51 @@
     scroll-behavior: smooth;
   }
 
-  body {
-    @apply min-h-full bg-neutral-50 text-neutral-900;
-    background: rgb(var(--surface-canvas));
-    color: rgb(var(--text-primary));
+  /* ========== Custom Scrollbar ========== */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(99 102 241 / 0.55) transparent;
   }
 
-  .dark body {
-    @apply bg-neutral-900 text-neutral-100;
+  .dark * {
+    scrollbar-color: rgb(129 140 248 / 0.5) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgb(99 102 241 / 0.7), rgb(139 92 246 / 0.7), rgb(6 182 212 / 0.6));
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgb(99 102 241), rgb(139 92 246), rgb(6 182 212));
+    background-clip: padding-box;
+  }
+
+  .dark ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgb(99 102 241 / 0.8), rgb(139 92 246 / 0.8), rgb(6 182 212 / 0.7));
+    background-clip: padding-box;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgb(99 102 241), rgb(139 92 246), rgb(6 182 212));
+    background-clip: padding-box;
+  }
+
+  body {
+    @apply min-h-full;
+    background: rgb(var(--surface-canvas));
+    color: rgb(var(--text-primary));
   }
 
   :focus-visible {
@@ -331,28 +385,26 @@
   }
 
   .page-section {
-    @apply rounded-lg border border-neutral-200 bg-white shadow-xs;
+    @apply rounded-xl border bg-white shadow-sm transition-shadow hover:shadow-md;
+    background: rgb(var(--surface-default));
+    border-color: rgb(var(--border-default));
   }
 
   .dark .page-section {
-    @apply border-neutral-800 bg-neutral-800;
+    background: rgb(var(--surface-default));
+    border-color: rgb(var(--border-default));
   }
 
   .surface {
     background: rgb(var(--surface-default));
   }
 
-  .dark .surface {
-    @apply bg-neutral-900;
-  }
-
   .surface-elevated {
     background: rgb(var(--surface-elevated));
-    @apply shadow-card;
   }
 
   .dark .surface-elevated {
-    @apply bg-neutral-800 shadow-sm;
+    background: rgb(var(--surface-elevated));
   }
 }
 
@@ -368,4 +420,133 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ========== NEW ANIMATIONS & EFFECTS ========== */
+
+/* Card hover lift */
+.card-hover {
+  transition: transform 200ms ease, box-shadow 200ms ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px -8px rgba(15, 23, 42, 0.12);
+}
+.dark .card-hover:hover {
+  box-shadow: 0 8px 24px -8px rgba(0, 0, 0, 0.3);
+}
+
+/* Button press effect */
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* Sidebar nav item hover glow */
+.nav-item {
+  transition: all 200ms ease;
+}
+.nav-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.nav-item.active {
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.2), rgba(99, 102, 241, 0.1));
+}
+
+/* Subtle gradient shimmer on cards */
+.shimmer-card {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer-card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  transition: left 600ms ease;
+}
+.shimmer-card:hover::after {
+  left: 100%;
+}
+
+/* Fade in up animation for elements */
+.fade-in-up {
+  animation: fadeInUp 400ms ease forwards;
+}
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Staggered children animation */
+.stagger-children > * {
+  opacity: 0;
+  animation: fadeInUp 400ms ease forwards;
+}
+.stagger-children > *:nth-child(1) { animation-delay: 0ms; }
+.stagger-children > *:nth-child(2) { animation-delay: 75ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 150ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 225ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 300ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 375ms; }
+
+/* Soft glow pulse for active indicators */
+.glow-pulse {
+  animation: glowPulse 2s ease-in-out infinite;
+}
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); }
+  50% { box-shadow: 0 0 12px 4px rgba(99, 102, 241, 0.2); }
+}
+
+/* Department accent backgrounds */
+.dept-support { background: linear-gradient(135deg, #0d9488 0%, #14b8a6 100%); }
+.dept-hr { background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%); }
+.dept-it { background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%); }
+.dept-finance { background: linear-gradient(135deg, #059669 0%, #10b981 100%); }
+.dept-procurement { background: linear-gradient(135deg, #d97706 0%, #f59e0b 100%); }
+
+/* Sidebar gradient accent line */
+.sidebar-accent {
+  position: relative;
+}
+.sidebar-accent::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  background: linear-gradient(180deg, #6366f1, #8b5cf6, #06b6d4);
+  border-radius: 0 2px 2px 0;
+  opacity: 0;
+  transition: opacity 200ms ease, height 200ms ease;
+}
+.sidebar-accent:hover::before,
+.sidebar-accent.active::before {
+  opacity: 1;
+}
+
+/* Input focus glow */
+.input-glow:focus {
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+/* Badge pop animation */
+.badge-pop {
+  animation: badgePop 300ms ease;
+}
+@keyframes badgePop {
+  0% { transform: scale(0.8); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
 }

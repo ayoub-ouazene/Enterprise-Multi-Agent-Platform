@@ -32,7 +32,7 @@ export function AppShell() {
   };
 
   return (
-    <div className="relative flex h-dvh min-h-0 flex-col bg-slate-950 text-white">
+    <div className="relative flex h-dvh min-h-0 flex-col bg-indigo-950 text-white">
       <SkipToContent />
       <Header
         onMenuClick={() => setSidebarOpen(true)}
@@ -40,14 +40,14 @@ export function AppShell() {
         onSidebarToggle={toggleCollapsed}
       />
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
-        {/* Subtle atmospheric background */}
-        <div className="pointer-events-none absolute inset-0 bg-slate-950" aria-hidden="true" />
-        <div className="pointer-events-none absolute inset-0 gradient-orb-bg opacity-40" aria-hidden="true" />
-        <div className="pointer-events-none absolute inset-0 dot-grid opacity-[0.07]" aria-hidden="true" />
-        <NoiseTexture opacity={0.02} />
+        {/* Subtle atmospheric background for sidebar area */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-indigo-950 to-purple-900" aria-hidden="true" />
+        <div className="pointer-events-none absolute inset-0 gradient-orb-bg opacity-30" aria-hidden="true" />
+        <NoiseTexture opacity={0.015} />
 
+        {/* Dark sidebar */}
         <aside
-          className="relative z-[1] hidden shrink-0 overflow-x-hidden overflow-y-auto border-r border-white/8 bg-slate-900/90 transition-[width] duration-panel ease-productive md:block"
+          className="relative z-[1] hidden shrink-0 overflow-x-hidden overflow-y-auto border-r border-white/5 bg-indigo-950/95 backdrop-blur-sm transition-[width] duration-panel ease-productive md:block"
           style={{ width: collapsed ? 'var(--sidebar-compact)' : 'var(--sidebar-wide)' }}
           aria-label="Desktop navigation"
         >
@@ -58,7 +58,8 @@ export function AppShell() {
 
         <MobileNav isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} user={user} />
 
-        <main id="main-content" className="relative z-[1] min-w-0 flex-1 overflow-y-auto scroll-smooth" tabIndex={-1}>
+        {/* Warm off-white content area - not pure white, easier on eyes */}
+        <main id="main-content" className="relative z-[1] min-w-0 flex-1 overflow-y-auto scroll-smooth bg-[#f8f6f3]" tabIndex={-1}>
           <motion.div
             key={location.pathname}
             initial={reducedMotion ? false : { opacity: 0, y: 5 }}

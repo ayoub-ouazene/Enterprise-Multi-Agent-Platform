@@ -26,12 +26,12 @@ export function PageHeader({ title, description, children, eyebrow }: PageHeader
   return (
     <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
       <div className="min-w-0">
-        {eyebrow && <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-400">{eyebrow}</p>}
-        <h1 className="text-2xl font-bold tracking-tight text-neutral-950 dark:text-white sm:text-[1.75rem]">
+        {eyebrow && <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-primary-600 dark:text-primary-300">{eyebrow}</p>}
+        <h1 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-white sm:text-[1.75rem]">
           {title}
         </h1>
         {description && (
-          <p className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {description}
           </p>
         )}
@@ -51,10 +51,10 @@ interface SectionProps {
 
 export function Section({ title, description, actions, children, className }: SectionProps) {
   return (
-    <section className={clsx('rounded-card border border-neutral-200 bg-white shadow-card dark:border-neutral-800 dark:bg-neutral-900', className)}>
+    <section className={clsx('rounded-xl border bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-800/80', className)}>
       {title && (
-        <div className="flex items-start justify-between gap-4 border-b border-neutral-200 px-5 py-4 dark:border-neutral-800">
-          <div><h2 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">{title}</h2>{description && <p className="mt-1 text-sm text-neutral-500">{description}</p>}</div>
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200/80 px-5 py-4 dark:border-slate-700/50">
+          <div><h2 className="text-sm font-semibold text-slate-800 dark:text-slate-100">{title}</h2>{description && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{description}</p>}</div>
           {actions}
         </div>
       )}
@@ -76,5 +76,5 @@ export function SplitLayout({ primary, secondary, className }: { primary: ReactN
 }
 
 export function FilterBar({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={clsx('flex flex-col gap-3 rounded-card border border-neutral-200 bg-white p-4 sm:flex-row sm:items-center dark:border-neutral-800 dark:bg-neutral-900', className)}>{children}</div>;
+  return <div className={clsx('flex flex-col gap-3 rounded-xl border border-slate-200/80 bg-white p-4 sm:flex-row sm:items-center dark:border-slate-700/50 dark:bg-slate-800/80', className)}>{children}</div>;
 }

@@ -74,12 +74,12 @@ export function Header({ onMenuClick, sidebarCollapsed, onSidebarToggle }: Heade
   const department = departments.find((item) => item.id === user?.department_id);
 
   return (
-    <header className="z-header relative isolate shrink-0 bg-slate-900/95 dark:border-white/10 dark:bg-slate-950/85">
+    <header className="z-header relative isolate shrink-0 bg-indigo-950/95 dark:border-white/10 dark:bg-indigo-950/85">
       {/* Top decorative strip */}
       <div className="h-[3px] w-full bg-gradient-to-r from-violet-500 via-primary-500 to-cyan-500" aria-hidden="true" />
 
       {/* Glass bar */}
-      <div className="relative border-b border-white/15 bg-slate-900/80 backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/85">
+      <div className="relative border-b border-white/15 bg-indigo-950/80 backdrop-blur-2xl dark:border-white/10 dark:bg-indigo-950/85">
         {/* Subtle inner glow */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
           <div className="absolute -top-16 left-1/4 h-24 w-96 rounded-full bg-primary-500/8 blur-3xl" />
@@ -161,7 +161,7 @@ export function Header({ onMenuClick, sidebarCollapsed, onSidebarToggle }: Heade
               <div className="relative ml-1" ref={menuRef}>
                 <button
                   onClick={() => setMenuOpen((v) => !v)}
-                  className="group/profile flex h-10 items-center gap-2 rounded-xl border border-white/15 bg-white/8 px-2 py-1 text-left transition hover:border-white/25 hover:bg-white/12 text-neutral-800"
+                  className="group/profile flex h-10 items-center gap-2 rounded-xl border border-white/15 bg-white/8 px-2 py-1 text-left transition hover:border-white/25 hover:bg-white/12 text-white"
                   aria-haspopup="menu"
                   aria-expanded={menuOpen}
                 >
@@ -190,7 +190,7 @@ export function Header({ onMenuClick, sidebarCollapsed, onSidebarToggle }: Heade
                       animate={{ opacity: 1, y: 0, scale: 1 }}
                       exit={{ opacity: 0, y: -6, scale: 0.97 }}
                       transition={{ duration: reducedMotion ? 0 : duration.fast, ease: easing.easeOut }}
-                      className="absolute right-0 top-full z-dropdown mt-2 w-60 overflow-hidden rounded-xl border border-white/15 bg-slate-900/95 shadow-2xl backdrop-blur-2xl"
+                      className="absolute right-0 top-full z-dropdown mt-2 w-60 overflow-hidden rounded-xl border border-white/15 bg-indigo-950/95 shadow-2xl backdrop-blur-2xl"
                     >
                       <div className="border-b border-white/15 px-4 py-3">
                         <p className="text-sm text-white">{user.email}</p>

@@ -35,8 +35,8 @@ export function Sidebar({ user, collapsed = false, onNavigate }: SidebarProps) {
             collapsed ? 'pointer-events-none w-0 opacity-0' : 'opacity-100',
           )}
         >
-          <p className="truncate text-sm font-semibold text-neutral-950">Company workspace</p>
-          <p className="truncate text-sm font-semibold text-neutral-700">
+          <p className="truncate text-sm font-semibold text-white">Company workspace</p>
+          <p className="truncate text-sm font-semibold text-white">
             {role}
           </p>
         </div>
@@ -48,7 +48,7 @@ export function Sidebar({ user, collapsed = false, onNavigate }: SidebarProps) {
           <div key={group.label}>
             <p
               className={clsx(
-                'mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-white/50 transition-opacity duration-300',
+                'mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.15em] text-white/70 transition-opacity duration-300',
                 collapsed && 'h-0 overflow-hidden opacity-0',
               )}
             >
@@ -69,7 +69,7 @@ export function Sidebar({ user, collapsed = false, onNavigate }: SidebarProps) {
                         collapsed ? 'justify-center px-2' : 'px-3',
                         isActive
                           ? 'bg-gradient-to-r from-primary-600/20 to-primary-500/10 text-white shadow-[inset_0_1px_0_rgba(99,102,241,0.1)]'
-                          : 'text-white/70 hover:bg-white/5 hover:text-white',
+                          : 'text-white hover:bg-white/5 hover:text-white',
                       )
                     }
                   >
@@ -88,7 +88,7 @@ export function Sidebar({ user, collapsed = false, onNavigate }: SidebarProps) {
                             'shrink-0 transition-colors duration-200',
                             isActive
                               ? 'text-primary-400'
-                              : 'text-white/60',
+                              : 'text-white/90',
                           )}
                           aria-hidden="true"
                         />
@@ -117,10 +117,10 @@ export function Sidebar({ user, collapsed = false, onNavigate }: SidebarProps) {
           collapsed && 'opacity-0',
         )}
       >
-        <p className="text-[10px] font-medium uppercase tracking-wider text-white/50">
+        <p className="text-[10px] font-medium uppercase tracking-wider text-white/70">
           Orchestra v1.0
         </p>
-        <p className="mt-0.5 text-[10px] text-neutral-500">
+        <p className="mt-0.5 text-[10px] text-white/60">
           Enterprise Multi-Agent Platform
         </p>
       </div>
