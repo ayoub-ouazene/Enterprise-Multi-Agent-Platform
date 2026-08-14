@@ -1,7 +1,7 @@
 # Orchestra
 
 <p align="center">
-  <img src="frontend/src/assets/logo.svg" alt="Orchestra logo" width="120" />
+  <img src="frontend/src/assets/logo.png" alt="Orchestra logo" width="120" />
 </p>
 
 **Orchestra** is a generalized, multi-tenant enterprise multi-agent platform that routes internal and external business requests through specialized AI-powered departments. Companies register, onboard their operational data, and let department agents — grounded in company knowledge via RAG — answer questions, make policy-based decisions, collaborate across teams, and request human approval only when truly necessary.
