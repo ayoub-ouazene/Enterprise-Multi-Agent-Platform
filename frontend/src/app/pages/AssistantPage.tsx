@@ -153,7 +153,7 @@ export function AssistantPage() {
                   <button
                     key={action.label}
                     onClick={() => handleSend(action.value)}
-                    className="group flex items-center justify-between rounded-xl border border-neutral-200/80 bg-white/80 px-4 py-3 text-left text-sm text-neutral-700 shadow-sm backdrop-blur-sm transition hover:border-primary-300 hover:bg-primary-50/80 hover:shadow-md dark:border-neutral-700/80 dark:bg-neutral-800/60 dark:text-neutral-300 dark:hover:border-primary-700 dark:hover:bg-primary-900/20"
+                    className="chip-lift group flex items-center justify-between rounded-xl border border-neutral-200/80 bg-white/80 px-4 py-3 text-left text-sm text-neutral-700 shadow-sm backdrop-blur-sm transition hover:border-primary-300 hover:bg-primary-50/80 hover:shadow-md dark:border-neutral-700/80 dark:bg-neutral-800/60 dark:text-neutral-300 dark:hover:border-primary-700 dark:hover:bg-primary-900/20"
                   >
                     <span>{action.label}</span>
                     <ArrowRight size={14} className="text-neutral-400 transition-transform group-hover:translate-x-0.5" />
@@ -185,7 +185,7 @@ export function AssistantPage() {
               type="submit"
               isLoading={mutation.isPending}
               disabled={mutation.isPending || !input.trim()}
-              className="h-10 w-10 rounded-full p-0 shadow-md"
+              className="btn-primary-glow h-10 w-10 rounded-full p-0"
             >
               <Send size={16} />
             </Button>

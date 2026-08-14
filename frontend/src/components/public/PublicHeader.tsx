@@ -46,7 +46,7 @@ export function PublicHeader({ transparent = false }: { transparent?: boolean })
       <div className="app-container flex h-16 items-center justify-between">
         {/* Logo */}
         <Link to="/" className="group inline-flex items-center gap-3 rounded-xl px-1 py-1 transition hover:bg-white/8">
-          <BrandMark />
+          <BrandMark className="aurora-breathe h-10 w-10" />
         </Link>
 
         {/* Desktop Nav */}

@@ -39,7 +39,7 @@ export function MetricCard({ title, value, subtitle, icon, category = 'neutral',
           )}
         </div>
         {icon && (
-          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-neutral-100 text-neutral-500 dark:bg-neutral-700 dark:text-neutral-300">
+          <div className="metric-icon flex h-10 w-10 items-center justify-center rounded-xl text-indigo-500/80 dark:text-indigo-400/90">
             {icon}
           </div>
         )}

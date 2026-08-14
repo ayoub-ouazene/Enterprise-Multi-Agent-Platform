@@ -35,7 +35,7 @@ export function AuthPanel({
   return (
     <section className="app-container py-8 sm:py-12 lg:py-16">
       <motion.div
-        className="mx-auto grid max-w-6xl overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-[0_24px_80px_-32px_rgba(15,23,42,0.3)] dark:border-neutral-800 dark:bg-neutral-900 lg:grid-cols-[0.9fr_1.1fr]"
+        className="mx-auto grid max-w-6xl overflow-hidden rounded-3xl border border-neutral-200/80 bg-white shadow-[0_24px_80px_-32px_rgba(15,23,42,0.35),0_0_0_1px_rgba(99,102,241,0.04)] dark:border-neutral-800 dark:bg-neutral-900 lg:grid-cols-[0.9fr_1.1fr]"
         initial={reducedMotion ? false : { opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: reducedMotion ? 0 : 0.5, ease: [0.2, 0, 0, 1] }}
@@ -68,11 +68,13 @@ export function AuthIllustration({ variant }: { variant: 'signup' | 'login' | 'p
   }[variant];
 
   return (
-    <aside className="relative flex h-full min-h-[320px] flex-col justify-between overflow-hidden bg-neutral-950 p-7 text-white sm:p-10 lg:min-h-[650px] lg:p-12">
+    <aside className="aurora-field relative flex h-full min-h-[320px] flex-col justify-between overflow-hidden bg-neutral-950 p-7 text-white sm:p-10 lg:min-h-[650px] lg:p-12">
       <div className="absolute inset-0 auth-grid opacity-30" aria-hidden="true" />
-      <div className="absolute -right-24 top-10 h-64 w-64 rounded-full bg-primary-500/20 blur-3xl floating-glow" aria-hidden="true" />
-      <div className="absolute -left-16 bottom-20 h-56 w-56 rounded-full bg-violet-600/10 blur-3xl" aria-hidden="true" />
-      <div className="absolute inset-0 bg-gradient-to-br from-primary-500/5 via-transparent to-violet-500/5" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+        <div className="absolute -right-24 top-10 h-64 w-64 rounded-full bg-primary-500/20 blur-3xl floating-glow" />
+        <div className="absolute -left-16 bottom-20 h-56 w-56 rounded-full bg-violet-600/10 blur-3xl" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary-500/5 via-transparent to-violet-500/5" />
+      </div>
       <div className="relative">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary-300">{content.eyebrow}</p>
         <h2 className="mt-5 max-w-lg text-3xl font-bold leading-tight text-white sm:text-4xl">{content.title}</h2>
@@ -99,7 +101,7 @@ export function AuthIllustration({ variant }: { variant: 'signup' | 'login' | 'p
         <div className="mt-4 grid grid-cols-3 gap-2 text-center text-[11px] text-neutral-200">
           {['Routed', 'In progress', 'Review'].map((label, index) => (
             <div key={label} className="rounded-lg bg-black/20 px-2 py-3">
-              <span className="mx-auto mb-2 block h-1.5 rounded-full bg-primary-400" style={{ width: `${42 + index * 18}%` }} />
+              <span className="mx-auto mb-2 block h-1.5 rounded-full bg-gradient-to-r from-primary-400 via-violet-400 to-sky-400 status-shimmer" style={{ width: `${42 + index * 18}%` }} />
               {label}
             </div>
           ))}

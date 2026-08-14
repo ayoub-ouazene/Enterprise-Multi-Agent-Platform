@@ -123,7 +123,7 @@ export function LandingPage() {
                   Create company workspace
                   <ArrowRight size={18} aria-hidden="true" className="transition-transform duration-ui group-hover:translate-x-0.5" />
                 </Link>
-                <Link to="/login" className="text-neutral-700">
+                <Link to="/login" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/40 bg-white px-6 py-3 font-semibold text-neutral-800 transition-[background-color,border-color,transform] duration-ui ease-productive hover:bg-neutral-100 hover:border-white/60 motion-safe:active:scale-[0.98]">
                   Sign in
                 </Link>
               </motion.div>

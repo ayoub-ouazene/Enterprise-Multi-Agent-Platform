@@ -550,3 +550,336 @@
   50% { transform: scale(1.1); }
   100% { transform: scale(1); }
 }
+
+/* ========== AMBIENT PAGE ENHANCEMENTS ========== */
+
+/* Ambient canvas for the warm app content area — drifting orbs + soft dot grid */
+.ambient-canvas {
+  position: relative;
+}
+.ambient-canvas::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(ellipse 900px 600px at 85% -10%, rgba(99, 102, 241, 0.07), transparent 65%),
+    radial-gradient(ellipse 800px 500px at -10% 40%, rgba(139, 92, 246, 0.06), transparent 65%),
+    radial-gradient(ellipse 700px 500px at 30% 110%, rgba(6, 182, 212, 0.05), transparent 65%);
+  animation: ambient-drift 26s ease-in-out infinite alternate;
+}
+.dark .ambient-canvas::before {
+  background-image:
+    radial-gradient(ellipse 900px 600px at 85% -10%, rgba(99, 102, 241, 0.16), transparent 65%),
+    radial-gradient(ellipse 800px 500px at -10% 40%, rgba(139, 92, 246, 0.12), transparent 65%),
+    radial-gradient(ellipse 700px 500px at 30% 110%, rgba(6, 182, 212, 0.10), transparent 65%);
+}
+@keyframes ambient-drift {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(-18px, 12px) scale(1.03); }
+  100% { transform: translate(14px, -10px) scale(0.97); }
+}
+
+/* Gradient section wash — soft vertical transition between light sections */
+.section-wash {
+  position: relative;
+}
+.section-wash::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(99, 102, 241, 0.035), transparent 22%, transparent 78%, rgba(139, 92, 246, 0.04)),
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(99, 102, 241, 0.05), transparent 70%);
+}
+.dark .section-wash::before {
+  background:
+    linear-gradient(180deg, rgba(99, 102, 241, 0.07), transparent 22%, transparent 78%, rgba(139, 92, 246, 0.08)),
+    radial-gradient(ellipse 70% 50% at 50% 0%, rgba(99, 102, 241, 0.09), transparent 70%);
+}
+.section-wash > * { position: relative; }
+
+/* Page card — premium elevation for app content cards */
+.page-card {
+  @apply rounded-2xl border bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_6px_24px_-10px_rgba(15,23,42,0.08)];
+  border-color: rgba(226, 224, 220, 0.85);
+  transition: box-shadow 240ms ease, transform 240ms ease, border-color 240ms ease;
+}
+.page-card:hover {
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 14px 40px -14px rgba(99, 102, 241, 0.14);
+  border-color: rgba(99, 102, 241, 0.25);
+}
+.dark .page-card {
+  @apply bg-neutral-900;
+  border-color: rgba(50, 60, 90, 0.8);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 6px 24px -10px rgba(0, 0, 0, 0.35);
+}
+.dark .page-card:hover {
+  border-color: rgba(129, 140, 248, 0.3);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 14px 40px -14px rgba(99, 102, 241, 0.25);
+}
+
+/* Animated aurora field for auth / 404 backdrops */
+.aurora-field {
+  position: relative;
+  overflow: hidden;
+}
+.aurora-field::before,
+.aurora-field::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  pointer-events: none;
+}
+.aurora-field::before {
+  width: 560px;
+  height: 560px;
+  top: -160px;
+  left: -140px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.35), rgba(139, 92, 246, 0.25) 45%, transparent 70%);
+  animation: aurora-drift-1 14s ease-in-out infinite alternate;
+}
+.aurora-field::after {
+  width: 480px;
+  height: 480px;
+  bottom: -140px;
+  right: -120px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.3), rgba(6, 182, 212, 0.2) 50%, transparent 72%);
+  animation: aurora-drift-2 17s ease-in-out infinite alternate;
+}
+@keyframes aurora-drift-1 {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  100% { transform: translate(70px, 40px) scale(1.18) rotate(8deg); }
+}
+@keyframes aurora-drift-2 {
+  0% { transform: translate(0, 0) scale(1) rotate(0deg); }
+  100% { transform: translate(-60px, -35px) scale(1.15) rotate(-10deg); }
+}
+
+/* Hero aurora O mark glow — slow luminous breathing */
+.aurora-breathe {
+  animation: aurora-breathe 5s ease-in-out infinite;
+}
+@keyframes aurora-breathe {
+  0%, 100% { filter: drop-shadow(0 0 18px rgba(99, 102, 241, 0.35)) drop-shadow(0 0 60px rgba(139, 92, 246, 0.18)); }
+  50% { filter: drop-shadow(0 0 30px rgba(99, 102, 241, 0.55)) drop-shadow(0 0 90px rgba(139, 92, 246, 0.3)); }
+}
+
+/* Step number ring pulse on hover (workflow) */
+.step-number {
+  transition: box-shadow 240ms ease, transform 240ms ease, background 240ms ease;
+}
+.group:hover .step-number {
+  box-shadow: 0 0 0 8px rgba(99, 102, 241, 0.12), 0 0 20px rgba(99, 102, 241, 0.3);
+  transform: scale(1.08);
+}
+
+/* Gradient divider line */
+.gradient-rule {
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.55), rgba(139, 92, 246, 0.55), rgba(6, 182, 212, 0.45), transparent);
+}
+
+/* Typing cursor blink for inputs on focus */
+input:focus {
+  transition: border-color 200ms ease, box-shadow 200ms ease;
+}
+
+/* Premium button sheen */
+.btn-sheen {
+  position: relative;
+  overflow: hidden;
+}
+.btn-sheen::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -75%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.28), transparent);
+  transform: skewX(-18deg);
+  transition: left 520ms ease;
+  pointer-events: none;
+}
+.btn-sheen:hover::after {
+  left: 125%;
+}
+
+/* Department icon tiles — vivid gradient badges */
+.dept-tile {
+  @apply flex h-11 w-11 items-center justify-center rounded-xl text-white shadow-lg transition-[transform,box-shadow] duration-200;
+}
+.dept-tile-support { background: linear-gradient(135deg, #0f766e, #14b8a6); box-shadow: 0 8px 20px -8px rgba(20, 184, 166, 0.5); }
+.dept-tile-hr { background: linear-gradient(135deg, #6d28d9, #a855f7); box-shadow: 0 8px 20px -8px rgba(168, 85, 247, 0.5); }
+.dept-tile-it { background: linear-gradient(135deg, #1d4ed8, #3b82f6); box-shadow: 0 8px 20px -8px rgba(59, 130, 246, 0.5); }
+.dept-tile-finance { background: linear-gradient(135deg, #047857, #10b981); box-shadow: 0 8px 20px -8px rgba(16, 185, 129, 0.5); }
+.dept-tile-procurement { background: linear-gradient(135deg, #b45309, #f59e0b); box-shadow: 0 8px 20px -8px rgba(245, 158, 11, 0.5); }
+
+/* 404 / access-denied floating icon */
+.feedback-float {
+  animation: feedback-float 4.5s ease-in-out infinite;
+}
+@keyframes feedback-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-10px) rotate(2deg); }
+}
+
+/* Shimmer badge — subtle motion for live/status badges */
+.status-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.status-shimmer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-20deg);
+  animation: status-sweep 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes status-sweep {
+  0%, 65% { left: -120%; }
+  100% { left: 220%; }
+}
+
+/* ============================================================
+   Logged-in app page enhancements (CSS-only presentation)
+   ============================================================ */
+
+/* Stat/metric icon tint — soft gradient wash behind metric icons */
+.metric-icon {
+  @apply flex h-9 w-9 items-center justify-center rounded-xl transition-transform duration-200;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(139, 92, 246, 0.10));
+  color: #6366f1;
+}
+.group:hover .metric-icon {
+  transform: scale(1.08) rotate(-4deg);
+}
+
+/* Attention / alert section — soft indigo left rail */
+.attention-rail {
+  position: relative;
+}
+.attention-rail::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #6366f1, #8b5cf6, #06b6d4);
+  opacity: 0.85;
+}
+
+/* Empty state float — gentle hovering for empty icons */
+.empty-float {
+  animation: empty-float 4s ease-in-out infinite;
+}
+@keyframes empty-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* List stagger — items fade in sequentially on page load */
+.stagger-in {
+  animation: stagger-in 480ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+@keyframes stagger-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Live badge pulse dot */
+.live-pulse {
+  position: relative;
+}
+.live-pulse::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: rgba(34, 197, 94, 0.55);
+  animation: live-pulse 2.2s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes live-pulse {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  70%, 100% { transform: scale(1.9); opacity: 0; }
+}
+
+/* Page title underline accent */
+.title-accent {
+  position: relative;
+}
+.title-accent::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -8px;
+  width: 48px;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+}
+
+/* Gradient primary button for the app shell actions */
+.btn-primary-glow {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  box-shadow: 0 8px 24px -8px rgba(99, 102, 241, 0.55);
+  transition: box-shadow 240ms ease, transform 200ms ease, filter 240ms ease;
+}
+.btn-primary-glow:hover {
+  filter: brightness(1.08);
+  box-shadow: 0 10px 32px -8px rgba(99, 102, 241, 0.7);
+}
+.btn-primary-glow:active {
+  transform: scale(0.98);
+}
+
+/* Suggestion chip hover lift (assistant) */
+.chip-lift {
+  transition: transform 200ms ease, border-color 200ms ease, box-shadow 200ms ease, background-color 200ms ease;
+}
+.chip-lift:hover {
+  transform: translateY(-2px);
+  border-color: rgba(99, 102, 241, 0.45);
+  box-shadow: 0 8px 20px -10px rgba(99, 102, 241, 0.4);
+  background-color: rgba(99, 102, 241, 0.05);
+}
+
+/* Subtle card entrance for app content */
+.card-rise {
+  animation: card-rise 420ms cubic-bezier(0.2, 0, 0, 1) both;
+}
+@keyframes card-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Timeline connector glow (request detail) */
+.timeline-glow {
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.6), rgba(139, 92, 246, 0.35), rgba(6, 182, 212, 0.25));
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.35);
+}
+
+/* Spinner upgrade — gradient track ring */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinning { animation: spin 1s linear infinite; }
+
+/* Table row hover tint */
+tr.row-hover {
+  transition: background-color 180ms ease;
+}
+tr.row-hover:hover {
+  background-color: rgba(99, 102, 241, 0.045);
+}

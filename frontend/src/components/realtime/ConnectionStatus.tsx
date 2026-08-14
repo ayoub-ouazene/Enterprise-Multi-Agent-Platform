@@ -16,7 +16,7 @@ export function ConnectionStatus() {
       aria-live="off"
       title={connected ? 'Realtime connection active' : 'Realtime disconnected'}
     >
-      <span className={clsx('h-1.5 w-1.5 rounded-full', connected ? 'bg-success-500' : 'bg-neutral-400')} />
+      <span className={clsx('h-1.5 w-1.5 rounded-full', connected ? 'bg-success-500 live-pulse' : 'bg-neutral-400')} />
       {connected ? 'Live' : 'Offline'}
     </span>
   );

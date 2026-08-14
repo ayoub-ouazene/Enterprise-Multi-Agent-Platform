@@ -2,8 +2,8 @@ import { NavLink } from 'react-router-dom';
 import { clsx } from 'clsx';
 import type { AuthenticatedUser } from '../../api/types';
 import { useDepartments } from '../../api/hooks/useDepartments';
-import { Building2, type LucideIcon } from 'lucide-react';
-import { buildNavigation, roleLabel } from './shell-utils';
+import type { LucideIcon } from 'lucide-react';
+import { buildNavigation } from './shell-utils';
 
 interface SidebarProps {
   user: AuthenticatedUser | null;
@@ -15,33 +15,9 @@ export function Sidebar({ user, collapsed = false, onNavigate }: SidebarProps) {
   const { data: departments = [] } = useDepartments();
   if (!user) return null;
   const groups = buildNavigation(user, departments);
-  const role = roleLabel(user);
 
   return (
     <div className="flex h-full flex-col">
-      {/* Workspace pill */}
-      <div
-        className={clsx(
-          'mx-3 mb-5 mt-1 flex items-center rounded-2xl border border-white/10 bg-white/10 p-3 backdrop-blur-sm transition-all',
-          collapsed ? 'justify-center' : 'gap-3',
-        )}
-      >
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-600 to-violet-700 text-white shadow-lg shadow-primary-600/20">
-          <Building2 size={18} aria-hidden="true" />
-        </span>
-        <div
-          className={clsx(
-            'min-w-0 transition-opacity duration-300',
-            collapsed ? 'pointer-events-none w-0 opacity-0' : 'opacity-100',
-          )}
-        >
-          <p className="truncate text-sm font-semibold text-white">Company workspace</p>
-          <p className="truncate text-sm font-semibold text-white">
-            {role}
-          </p>
-        </div>
-      </div>
-
       {/* Nav groups */}
       <nav aria-label="Main navigation" className="flex-1 space-y-6 px-3">
         {groups.map((group) => (

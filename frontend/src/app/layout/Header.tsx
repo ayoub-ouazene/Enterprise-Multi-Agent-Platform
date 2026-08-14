@@ -102,7 +102,7 @@ export function Header({ onMenuClick, sidebarCollapsed, onSidebarToggle }: Heade
             className="group flex shrink-0 items-center gap-3 rounded-xl px-1.5 py-1.5 transition-colors hover:bg-white/10"
             aria-label="Orchestra home"
           >
-            <BrandMark />
+            <BrandMark className="aurora-breathe" />
           </Link>
 
           { /* Sidebar toggle */}

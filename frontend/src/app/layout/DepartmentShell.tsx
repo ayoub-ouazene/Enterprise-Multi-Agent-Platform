@@ -46,7 +46,7 @@ export function DepartmentShell() {
 
   return (
     <div className="min-h-full bg-neutral-50 dark:bg-neutral-950">
-      <header className="border-b border-neutral-200 bg-slate-900 text-white dark:border-neutral-800 dark:bg-slate-900">
+      <header className="border-b border-neutral-200 bg-indigo-950 text-white dark:border-neutral-800 dark:bg-indigo-950">
         <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl" style={{ backgroundColor: meta.lightColor, color: meta.darkColor }}>
@@ -91,7 +91,7 @@ export function DepartmentShell() {
       )}
 
       <div className="mx-auto flex max-w-[1600px]">
-        <aside className="hidden w-56 shrink-0 border-r border-neutral-200 bg-slate-900 px-3 py-5 dark:border-neutral-800 dark:bg-slate-900 md:block">
+        <aside className="hidden w-56 shrink-0 border-r border-neutral-200 bg-indigo-950 px-3 py-5 dark:border-neutral-800 dark:bg-indigo-950 md:block">
           <nav aria-label={`${meta.label} workspace navigation`} className="space-y-1">
             {sections.map((item) => <WorkspaceLink key={item.id} base={base} {...item} />)}
           </nav>
@@ -100,7 +100,7 @@ export function DepartmentShell() {
               <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-wide text-neutral-300">Administration</p>
               <nav className="space-y-1">
                 {meta.resourceLinks.map((link) => (
-                  <a key={link.href} href={link.href} className="flex min-h-10 items-center gap-2 rounded-lg px-3 text-xs font-medium text-neutral-300 hover:bg-slate-800 hover:text-white dark:hover:bg-slate-800 dark:hover:text-white">
+                  <a key={link.href} href={link.href} className="flex min-h-10 items-center gap-2 rounded-lg px-3 text-xs font-medium text-neutral-300 hover:bg-white/5 hover:text-white dark:hover:bg-white/5 dark:hover:text-white">
                     <Settings size={14} /> {link.label}
                   </a>
                 ))}
@@ -109,7 +109,7 @@ export function DepartmentShell() {
           )}
         </aside>
         <div className="min-w-0 flex-1">
-          <nav aria-label={`${meta.label} mobile workspace navigation`} className="flex overflow-x-auto border-b border-neutral-200 bg-slate-900 px-2 text-white md:hidden dark:border-neutral-800 dark:bg-slate-900">
+          <nav aria-label={`${meta.label} mobile workspace navigation`} className="flex overflow-x-auto border-b border-neutral-200 bg-indigo-950 px-2 text-white md:hidden dark:border-neutral-800 dark:bg-indigo-950">
             {sections.map((item) => <WorkspaceLink key={item.id} base={base} compact {...item} />)}
           </nav>
           <div className="p-4 sm:p-6 lg:p-8">

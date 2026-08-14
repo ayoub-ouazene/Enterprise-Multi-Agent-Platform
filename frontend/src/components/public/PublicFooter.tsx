@@ -3,11 +3,12 @@ import { BrandMark } from './BrandMark';
 
 export function PublicFooter() {
   return (
-    <footer className="relative border-t border-neutral-200 bg-white py-10 dark:border-neutral-800 dark:bg-neutral-950">
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary-500/30 to-transparent" aria-hidden="true" />
+    <footer className="gradient-rule relative border-t border-neutral-200 bg-white py-10 dark:border-neutral-800 dark:bg-neutral-950">
       <div className="app-container flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
         <div>
-          <BrandMark />
+          <div className="inline-flex items-center gap-2.5 rounded-xl px-1 py-1 transition-colors duration-300 hover:bg-neutral-100 dark:hover:bg-neutral-900">
+            <BrandMark inverted className="h-10 w-10" />
+          </div>
           <p className="mt-3 max-w-sm text-sm leading-6 text-neutral-500 dark:text-neutral-400">
             Coordinated enterprise requests with company control at every step.
           </p>

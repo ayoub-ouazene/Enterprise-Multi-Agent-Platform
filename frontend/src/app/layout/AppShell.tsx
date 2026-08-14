@@ -59,7 +59,8 @@ export function AppShell() {
         <MobileNav isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} user={user} />
 
         {/* Warm off-white content area - not pure white, easier on eyes */}
-        <main id="main-content" className="relative z-[1] min-w-0 flex-1 overflow-y-auto scroll-smooth bg-[#f8f6f3]" tabIndex={-1}>
+        <main id="main-content" className="ambient-canvas relative z-[1] min-w-0 flex-1 overflow-y-auto scroll-smooth bg-[#f8f6f3]" tabIndex={-1}>
+          <div className="pointer-events-none absolute inset-0 dot-grid opacity-40" aria-hidden="true" />
           <motion.div
             key={location.pathname}
             initial={reducedMotion ? false : { opacity: 0, y: 5 }}
