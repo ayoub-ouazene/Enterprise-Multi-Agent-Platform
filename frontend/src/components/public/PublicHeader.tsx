@@ -66,7 +66,7 @@ export function PublicHeader({ transparent = false }: { transparent?: boolean })
         <div className="hidden items-center gap-2 md:flex">
           <Link
             to="/login"
-            className="rounded-lg px-4 py-2 text-sm font-semibold text-neutral-900 transition hover:bg-white/10 hover:text-neutral-700"
+            className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
           >
             Sign in
           </Link>
@@ -115,12 +115,12 @@ export function PublicHeader({ transparent = false }: { transparent?: boolean })
                 </a>
               ))}
               <div className="mt-3 grid grid-cols-1 gap-2 border-t border-white/15 pt-4 min-[360px]:grid-cols-2">
-                <Link
-                  to="/login"
-                  className="rounded-lg border border-white/20 px-4 py-3 text-center font-semibold text-white/85 transition hover:bg-white/10 hover:text-white"
-                >
-                  Sign in
-                </Link>
+          <Link
+            to="/login"
+            className="rounded-lg border border-white/30 px-4 py-3 text-center font-semibold text-white transition hover:bg-white/10"
+          >
+            Sign in
+          </Link>
                 <Link
                   to="/signup"
                   className="rounded-lg bg-gradient-to-r from-primary-600 to-violet-600 px-4 py-3 text-center font-semibold text-white shadow-xl shadow-primary-600/30 transition hover:shadow-primary-500/40 hover:brightness-105"

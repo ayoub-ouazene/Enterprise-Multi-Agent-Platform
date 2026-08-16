@@ -47,8 +47,8 @@ export function AnimatedBackground({
         )}
         {variant === 'aurora' && <AuroraBackground />}
 
-        {/* Overlay for better contrast */}
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-neutral-50/80 dark:to-neutral-950/80" />
+        {/* Overlay for better contrast — fades the aurora near the bottom so the page footer stays distinct */}
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-neutral-950/80 dark:to-neutral-950/85" />
       </div>
 
       {/* Noise texture overlay */}
