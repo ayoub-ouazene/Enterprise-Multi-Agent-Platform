@@ -1,11 +1,9 @@
-import { Link } from 'react-router-dom';
 import { clsx } from 'clsx';
 import logo from '../../assets/logo.png';
 
 export function BrandMark({ tabIndex, className, inverted }: { inverted?: boolean; tabIndex?: number; className?: string }) {
   return (
-    <Link
-      to="/"
+    <span
       className="inline-flex items-center gap-2.5 rounded-lg"
       aria-label="Orchestra home"
       tabIndex={tabIndex}
@@ -14,6 +12,6 @@ export function BrandMark({ tabIndex, className, inverted }: { inverted?: boolea
       <span className={`text-[17px] font-bold tracking-tight ${inverted ? 'text-neutral-900 dark:text-white' : 'text-white'}`}>
         Orchestra
       </span>
-    </Link>
+    </span>
   );
 }

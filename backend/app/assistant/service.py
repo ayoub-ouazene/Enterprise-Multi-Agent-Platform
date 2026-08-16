@@ -5,11 +5,12 @@ import inspect
 from app.assistant.schemas import AssistantMessageRequest, AssistantMessageResponse
 from app.auth.context import AuthenticatedUser
 from app.core.config import Settings
-from app.llm.groq import GroqRouterClient
+from app.llm.client import GroqLLMClient
 from app.requests.schemas import BusinessRequestCreate
 from app.requests.service import BusinessRequestService
 from app.workflow.router_output import RouterMessageCategory, RouterOutput
 from app.workflow.service import WorkflowService
+from app.workflow.prompts.router import ROUTER_SYSTEM_PROMPT, build_router_user_message
 from app.core.enums import DepartmentType
 from app.departments.contracts import DepartmentExecutionContext, DepartmentNextAction
 from app.rag.pinecone import PineconeProvider
@@ -33,7 +34,7 @@ class AssistantService:
         self.router_client = (
             router_client
             if router_client is not None
-            else GroqRouterClient(settings)
+            else GroqLLMClient(settings)
         )
         self.request_service = request_service or BusinessRequestService(
             session,
@@ -65,7 +66,7 @@ class AssistantService:
                 short_summary=None,
             )
 
-        output = await self.router_client.classify(payload.message)
+        output = await self._classify(payload.message)
         if output.message_category == RouterMessageCategory.PLATFORM_QUESTION:
             return self._nonpersistent_response(
                 output,
@@ -166,6 +167,25 @@ class AssistantService:
             request_type=output.request_type,
             short_summary=output.short_summary,
         )
+
+    async def _classify(self, message: str) -> RouterOutput:
+        """Classify message using the unified Groq client."""
+        raw = await self.router_client.generate(
+            messages=[
+                {"role": "system", "content": ROUTER_SYSTEM_PROMPT},
+                {"role": "user", "content": build_router_user_message(
+                    message=message,
+                    clarification_count=0,
+                    clarification_maximum=self.settings.router_max_clarification_questions,
+                    latest_question=None,
+                    latest_answer=None,
+                )},
+            ],
+            model=self.settings.groq_model_router,
+            response_schema=RouterOutput,
+            role_name="router",
+        )
+        return RouterOutput.model_validate(raw)
 
     @staticmethod
     def _with_sources(message: str, result) -> str:

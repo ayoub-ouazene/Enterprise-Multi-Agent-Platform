@@ -50,6 +50,28 @@ backend/uploads/*
 Thumbs.db
 desktop.ini
 
+# ─── Windows reserved device names (stray files from `> NUL` redirects) ────
+# On Windows, NUL is a reserved device name. In Git Bash / MSYS, a redirect
+# like `command > NUL` can create a literal file named "NUL" instead of
+# discarding output. Git cannot index such files and `git add .` fails with
+# "unable to index file 'NUL'". Ignore them so they never block staging.
+NUL
+nul
+backend/NUL
+backend/nul
+
+# ─── Playwright CLI debug snapshots ────────────────────────────────────────
+.playwright-cli/
+frontend/.playwright-cli/
+
+# ─── Local backup / scratch directories ─────────────────────────────────────
+backend/.bak/
+
+# ─── Local debug screenshots & logs at repo root ───────────────────────────
+/*.png
+/error.txt
+/temp_*.png
+
 # ─── Alembic / DB local artifacts ──────────────────────────────────────────
 *.sqlite
 *.sqlite3

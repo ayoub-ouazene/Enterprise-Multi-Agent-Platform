@@ -1,689 +1,249 @@
-import asyncio
-import json
-import logging
+"""Compatibility shim: old Groq client classes wrapping the unified GroqLLMClient.
+
+All existing imports from ``app.llm.groq`` continue to work; each class is now a
+thin adapter over ``GroqLLMClient``.
+"""
+
+from __future__ import annotations
+
+from typing import Any, Callable
+
+from app.core.config import Settings
+from app.llm.client import GroqLLMClient
+
+
+class _DepartmentClientMixin:
+    """Base mixin that all department-specific clients inherit."""
+
+    _ROLE_NAME: str = "unknown"
+    _MODEL_ATTR: str = "groq_model_fast"
+
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        client: Any | None = None,
+        sleep: Callable[..., Any] | None = None,
+    ) -> None:
+        kwargs: dict[str, Any] = {"settings": settings}
+        if client is not None:
+            kwargs["client"] = client
+        self._llm = GroqLLMClient(**kwargs)
+        self.settings = settings
+
+    async def generate(
+        self,
+        payload: Any,
+        *,
+        role: Any | None = None,
+    ) -> Any:
+        """Delegate to unified client; return raw dict for backward compat."""
+        from app.llm.client import ProviderErrorFactory
+
+        model = getattr(self.settings, self._MODEL_ATTR, self.settings.groq_model_fast)
+        return await self._llm.generate(
+            messages=[
+                {"role": "system", "content": payload.get("system_prompt", "")},
+                {"role": "user", "content": payload.get("user_prompt", "")},
+            ],
+            model=model,
+            role_name=self._ROLE_NAME,
+            response_schema=payload.get("response_schema"),
+            on_provider_error=ProviderErrorFactory,
+        )
+
+
+class GroqRouterClient(_DepartmentClientMixin):
+    """Wraps unified client with Router-specific config."""
+
+    _ROLE_NAME = "router"
+    _MODEL_ATTR = "groq_model_router"
+
+    def __init__(self, settings: Settings, **kwargs: Any) -> None:
+        from app.llm.exceptions import RouterConfigurationError
+
+        if not settings.groq_model_router or not settings.groq_api_key:
+            raise RouterConfigurationError("Router not configured")
+        super().__init__(settings, **kwargs)
+        self.max_retries = settings.llm_max_retries
+        self.clarification_maximum = settings.router_max_clarification_questions
+
+    async def classify(self, message: str, **kwargs: Any) -> Any:
+        """Router entry-point used by old code."""
+        from app.workflow.prompts.router import (
+            ROUTER_SYSTEM_PROMPT,
+            build_router_user_message,
+        )
+        from app.workflow.router_output import RouterOutput
+        from app.llm.exceptions import RouterProviderError, RouterOutputError
+
+        raw = await self._llm.generate(
+            messages=[
+                {"role": "system", "content": ROUTER_SYSTEM_PROMPT},
+                {
+                    "role": "user",
+                    "content": build_router_user_message(
+                        message=message,
+                        clarification_count=kwargs.get("clarification_count", 0),
+                        clarification_maximum=self.clarification_maximum,
+                        latest_question=kwargs.get("latest_question"),
+                        latest_answer=kwargs.get("latest_answer"),
+                    ),
+                },
+            ],
+            model=self.settings.groq_model_router,
+            response_schema=RouterOutput,
+            role_name="router",
+            on_provider_error=RouterProviderError,
+            on_output_error=RouterOutputError,
+        )
+        return RouterOutput.model_validate(raw)
+
+    def validate_configuration(self) -> None:
+        from app.llm.exceptions import RouterConfigurationError
+
+        if not self.settings.groq_model_router or not self.settings.groq_api_key:
+            raise RouterConfigurationError("Router not configured")
+
+
+class GroqCustomerSupportClient(_DepartmentClientMixin):
+    _ROLE_NAME = "customer_support"
+
+    async def generate(self, payload: Any, *, role: Any) -> Any:
+        from app.departments.customer_support.schemas import CustomerSupportResult
+        from app.llm.exceptions import (
+            CustomerSupportProviderError,
+            CustomerSupportOutputError,
+        )
+
+        raw = await self._llm.generate(
+            messages=[
+                {"role": "system", "content": payload.get("system_prompt", "")},
+                {"role": "user", "content": payload.get("user_prompt", "")},
+            ],
+            model=self.settings.groq_model_fast if role.value == "fast" else self.settings.groq_model_reasoning,
+            response_schema=CustomerSupportResult,
+            role_name="customer_support",
+            on_provider_error=CustomerSupportProviderError,
+            on_output_error=CustomerSupportOutputError,
+        )
+        return CustomerSupportResult.model_validate(raw)
+
+
+class GroqITClient(_DepartmentClientMixin):
+    _ROLE_NAME = "it"
+
+    async def generate(self, payload: Any, *, role: Any) -> Any:
+        from app.departments.it.schemas import ITDepartmentResult
+        from app.llm.exceptions import ITProviderError, ITOutputError
+
+        raw = await self._llm.generate(
+            messages=[
+                {"role": "system", "content": payload.get("system_prompt", "")},
+                {"role": "user", "content": payload.get("user_prompt", "")},
+            ],
+            model=self.settings.groq_model_fast if role.value == "fast" else self.settings.groq_model_reasoning,
+            response_schema=ITDepartmentResult,
+            role_name="it",
+            on_provider_error=ITProviderError,
+            on_output_error=ITOutputError,
+        )
+        return ITDepartmentResult.model_validate(raw)
+
+
+class GroqFinanceClient(_DepartmentClientMixin):
+    _ROLE_NAME = "finance"
+
+    async def generate(self, payload: Any, *, role: Any) -> Any:
+        from app.departments.finance.schemas import FinanceDepartmentResult
+        from app.llm.exceptions import FinanceProviderError, FinanceOutputError
+
+        raw = await self._llm.generate(
+            messages=[
+                {"role": "system", "content": payload.get("system_prompt", "")},
+                {"role": "user", "content": payload.get("user_prompt", "")},
+            ],
+            model=self.settings.groq_model_fast if role.value == "fast" else self.settings.groq_model_reasoning,
+            response_schema=FinanceDepartmentResult,
+            role_name="finance",
+            on_provider_error=FinanceProviderError,
+            on_output_error=FinanceOutputError,
+        )
+        return FinanceDepartmentResult.model_validate(raw)
+
+
+class GroqProcurementClient(_DepartmentClientMixin):
+    _ROLE_NAME = "procurement"
+
+    async def generate(self, payload: Any, *, role: Any) -> Any:
+        from app.departments.procurement.schemas import ProcurementDepartmentResult
+        from app.llm.exceptions import ProcurementProviderError, ProcurementOutputError
+
+        raw = await self._llm.generate(
+            messages=[
+                {"role": "system", "content": payload.get("system_prompt", "")},
+                {"role": "user", "content": payload.get("user_prompt", "")},
+            ],
+            model=self.settings.groq_model_fast if role.value == "fast" else self.settings.groq_model_reasoning,
+            response_schema=ProcurementDepartmentResult,
+            role_name="procurement",
+            on_provider_error=ProcurementProviderError,
+            on_output_error=ProcurementOutputError,
+        )
+        return ProcurementDepartmentResult.model_validate(raw)
+
+
+class GroqHRClient(_DepartmentClientMixin):
+    _ROLE_NAME = "hr"
+
+    async def generate(self, payload: Any, *, role: Any) -> Any:
+        from app.departments.hr.schemas import HRDepartmentResult
+        from app.llm.exceptions import HRProviderError, HROutputError
+
+        raw = await self._llm.generate(
+            messages=[
+                {"role": "system", "content": payload.get("system_prompt", "")},
+                {"role": "user", "content": payload.get("user_prompt", "")},
+            ],
+            model=self.settings.groq_model_fast if role.value == "fast" else self.settings.groq_model_reasoning,
+            response_schema=HRDepartmentResult,
+            role_name="hr",
+            on_provider_error=HRProviderError,
+            on_output_error=HROutputError,
+        )
+        return HRDepartmentResult.model_validate(raw)
+
+
+class GroqReviewerClient(_DepartmentClientMixin):
+    _ROLE_NAME = "reviewer"
+    _MODEL_ATTR = "groq_model_reviewer"
+
+    async def review(self, package: Any) -> Any:
+        from app.workflow.prompts.reviewer import (
+            REVIEWER_SYSTEM_PROMPT,
+            build_reviewer_user_message,
+        )
+        from app.workflow.review.schemas import ReviewerResult
+        from app.llm.exceptions import ReviewerProviderError, ReviewerOutputError
+
+        raw = await self._llm.generate(
+            messages=[
+                {"role": "system", "content": REVIEWER_SYSTEM_PROMPT},
+                {"role": "user", "content": build_reviewer_user_message(package)},
+            ],
+            model=self.settings.groq_model_reviewer,
+            response_schema=ReviewerResult,
+            role_name="reviewer",
+            on_provider_error=ReviewerProviderError,
+            on_output_error=ReviewerOutputError,
+        )
+        return ReviewerResult.model_validate(raw)
+
+
+# Provide SupportModelRole for backward compat
 from enum import StrEnum
-from collections.abc import Awaitable, Callable
-from time import monotonic
-from typing import TYPE_CHECKING, Any
-
-from groq import (
-    APIConnectionError,
-    APITimeoutError,
-    AsyncGroq,
-    InternalServerError,
-    RateLimitError,
-)
-from pydantic import ValidationError
-
-from app.core.config import (
-    ConfigurationError,
-    Settings,
-    validate_router_configuration,
-    validate_customer_support_configuration,
-    validate_it_configuration,
-    validate_reviewer_configuration,
-)
-from app.llm.exceptions import (
-    CustomerSupportConfigurationError,
-    CustomerSupportOutputError,
-    CustomerSupportProviderError,
-    FinanceConfigurationError,
-    FinanceOutputError,
-    FinanceProviderError,
-    ProcurementConfigurationError,
-    ProcurementOutputError,
-    ProcurementProviderError,
-    HRConfigurationError,
-    HROutputError,
-    HRProviderError,
-    ITConfigurationError,
-    ITOutputError,
-    ITProviderError,
-    RouterConfigurationError,
-    RouterOutputError,
-    RouterProviderError,
-    ReviewerConfigurationError,
-    ReviewerOutputError,
-    ReviewerProviderError,
-)
-if TYPE_CHECKING:
-    from app.departments.customer_support.schemas import CustomerSupportModelInput, CustomerSupportResult
-from app.workflow.prompts.router import (
-    ROUTER_SYSTEM_PROMPT,
-    build_router_user_message,
-)
-from app.workflow.router_output import RouterOutput
-
-
-logger = logging.getLogger(__name__)
-
-TemporaryProviderError = (
-    APIConnectionError,
-    APITimeoutError,
-    InternalServerError,
-    RateLimitError,
-)
 
 
 class SupportModelRole(StrEnum):
     FAST = "fast"
     REASONING = "reasoning"
-
-
-class GroqCustomerSupportClient:
-    """Centralized Groq access for the two approved Customer Support model roles."""
-
-    def __init__(self, settings: Settings, *, client: Any | None = None,
-                 sleep: Callable[[float], Awaitable[None]] = asyncio.sleep) -> None:
-        try:
-            validate_customer_support_configuration(settings)
-        except ConfigurationError as exc:
-            raise CustomerSupportConfigurationError(str(exc)) from None
-        self.settings = settings
-        self._sleep = sleep
-        self._client = client or AsyncGroq(
-            api_key=settings.groq_api_key.get_secret_value(),
-            base_url=str(settings.groq_base_url),
-            timeout=float(settings.llm_request_timeout_seconds),
-            max_retries=0,
-        )
-
-    async def generate(
-        self, payload: "CustomerSupportModelInput", *, role: SupportModelRole
-    ) -> "CustomerSupportResult":
-        from app.departments.customer_support.prompt import (
-            CUSTOMER_SUPPORT_SYSTEM_PROMPT,
-            build_customer_support_user_message,
-        )
-        from app.departments.customer_support.schemas import CustomerSupportResult
-        model = (
-            self.settings.groq_model_fast if role == SupportModelRole.FAST
-            else self.settings.groq_model_reasoning
-        ).strip()
-        messages = [
-            {"role": "system", "content": CUSTOMER_SUPPORT_SYSTEM_PROMPT},
-            {"role": "user", "content": build_customer_support_user_message(payload)},
-        ]
-        retries = 0
-        validation_retry = False
-        while True:
-            started = monotonic()
-            try:
-                response = await self._client.chat.completions.create(
-                    model=model, messages=messages,
-                    temperature=self.settings.llm_temperature,
-                    response_format={"type": "json_object"},
-                )
-                content = response.choices[0].message.content
-                if not isinstance(content, str) or not content.strip():
-                    raise ValueError("empty response")
-                result = CustomerSupportResult.model_validate(json.loads(content))
-            except TemporaryProviderError:
-                self._log_support(started, role, model, retries, "temporary_failure")
-                if retries >= self.settings.llm_max_retries:
-                    raise CustomerSupportProviderError(
-                        "Customer Support is temporarily unavailable"
-                    ) from None
-                retries += 1
-                await self._sleep(min(0.25 * 2 ** (retries - 1), 2.0))
-                continue
-            except (json.JSONDecodeError, ValidationError, ValueError, IndexError, TypeError):
-                self._log_support(started, role, model, retries, "invalid_output")
-                if validation_retry or retries >= self.settings.llm_max_retries:
-                    raise CustomerSupportOutputError(
-                        "Customer Support returned an invalid structured response"
-                    ) from None
-                validation_retry = True
-                retries += 1
-                messages.append({
-                    "role": "system",
-                    "content": "Correct the previous response and return only schema-valid JSON.",
-                })
-                continue
-            except Exception:
-                self._log_support(started, role, model, retries, "permanent_failure")
-                raise CustomerSupportProviderError("Customer Support request failed") from None
-            self._log_support(started, role, model, retries, "success")
-            return result
-
-    @staticmethod
-    def _log_support(started: float, role: SupportModelRole, model: str,
-                     retries: int, category: str) -> None:
-        logger.info(
-            "LLM request completed role=%s model=%s latency_ms=%d retry_count=%d category=%s",
-            f"customer_support_{role.value}", model,
-            int((monotonic() - started) * 1000), retries, category,
-        )
-
-
-class GroqITClient:
-    """Centralized Groq client for the fixed IT Fast and Reasoning roles."""
-
-    def __init__(self, settings: Settings, *, client: Any | None = None,
-                 sleep: Callable[[float], Awaitable[None]] = asyncio.sleep) -> None:
-        try:
-            validate_it_configuration(settings)
-        except ConfigurationError as exc:
-            raise ITConfigurationError(str(exc)) from None
-        self.settings, self._sleep = settings, sleep
-        self._client = client or AsyncGroq(api_key=settings.groq_api_key.get_secret_value(),
-            base_url=str(settings.groq_base_url), timeout=float(settings.llm_request_timeout_seconds), max_retries=0)
-
-    async def generate(self, payload: Any, *, role: Any) -> Any:
-        from app.departments.it.enums import ITModelRole
-        from app.departments.it.prompt import IT_SYSTEM_PROMPT, build_it_user_message
-        from app.departments.it.schemas import ITDepartmentResult
-        if role not in {ITModelRole.FAST, ITModelRole.REASONING}:
-            raise ITConfigurationError("Unsupported IT model role")
-        model = (self.settings.groq_model_fast if role == ITModelRole.FAST else self.settings.groq_model_reasoning).strip()
-        messages = [{"role": "system", "content": IT_SYSTEM_PROMPT},
-            {"role": "user", "content": build_it_user_message(payload)}]
-        retries, validation_retry = 0, False
-        while True:
-            started = monotonic()
-            try:
-                response = await self._client.chat.completions.create(model=model,
-                    messages=messages, temperature=self.settings.llm_temperature,
-                    response_format={"type": "json_object"})
-                content = response.choices[0].message.content
-                if not isinstance(content, str) or not content.strip():
-                    raise ValueError("empty response")
-                result = ITDepartmentResult.model_validate(json.loads(content))
-            except TemporaryProviderError:
-                self._log_it(started, role.value, model, retries, "temporary_failure")
-                if retries >= self.settings.llm_max_retries:
-                    raise ITProviderError("IT is temporarily unavailable") from None
-                retries += 1
-                await self._sleep(min(0.25 * 2 ** (retries - 1), 2.0))
-                continue
-            except (json.JSONDecodeError, ValidationError, ValueError, IndexError, TypeError):
-                self._log_it(started, role.value, model, retries, "invalid_output")
-                if validation_retry or retries >= self.settings.llm_max_retries:
-                    raise ITOutputError("IT returned an invalid structured response") from None
-                validation_retry, retries = True, retries + 1
-                messages.append({"role": "system", "content": "Correct the response and return only valid ITDepartmentResult JSON."})
-                continue
-            except Exception:
-                self._log_it(started, role.value, model, retries, "permanent_failure")
-                raise ITProviderError("IT provider request failed") from None
-            self._log_it(started, role.value, model, retries, "success")
-            return result
-
-    @staticmethod
-    def _log_it(started: float, role: str, model: str, retries: int, category: str) -> None:
-        logger.info("LLM request completed role=%s model=%s latency_ms=%d retry_count=%d category=%s",
-            f"it_{role}", model, int((monotonic() - started) * 1000), retries, category)
-
-
-class GroqFinanceClient:
-    """Centralized Groq client restricted to Finance Fast and Reasoning roles."""
-
-    def __init__(self, settings: Settings, *, client: Any | None = None,
-                 sleep: Callable[[float], Awaitable[None]] = asyncio.sleep) -> None:
-        if settings.groq_api_key is None or not settings.groq_api_key.get_secret_value().strip():
-            raise FinanceConfigurationError("GROQ_API_KEY must be configured for Finance")
-        if not settings.groq_model_fast.strip() or not settings.groq_model_reasoning.strip():
-            raise FinanceConfigurationError(
-                "Fast and Reasoning Groq models must be configured for Finance"
-            )
-        self.settings, self._sleep = settings, sleep
-        self._client = client or AsyncGroq(
-            api_key=settings.groq_api_key.get_secret_value(),
-            base_url=str(settings.groq_base_url),
-            timeout=float(settings.llm_request_timeout_seconds),
-            max_retries=0,
-        )
-
-    async def generate(self, payload: Any, *, role: Any) -> Any:
-        from app.departments.finance.enums import FinanceModelRole
-        from app.departments.finance.prompt import FINANCE_SYSTEM_PROMPT, build_finance_user_message
-        from app.departments.finance.schemas import FinanceDepartmentResult
-
-        if role not in {FinanceModelRole.FAST, FinanceModelRole.REASONING}:
-            raise FinanceConfigurationError("Unsupported Finance model role")
-        model = (
-            self.settings.groq_model_fast
-            if role == FinanceModelRole.FAST
-            else self.settings.groq_model_reasoning
-        ).strip()
-        messages = [
-            {"role": "system", "content": FINANCE_SYSTEM_PROMPT},
-            {"role": "user", "content": build_finance_user_message(payload)},
-        ]
-        retries, validation_retry = 0, False
-        while True:
-            started = monotonic()
-            try:
-                response = await self._client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    temperature=self.settings.llm_temperature,
-                    response_format={"type": "json_object"},
-                )
-                content = response.choices[0].message.content
-                if not isinstance(content, str) or not content.strip():
-                    raise ValueError("empty response")
-                result = FinanceDepartmentResult.model_validate(json.loads(content))
-            except TemporaryProviderError:
-                self._log(started, role.value, model, retries, "temporary_failure")
-                if retries >= self.settings.llm_max_retries:
-                    raise FinanceProviderError("Finance is temporarily unavailable") from None
-                retries += 1
-                await self._sleep(min(0.25 * 2 ** (retries - 1), 2.0))
-                continue
-            except (json.JSONDecodeError, ValidationError, ValueError, IndexError, TypeError):
-                self._log(started, role.value, model, retries, "invalid_output")
-                if validation_retry or retries >= self.settings.llm_max_retries:
-                    raise FinanceOutputError(
-                        "Finance returned an invalid structured response"
-                    ) from None
-                validation_retry, retries = True, retries + 1
-                messages.append({
-                    "role": "system",
-                    "content": "Correct the response and return only valid FinanceDepartmentResult JSON.",
-                })
-                continue
-            except Exception:
-                self._log(started, role.value, model, retries, "permanent_failure")
-                raise FinanceProviderError("Finance provider request failed") from None
-            self._log(started, role.value, model, retries, "success")
-            return result
-
-    @staticmethod
-    def _log(started: float, role: str, model: str, retries: int, category: str) -> None:
-        logger.info(
-            "LLM request completed role=%s model=%s latency_ms=%d retry_count=%d category=%s",
-            f"finance_{role}", model, int((monotonic() - started) * 1000), retries, category,
-        )
-
-
-class GroqProcurementClient:
-    """Centralized Groq client restricted to Procurement model roles."""
-
-    def __init__(
-        self,
-        settings: Settings,
-        *,
-        client: Any | None = None,
-        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
-    ) -> None:
-        if settings.groq_api_key is None or not settings.groq_api_key.get_secret_value().strip():
-            raise ProcurementConfigurationError(
-                "GROQ_API_KEY must be configured for Procurement"
-            )
-        if not settings.groq_model_fast.strip() or not settings.groq_model_reasoning.strip():
-            raise ProcurementConfigurationError(
-                "Fast and Reasoning Groq models must be configured for Procurement"
-            )
-        self.settings, self._sleep = settings, sleep
-        self._client = client or AsyncGroq(
-            api_key=settings.groq_api_key.get_secret_value(),
-            base_url=str(settings.groq_base_url),
-            timeout=float(settings.llm_request_timeout_seconds),
-            max_retries=0,
-        )
-
-    async def generate(self, payload: Any, *, role: Any) -> Any:
-        from app.departments.procurement.enums import ProcurementModelRole
-        from app.departments.procurement.prompt import (
-            PROCUREMENT_SYSTEM_PROMPT,
-            build_procurement_user_message,
-        )
-        from app.departments.procurement.schemas import ProcurementDepartmentResult
-
-        if role not in {ProcurementModelRole.FAST, ProcurementModelRole.REASONING}:
-            raise ProcurementConfigurationError("Unsupported Procurement model role")
-        model = (
-            self.settings.groq_model_fast
-            if role == ProcurementModelRole.FAST
-            else self.settings.groq_model_reasoning
-        ).strip()
-        messages = [
-            {"role": "system", "content": PROCUREMENT_SYSTEM_PROMPT},
-            {"role": "user", "content": build_procurement_user_message(payload)},
-        ]
-        retries, validation_retry = 0, False
-        while True:
-            started = monotonic()
-            try:
-                response = await self._client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    temperature=self.settings.llm_temperature,
-                    response_format={"type": "json_object"},
-                )
-                content = response.choices[0].message.content
-                if not isinstance(content, str) or not content.strip():
-                    raise ValueError("empty response")
-                result = ProcurementDepartmentResult.model_validate(json.loads(content))
-            except TemporaryProviderError:
-                self._log_procurement(
-                    started, role.value, model, retries, "temporary_failure"
-                )
-                if retries >= self.settings.llm_max_retries:
-                    raise ProcurementProviderError(
-                        "Procurement is temporarily unavailable"
-                    ) from None
-                retries += 1
-                await self._sleep(min(0.25 * 2 ** (retries - 1), 2.0))
-                continue
-            except (json.JSONDecodeError, ValidationError, ValueError, IndexError, TypeError):
-                self._log_procurement(started, role.value, model, retries, "invalid_output")
-                if validation_retry or retries >= self.settings.llm_max_retries:
-                    raise ProcurementOutputError(
-                        "Procurement returned an invalid structured response"
-                    ) from None
-                validation_retry, retries = True, retries + 1
-                messages.append(
-                    {
-                        "role": "system",
-                        "content": (
-                            "Correct the response and return only valid "
-                            "ProcurementDepartmentResult JSON."
-                        ),
-                    }
-                )
-                continue
-            except Exception:
-                self._log_procurement(
-                    started, role.value, model, retries, "permanent_failure"
-                )
-                raise ProcurementProviderError("Procurement provider request failed") from None
-            self._log_procurement(started, role.value, model, retries, "success")
-            return result
-
-    @staticmethod
-    def _log_procurement(
-        started: float, role: str, model: str, retries: int, category: str
-    ) -> None:
-        logger.info(
-            "LLM request completed role=%s model=%s latency_ms=%d retry_count=%d category=%s",
-            f"procurement_{role}",
-            model,
-            int((monotonic() - started) * 1000),
-            retries,
-            category,
-        )
-
-
-class GroqHRClient:
-    """Centralized Groq client restricted to HR Fast and Reasoning roles."""
-
-    def __init__(self, settings: Settings, *, client: Any | None = None,
-                 sleep: Callable[[float], Awaitable[None]] = asyncio.sleep) -> None:
-        if settings.groq_api_key is None or not settings.groq_api_key.get_secret_value().strip():
-            raise HRConfigurationError("GROQ_API_KEY must be configured for HR")
-        if not settings.groq_model_fast.strip() or not settings.groq_model_reasoning.strip():
-            raise HRConfigurationError("Fast and Reasoning Groq models must be configured for HR")
-        self.settings, self._sleep = settings, sleep
-        self._client = client or AsyncGroq(
-            api_key=settings.groq_api_key.get_secret_value(),
-            base_url=str(settings.groq_base_url),
-            timeout=float(settings.llm_request_timeout_seconds),
-            max_retries=0,
-        )
-
-    async def generate(self, payload: Any, *, role: Any) -> Any:
-        from app.departments.hr.enums import HRModelRole
-        from app.departments.hr.prompt import HR_SYSTEM_PROMPT, build_hr_user_message
-        from app.departments.hr.schemas import HRDepartmentResult
-
-        if role not in {HRModelRole.FAST, HRModelRole.REASONING}:
-            raise HRConfigurationError("Unsupported HR model role")
-        model = self.settings.groq_model_fast if role == HRModelRole.FAST else self.settings.groq_model_reasoning
-        messages = [{"role": "system", "content": HR_SYSTEM_PROMPT},
-                    {"role": "user", "content": build_hr_user_message(payload)}]
-        retries, validation_retry = 0, False
-        while True:
-            started = monotonic()
-            try:
-                response = await self._client.chat.completions.create(
-                    model=model.strip(), messages=messages, temperature=self.settings.llm_temperature,
-                    response_format={"type": "json_object"})
-                content = response.choices[0].message.content
-                if not isinstance(content, str) or not content.strip():
-                    raise ValueError("empty response")
-                result = HRDepartmentResult.model_validate(json.loads(content))
-            except TemporaryProviderError:
-                self._log_hr(started, role.value, model, retries, "temporary_failure")
-                if retries >= self.settings.llm_max_retries:
-                    raise HRProviderError("HR is temporarily unavailable") from None
-                retries += 1
-                await self._sleep(min(0.25 * 2 ** (retries - 1), 2.0))
-                continue
-            except (json.JSONDecodeError, ValidationError, ValueError, IndexError, TypeError):
-                self._log_hr(started, role.value, model, retries, "invalid_output")
-                if validation_retry or retries >= self.settings.llm_max_retries:
-                    raise HROutputError("HR returned an invalid structured response") from None
-                validation_retry, retries = True, retries + 1
-                messages.append({"role": "system", "content": "Correct the response and return only valid HRDepartmentResult JSON."})
-                continue
-            except Exception:
-                self._log_hr(started, role.value, model, retries, "permanent_failure")
-                raise HRProviderError("HR provider request failed") from None
-            self._log_hr(started, role.value, model, retries, "success")
-            return result
-
-    @staticmethod
-    def _log_hr(started: float, role: str, model: str, retries: int, category: str) -> None:
-        logger.info("LLM request completed role=%s model=%s latency_ms=%d retry_count=%d category=%s",
-            f"hr_{role}", model, int((monotonic() - started) * 1000), retries, category)
-
-
-class GroqRouterClient:
-    """Centralized, replaceable Groq client for the Router model role."""
-
-    def __init__(
-        self,
-        settings: Settings,
-        *,
-        client: Any | None = None,
-        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
-    ) -> None:
-        try:
-            validate_router_configuration(settings)
-        except ConfigurationError as exc:
-            raise RouterConfigurationError(str(exc)) from None
-
-        self.settings = settings
-        self.model = settings.groq_model_router.strip()
-        self.max_retries = settings.llm_max_retries
-        self.clarification_maximum = settings.router_max_clarification_questions
-        self._sleep = sleep
-        self._client = (
-            client
-            if client is not None
-            else AsyncGroq(
-                api_key=settings.groq_api_key.get_secret_value(),
-                base_url=str(settings.groq_base_url),
-                timeout=float(settings.llm_request_timeout_seconds),
-                max_retries=0,
-            )
-        )
-
-    def validate_configuration(self) -> None:
-        """Allow workflow services to validate before mutating a request."""
-
-        try:
-            validate_router_configuration(self.settings)
-        except ConfigurationError as exc:
-            raise RouterConfigurationError(str(exc)) from None
-
-    async def classify(
-        self,
-        message: str,
-        *,
-        clarification_count: int = 0,
-        latest_question: str | None = None,
-        latest_answer: str | None = None,
-    ) -> RouterOutput:
-        user_message = build_router_user_message(
-            message=message,
-            clarification_count=clarification_count,
-            clarification_maximum=self.clarification_maximum,
-            latest_question=latest_question,
-            latest_answer=latest_answer,
-        )
-        messages: list[dict[str, str]] = [
-            {"role": "system", "content": ROUTER_SYSTEM_PROMPT},
-            {"role": "user", "content": user_message},
-        ]
-        retries_used = 0
-        validation_retry_used = False
-
-        while True:
-            started = monotonic()
-            try:
-                response = await self._client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,
-                    temperature=self.settings.llm_temperature,
-                    response_format={"type": "json_object"},
-                )
-                output = self._parse_response(response)
-                if (
-                    output.needs_clarification
-                    and clarification_count >= self.clarification_maximum
-                ):
-                    raise ValueError("clarification limit was exceeded")
-            except TemporaryProviderError:
-                self._log_attempt(started, retries_used, "temporary_failure")
-                if retries_used >= self.max_retries:
-                    raise RouterProviderError(
-                        "The Router provider is temporarily unavailable"
-                    ) from None
-                retries_used += 1
-                await self._sleep(min(0.25 * (2 ** (retries_used - 1)), 2.0))
-                continue
-            except (json.JSONDecodeError, ValidationError, ValueError, IndexError, TypeError):
-                self._log_attempt(started, retries_used, "invalid_output")
-                if validation_retry_used or retries_used >= self.max_retries:
-                    raise RouterOutputError(
-                        "The Router returned an invalid structured response"
-                    ) from None
-                validation_retry_used = True
-                retries_used += 1
-                messages.append(
-                    {
-                        "role": "system",
-                        "content": (
-                            "The previous response was invalid. Return a corrected JSON "
-                            "object that satisfies every schema and routing rule."
-                        ),
-                    }
-                )
-                continue
-            except Exception:
-                self._log_attempt(started, retries_used, "permanent_failure")
-                raise RouterProviderError("The Router provider request failed") from None
-
-            self._log_attempt(started, retries_used, "success")
-            return output
-
-    @staticmethod
-    def _parse_response(response: Any) -> RouterOutput:
-        content = response.choices[0].message.content
-        if not isinstance(content, str) or not content.strip():
-            raise ValueError("empty Router response")
-        raw = json.loads(content)
-        return RouterOutput.model_validate(raw)
-
-    def _log_attempt(self, started: float, retry_count: int, category: str) -> None:
-        logger.info(
-            "LLM request completed role=%s model=%s latency_ms=%d retry_count=%d category=%s",
-            "router",
-            self.model,
-            int((monotonic() - started) * 1_000),
-            retry_count,
-            category,
-        )
-
-
-class GroqReviewerClient:
-    """Centralized Groq client for the Reviewer model role. No tool access. No mutations."""
-
-    def __init__(
-        self,
-        settings: Settings,
-        *,
-        client: Any | None = None,
-        sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
-    ) -> None:
-        try:
-            validate_reviewer_configuration(settings)
-        except ConfigurationError as exc:
-            raise ReviewerConfigurationError(str(exc)) from None
-        self.settings = settings
-        self.model = settings.groq_model_reviewer.strip()
-        self.max_retries = settings.llm_max_retries
-        self._sleep = sleep
-        self._client = (
-            client
-            if client is not None
-            else AsyncGroq(
-                api_key=settings.groq_api_key.get_secret_value(),
-                base_url=str(settings.groq_base_url),
-                timeout=float(settings.llm_request_timeout_seconds),
-                max_retries=0,
-            )
-        )
-
-    async def review(self, package: "ReviewPackage") -> "ReviewerResult":
-        from app.workflow.prompts.reviewer import REVIEWER_SYSTEM_PROMPT, build_reviewer_user_message
-        from app.workflow.review.schemas import ReviewerResult
-
-        messages: list[dict[str, str]] = [
-            {"role": "system", "content": REVIEWER_SYSTEM_PROMPT},
-            {"role": "user", "content": build_reviewer_user_message(package)},
-        ]
-        retries = 0
-        validation_retry = False
-        while True:
-            started = monotonic()
-            try:
-                response = await self._client.chat.completions.create(
-                    model=self.model,
-                    messages=messages,
-                    temperature=self.settings.llm_temperature,
-                    response_format={"type": "json_object"},
-                )
-                content = response.choices[0].message.content
-                if not isinstance(content, str) or not content.strip():
-                    raise ValueError("empty reviewer response")
-                result = ReviewerResult.model_validate(json.loads(content))
-            except TemporaryProviderError:
-                self._log(started, retries, "temporary_failure")
-                if retries >= self.max_retries:
-                    raise ReviewerProviderError("Reviewer is temporarily unavailable") from None
-                retries += 1
-                await self._sleep(min(0.25 * 2 ** (retries - 1), 2.0))
-                continue
-            except (json.JSONDecodeError, ValidationError, ValueError, IndexError, TypeError):
-                self._log(started, retries, "invalid_output")
-                if validation_retry or retries >= self.max_retries:
-                    raise ReviewerOutputError("Reviewer returned an invalid structured response") from None
-                validation_retry = True
-                retries += 1
-                messages.append({
-                    "role": "system",
-                    "content": (
-                        "The previous response was invalid. Return strictly valid JSON "
-                        "matching the ReviewerResult schema with no extra fields."
-                    ),
-                })
-                continue
-            except Exception:
-                self._log(started, retries, "permanent_failure")
-                raise ReviewerProviderError("Reviewer provider request failed") from None
-            self._log(started, retries, "success")
-            return result
-
-    def _log(self, started: float, retries: int, category: str) -> None:
-        logger.info(
-            "LLM request completed role=%s model=%s latency_ms=%d retry_count=%d category=%s",
-            "reviewer",
-            self.model,
-            int((monotonic() - started) * 1_000),
-            retries,
-            category,
-        )

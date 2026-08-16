@@ -74,7 +74,7 @@ class Settings(BaseSettings):
 
     # Groq placeholders
     groq_api_key: SecretStr | None = Field(default=None, repr=False)
-    groq_base_url: AnyHttpUrl = AnyHttpUrl("https://api.groq.com/openai/v1")
+    groq_base_url: AnyHttpUrl = AnyHttpUrl("https://api.groq.com")
     groq_model_router: str = "llama-3.1-8b-instant"
     groq_model_fast: str = "openai/gpt-oss-20b"
     groq_model_reasoning: str = "openai/gpt-oss-120b"

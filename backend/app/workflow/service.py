@@ -48,7 +48,7 @@ from app.workflow.exceptions import (
     WorkflowPersistenceError,
     WorkflowTerminalError,
 )
-from app.workflow.graph import workflow_graph
+from app.workflow.linear_graph import CompiledLinearGraph
 from app.workflow.models import WorkflowEvent
 from app.workflow.persistence import WorkflowPersistence
 from app.workflow.repository import WorkflowEventRepository
@@ -282,7 +282,7 @@ class WorkflowService:
             )
         self.failure_service = failure_service
         self.capability_gap_service = capability_gap_service
-        self.graph = graph or workflow_graph
+        self.graph = graph or CompiledLinearGraph()
 
     def _get_router_client(self) -> Any:
         if self.router_client is None:
