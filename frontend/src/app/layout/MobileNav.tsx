@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { Link } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { X } from 'lucide-react';
 import type { AuthenticatedUser } from '../../api/types';
@@ -57,7 +58,7 @@ export function MobileNav({ isOpen, onClose, user }: MobileNavProps) {
             {/* Drawer header */}
             <div className="flex h-[3.75rem] shrink-0 items-center justify-between border-b border-white/10 px-4">
               <div className="flex items-center gap-3">
-                <BrandMark tabIndex={-1} />
+                <Link to="/app" className="inline-flex items-center"><BrandMark tabIndex={-1} /></Link>
               </div>
               <button
                 onClick={onClose}

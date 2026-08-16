@@ -17,6 +17,7 @@ export function AuthLayout({ children }: { children: ReactNode }) {
       <a href="#main-content" className="skip-link">Skip to main content</a>
       <PublicHeader />
       <main id="main-content" className="relative z-10">{children}</main>
+      <div className="relative z-10 mt-16" />
       <PublicFooter />
     </div>
   );
